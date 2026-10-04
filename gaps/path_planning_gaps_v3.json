@@ -1,0 +1,40 @@
+{
+  "benchmark_gaps": [
+    "No performance benchmarks comparing boustrophedon vs spiral vs wavefront on identical field shapes",
+    "No path quality metrics beyond total_distance (smoothness, curvature, energy consumption, turn count)",
+    "No comparison against optimal or near-optimal solutions (e.g., TSP-based pass ordering)",
+    "No scalability tests: large fields (1000x1000+), many obstacles (100+), fine swath widths",
+    "No real-world field shape test cases (L-shaped, concave, multi-polygon fields with holes)",
+    "No timing benchmarks for planning algorithms (planning latency vs field size)",
+    "No coverage accuracy measurement (actual area covered vs claimed coverage_ratio)",
+    "No comparison of grid resolution impact on A*/wavefront path quality"
+  ],
+  "bottlenecks": [
+    "Boustrophedon uses bounding box, not actual field boundary — over-covers convex hull area for non-rectangular fields, wasting time/energy",
+    "Coverage ratio calculation is simplified: uses bounding box area instead of actual polygon area, giving inaccurate coverage estimates",
+    "ObstacleField.avoid_path returns 4 corner points of a square around the obstacle without checking if the path actually intersects the obstacle or computing tangent-based avoidance",
+    "Spiral coverage filters out obstacle points but does not reroute — creates discontinuous paths with gaps in coverage",
+    "Boustrophedon planner has no obstacle avoidance at all — passes through obstacles",
+    "Wavefront DFS path generation creates snake-like paths with excessive backtracking, not efficient coverage",
+    "No path smoothing or post-processing (e.g., Bezier curves, shortcutting) — paths are jagged polylines",
+    "A* is grid-only with no continuous-space planning — quantization error on coarse grids",
+    "No dynamic replanning capability — cannot handle obstacles discovered mid-execution",
+    "No multi-robot coordination or task allocation — single-vehicle only",
+    "Spiral coverage does not handle non-circular fields — max_radius approximation loses corners",
+    "No support for non-holonomic vehicle constraints (minimum turning radius, Dubins paths)"
+  ],
+  "missing_algorithms": [
+    "RRT/RRT* — sampling-based path planning for complex continuous environments with non-circular obstacles",
+    "D* Lite — incremental replanning for unknown or changing environments (discovered obstacles)",
+    "PRM (Probabilistic Roadmap) — multi-query planning for repeated navigation in the same field",
+    "Voronoi-based coverage — maximizes clearance from obstacles, useful for safety-critical operations",
+    "Multi-robot coverage — task allocation, region decomposition, and coordination for fleets",
+    "Convex decomposition — decompose non-convex fields into convex sub-regions for efficient boustrophedon",
+    "Dubins/Reeds-Shepp paths — curvature-constrained paths for vehicles with minimum turning radius",
+    "TSP-based pass ordering — optimize the order of coverage passes to minimize transit distance",
+    "Genetic algorithm / simulated annealing — meta-optimization of coverage paths for complex fields",
+    "Morse-based coverage — topological approach using critical points for guaranteed complete coverage",
+    "STC (Spanning Tree Coverage) — grid-based complete coverage via spanning tree decomposition",
+    "Boustrophedon cellular decomposition — partition field into obstacle-free cells, cover each optimally"
+  ]
+}

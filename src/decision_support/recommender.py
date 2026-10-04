@@ -38,6 +38,8 @@ class DecisionEngine:
 
     def recommend(self, state: FarmState) -> RecommendationResult:
         """Generate recommendations based on farm state."""
+        if self.algorithm == "ensemble":
+            return self._recommend_ensemble(state)
         if self.algorithm == "ml":
             return self._recommend_ml(state)
         return self._recommend_rule_based(state)
@@ -131,6 +133,90 @@ class DecisionEngine:
                         "priority_score": priority_score,
                         "recommendations": recommendations,
                         "actions": actions,
+                    },
+                )
+            )
+
+        return result
+
+    def _recommend_ensemble(self, state: FarmState) -> RecommendationResult:
+        """Generate recommendations using ensemble of rule-based and ML paths.
+
+        Combines outputs from both approaches:
+        - Merges recommendations (deduplicated)
+        - Averages priority scores
+        - Averages confidence scores
+        - Merges feature importance (averaged)
+        """
+        if self.model is None:
+            raise RuntimeError("Ensemble algorithm requires a model")
+        if not self.model.is_trained:
+            raise RuntimeError(f"Model {self.model.name} is not trained")
+
+        # Get rule-based result
+        rule_result = self._recommend_rule_based(state)
+
+        # Get ML result
+        ml_result = self._recommend_ml(state)
+
+        # Merge recommendations (deduplicated, preserving order)
+        seen = set()
+        merged_recommendations = []
+        for rec in rule_result.recommendations + ml_result.recommendations:
+            if rec not in seen:
+                seen.add(rec)
+                merged_recommendations.append(rec)
+
+        # Merge actions (deduplicated)
+        seen_actions = set()
+        merged_actions = []
+        for action in rule_result.actions + ml_result.actions:
+            if action not in seen_actions:
+                seen_actions.add(action)
+                merged_actions.append(action)
+
+        # Average priority scores
+        priority_score = (rule_result.priority_score + ml_result.priority_score) / 2.0
+        priority_score = min(1.0, priority_score)
+
+        # Average confidence scores
+        confidence = (rule_result.confidence + ml_result.confidence) / 2.0
+        confidence = min(1.0, confidence)
+
+        # Merge feature importance (average values for shared keys)
+        all_keys = set(rule_result.feature_importance.keys()) | set(
+            ml_result.feature_importance.keys()
+        )
+        merged_importance: Dict[str, float] = {}
+        for key in all_keys:
+            rule_val = rule_result.feature_importance.get(key, 0.0)
+            ml_val = ml_result.feature_importance.get(key, 0.0)
+            merged_importance[key] = (rule_val + ml_val) / 2.0
+
+        # Normalize feature importance to sum to 1.0
+        total_importance = sum(merged_importance.values())
+        if total_importance > 0:
+            merged_importance = {k: v / total_importance for k, v in merged_importance.items()}
+
+        result = RecommendationResult(
+            recommendations=merged_recommendations,
+            priority_score=priority_score,
+            algorithm="ensemble",
+            actions=merged_actions,
+            tenant_id=state.tenant_id,
+            confidence=confidence,
+            feature_importance=merged_importance,
+        )
+
+        if self._bus and priority_score > 0.5:
+            self._bus.publish(
+                DomainEvent(
+                    event_type=EventType.ALERT_TRIGGERED,
+                    source="decision_support.recommender",
+                    payload={
+                        "priority_score": priority_score,
+                        "recommendations": merged_recommendations,
+                        "actions": merged_actions,
                     },
                 )
             )

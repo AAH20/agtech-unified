@@ -1,0 +1,41 @@
+{
+  "missing_algorithms": [
+    "No metabolic pathway modeling (flux balance analysis, pathway enrichment, or metabolic network reconstruction) — no KEGG/PlantCyc pathway integration",
+    "No phylogenetic analysis or multiple sequence alignment (MSA) — variant.py and protein.py lack evolutionary context needed for conservation-based scoring",
+    "No gene prediction or ORF finding — no tool to identify coding regions in genomic DNA",
+    "No promoter/enhancer element prediction — regulatory element detection is absent",
+    "No RNA secondary structure prediction — relevant for gRNA efficiency and mRNA stability",
+    "No copy number variation (CNV) or structural variant (SV) detection beyond simple indels",
+    "No gene ontology (GO) enrichment or functional annotation pipeline",
+    "No protein tertiary structure prediction — structure.py only implements Chou-Fasman secondary structure; no AlphaFold, homology modeling, or ab initio folding",
+    "No regulatory network inference — network.py only does co-expression; no transcription factor binding site prediction or gene regulatory network modeling",
+    "No QTL mapping — gwas.py implements single-SNP association but no interval mapping or multi-locus QTL detection"
+  ],
+  "bottlenecks": [
+    "CRISPR off-target scoring is O(n) per guide with no genome-wide index — cannot scale to whole-genome off-target search without a suffix array or BWT index",
+    "Variant effect prediction processes variants sequentially in predict_batch (list comprehension) — no parallelization for large VCF files",
+    "Allergenicity similarity calculation is O(n*m*k) where n=query length, m=db size, k=window size — will be slow for large allergen databases",
+    "Codon optimizer uses a single most-frequent codon per amino acid — no consideration of codon pair bias, mRNA secondary structure, or tRNA pool optimization",
+    "No caching of expensive computations (protein analysis, variant prediction) — repeated calls recompute from scratch",
+    "GFF3/GTF parsers load entire files into memory — no streaming parser for large genome annotations",
+    "No database or file-based persistence for analysis results — all in-memory only",
+    "Network analysis builds edges via O(n^2) pairwise comparison — no spatial index or approximation for large gene sets",
+    "GWAS processes SNPs sequentially — no vectorized or parallel association testing for genome-wide scans"
+  ],
+  "benchmark_gaps": [
+    "CRISPR efficiency_score uses a simple heuristic (GC content + poly-T penalty + G bonus) — not validated against established tools like CRISPRscan, CHOPCHOP, or Rule Set 2",
+    "CRISPR off_target_score is a placeholder heuristic (GC deviation + k-mer complexity) — no alignment-based off-target search (e.g., Bowtie/BWA integration) or CFD score calculation",
+    "Variant SIFT score is a binary conservative/radical classifier (0.7 or 0.1) — real SIFT uses position-specific scoring matrices from protein multiple sequence alignments",
+    "Variant PolyPhen score uses only charge and hydrophobicity — real PolyPhen-2 uses structural features (secondary structure, solvent accessibility, B-factor) plus sequence-based features",
+    "No benchmark dataset integration (ClinVar, dbSNP, gnomAD) — variant predictions cannot be validated against known pathogenic/benign variants",
+    "No ROC/AUC or precision/recall evaluation framework for any predictor — no quantitative performance metrics",
+    "Solubility predictor uses a simple weighted sum of 4 features — not benchmarked against experimental solubility databases (e.g., eSol, PROSO II)",
+    "Localization predictor uses regex patterns only — no SignalP/TargetP/DeepLoc integration or machine learning-based prediction",
+    "No cross-validation or holdout testing framework — all predictors are untested against independent datasets",
+    "Codon optimization uses only 3 species (human, e_coli, yeast) — missing Arabidopsis, soybean, tomato, rice, maize, wheat, and other major crops",
+    "No integration with external tools or databases (UniProt, NCBI, Ensembl Plants, KEGG) — all data is hardcoded",
+    "Chou-Fasman secondary structure prediction is a 1970s-era method — not benchmarked against modern tools (PSIPRED, JPred, AlphaFold)",
+    "Co-expression network uses Pearson correlation only — no mutual information, partial correlation, or causal inference methods",
+    "GWAS uses simple linear regression — no mixed models, population structure correction, or multiple testing correction (Bonferroni, FDR)"
+  ]
+}

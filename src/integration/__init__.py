@@ -8,6 +8,7 @@ from src.integration.unified_optimizer import (
     SolverType,
     UnifiedOptimizer,
 )
+from src.integration.union_find import UnionFind
 
 __all__ = [
     "EventType",
@@ -18,4 +19,5 @@ __all__ = [
     "OptimizationProblem",
     "OptimizationResult",
     "UnifiedOptimizer",
+    "UnionFind",
 ]

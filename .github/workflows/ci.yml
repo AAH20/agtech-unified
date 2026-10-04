@@ -16,6 +16,7 @@ jobs:
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +37,8 @@ jobs:
   test:
     name: Test (pytest)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint]
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
@@ -75,6 +78,8 @@ jobs:
   security:
     name: Security (bandit)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test]
     steps:
       - uses: actions/checkout@v4
 
@@ -98,3 +103,43 @@ jobs:
         with:
           name: bandit-report
           path: bandit-report.json
+
+  docker-build:
+    name: Docker Build (multi-arch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: agtech-unified:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export image for scanning
+        run: |
+          docker build -t agtech-unified:scan .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: agtech-unified:scan
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: Upload Trivy scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json

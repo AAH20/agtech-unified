@@ -21,6 +21,12 @@ from src.digital_twin.nutrient_cycling import (
 )
 from src.digital_twin.ontology import AGROVOCOntology, Concept, SearchResult
 from src.digital_twin.pest_model import PestModel, PestSimulationResult, PestState
+from src.digital_twin.root_growth import (
+    RootGrowthModel,
+    RootGrowthResult,
+    RootGrowthState,
+    RootLayerState,
+)
 from src.digital_twin.simulator import DigitalTwin, SimulationResult, SimulationState
 from src.digital_twin.sync import (
     HierarchicalSynchronizer,
@@ -35,6 +41,11 @@ from src.digital_twin.water_balance import (
     WaterBalanceModel,
     WaterBalanceResult,
     WaterBalanceState,
+)
+from src.digital_twin.yield_prediction import (
+    GrainQuality,
+    YieldModel,
+    YieldPrediction,
 )
 
 __all__ = [
@@ -60,6 +71,13 @@ __all__ = [
     "PestState",
     "PestSimulationResult",
     "PestModel",
+    "RootGrowthState",
+    "RootLayerState",
+    "RootGrowthResult",
+    "RootGrowthModel",
+    "GrainQuality",
+    "YieldPrediction",
+    "YieldModel",
     "DiseaseState",
     "DiseaseSimulationResult",
     "DiseaseModel",

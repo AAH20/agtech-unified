@@ -48,9 +48,9 @@ def test_example_files_have_docstrings():
     examples_dir = ROOT / "examples"
     for py_file in examples_dir.glob("*.py"):
         content = py_file.read_text().strip()
-        assert content.startswith('"""') or content.startswith(
-            "'''"
-        ), f"{py_file.name} missing module docstring"
+        assert content.startswith('"""') or content.startswith("'''"), (
+            f"{py_file.name} missing module docstring"
+        )
 
 
 def test_example_files_have_main_guard():
@@ -58,9 +58,9 @@ def test_example_files_have_main_guard():
     examples_dir = ROOT / "examples"
     for py_file in examples_dir.glob("*.py"):
         content = py_file.read_text()
-        assert (
-            "__name__" in content and "__main__" in content
-        ), f"{py_file.name} missing __main__ guard"
+        assert "__name__" in content and "__main__" in content, (
+            f"{py_file.name} missing __main__ guard"
+        )
 
 
 def test_example_files_import_from_src():

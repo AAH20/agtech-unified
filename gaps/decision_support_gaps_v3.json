@@ -1,0 +1,44 @@
+{
+  "bottlenecks": [
+    "Rule-based confidence is still heuristic: min(1.0, len(recommendations)*0.2+0.3) — not a calibrated model probability, unreliable for ranking or thresholding",
+    "Rule-based feature importance is hardcoded to mirror rule-trigger weights (0.4/0.3/0.2/0.1) rather than learned from data",
+    "API gateway authentication defaults to open: when auth=None, _authenticate returns {sub:anonymous, roles:[admin]} — fail-open design",
+    "TenantRegistry uses in-memory dicts/lists for all state — no persistence, no horizontal scalability, data lost on restart",
+    "AuditLogger stores all events in an in-memory list with no eviction — unbounded memory growth in long-running processes",
+    "Rate limiting state is per-process in-memory in both api_gateway.py (_rate_limit_hits) and security.py (_rate_limits) — not shared across workers",
+    "No caching layer for recommendations — identical FarmState inputs recompute from scratch every time",
+    "Dashboard broadcast() iterates all WebSocket clients sequentially with no backpressure — a slow client can delay updates for all others",
+    "list_readings and list_commands in api_gateway filter only by farm_id, not tenant_id — cross-tenant farm_id guess could leak data",
+    "No async support in DecisionEngine — recommend() is synchronous and blocks the event loop when called from async FastAPI endpoints",
+    "DecisionEngine ML path is disconnected from ModelRegistry — no version selection, no rollback, no canary deployment",
+    "No model performance monitoring — no logging of prediction accuracy, no alerting when model degrades, no automated retraining triggers"
+  ],
+  "missing_algorithms": [
+    "No ensemble or hybrid approach — recommendations cannot combine rule-based and ML outputs (e.g., rules for safety-critical thresholds, ML for yield optimization)",
+    "No time-series forecasting — no ARIMA, Prophet, or LSTM-based forecasting for predicting future soil moisture, temperature, or pest pressure",
+    "No optimization algorithms — no linear programming or constraint solver for irrigation scheduling, fertilizer planning, or resource allocation under constraints",
+    "No reinforcement learning or multi-armed bandit — no exploration/exploitation mechanism to learn which recommendations improve outcomes over time",
+    "No causal inference — no uplift modeling or counterfactual analysis to estimate the true effect of a recommendation",
+    "No feedback loop — RecommendationResult has no outcome tracking, so the system cannot measure whether recommendations were followed or whether they worked",
+    "No canary or shadow deployment — no mechanism to serve a new model version to a subset of traffic for validation before full rollout",
+    "No ML-based GPS spoofing detection — GPSSpoofingDetector uses only rule-based heuristics, no ML models for pattern recognition",
+    "No sensor fusion for GPS anti-spoofing — no integration with IMU, barometer, or other sensors to corroborate GPS readings",
+    "No push notification channels (FCM/APNs) — mobile app users cannot receive push notifications",
+    "No chat platform integrations (Slack, Telegram, Discord) — teams cannot receive alerts in collaboration tools",
+    "No hyperparameter tuning — no grid search, random search, or Bayesian optimization for model hyperparameters",
+    "No online/incremental learning support — models cannot be updated incrementally with new data, only batch training",
+    "No feature store persistence layer — FeatureEngine computes GDD, VPD, and trend features but there is no persistence, versioning, or retrieval layer for serving features at inference time"
+  ],
+  "benchmark_gaps": [
+    "No offline evaluation metrics for recommendations — no precision, recall, NDCG, or mean reciprocal rank computed against historical outcomes",
+    "No online metrics tracking — no measurement of recommendation click-through rate, action completion rate, or user satisfaction",
+    "No model performance baselines — no stored baseline accuracy for yield prediction or anomaly detection to compare new models against",
+    "No load or stress testing for the API gateway — no benchmarks for requests/sec, latency percentiles, or breaking points under concurrent load",
+    "No regression tests for model accuracy — tests verify model training/prediction mechanics but do not assert minimum accuracy thresholds on fixed datasets",
+    "No fairness or bias testing — no checks for disparate recommendation quality across crop types, farm sizes, or geographic regions",
+    "No latency SLO tests — no assertions that recommend() or API endpoints complete within a target latency budget",
+    "No throughput benchmarks for the audit logger — no measurement of events/sec capacity or chain verification cost at scale",
+    "No chaos or failure-mode tests — no tests for behavior when ML model is untrained, when feature store is unavailable, or when audit logger fails",
+    "No integration tests exercising the full path from sensor reading → alert → recommendation → notification — each subsystem is tested in isolation"
+  ]
+}

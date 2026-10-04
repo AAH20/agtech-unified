@@ -1,0 +1,44 @@
+{
+  "benchmark_gaps": [
+    "SIM-001: No photosynthesis/CO2 model — growth is purely logistic with stress multipliers; no C3/C4 pathways, radiation use efficiency, or CO2 fertilization effect. Cannot model climate change scenarios or greenhouse production.",
+    "SIM-002: No yield prediction — simulation produces crop_height but no yield estimate (harvest index × biomass), grain quality, or harvestable output. Cannot connect simulation to economic decisions.",
+    "SIM-003: No root growth model — root_depth is a static parameter in water_balance.py; no dynamic root zone expansion, root water uptake by depth, or root architecture simulation.",
+    "SIM-004: No weed competition model — weed_pressure is a static scalar in SimulationState; no weed population dynamics, competition for light/water/nutrients, or weed-crop interaction algorithms.",
+    "SIM-005: No weather forecast ingestion — simulate_with_weather() accepts historical weather dicts but no forecast API integration, no stochastic weather generation, and no seasonal climate scenario drivers.",
+    "SIM-006: No multi-layer soil water model — single bucket model with uniform soil moisture; no vertical water movement, percolation between layers, or depth-dependent root uptake.",
+    "SIM-007: No van Genuchten soil water retention curves — linear stress factor between wilting point and field capacity; no soil-type-specific water retention or hydraulic conductivity curves.",
+    "SIM-008: No salinity/electrical conductivity tracking — no salt accumulation, leaching fraction, or irrigation water quality modeling. Cannot model brackish water irrigation or salinization risk.",
+    "SIM-009: No validation/calibration framework — no mechanism to validate simulation outputs against observed data or calibrate parameters. No RMSE/MAE metrics or parameter optimization.",
+    "SIM-010: No uncertainty quantification — all models are deterministic point estimates; no Monte Carlo simulation, parameter uncertainty propagation, or confidence intervals on predictions.",
+    "WB-001: No FAO-56 Kc climate adjustment — get_kc_for_stage() returns fixed values; no adjustment for wind speed, humidity, or crop height per FAO-56 Table 12/17.",
+    "WB-002: No dual Kc with proper Ke separation — dual_crop_coefficient_et() exists but Ke (soil evaporation) is not dynamically computed from soil moisture, surface wetting, or cover fraction.",
+    "WB-003: No water stress coefficient (Ks) — FAO-56 Ks from soil water depletion is not computed; water_stress_factor() is a simple linear interpolation, not the FAO-56 Ks equation.",
+    "WB-004: No soil heat flux (G) calculation — compute_et0() sets G=0.0 (acceptable for daily but not for sub-daily); no FAO-56 soil heat flux estimation from temperature or net radiation.",
+    "WB-005: No FAO-56 crop coefficient curve — Kc values are stage-based constants; no continuous Kc curve as a function of growth stage or days after planting.",
+    "WB-006: No multi-layer soil water model — single bucket with one moisture value; cannot model deep percolation, root zone depletion profiles, or layered soil textures.",
+    "WB-007: No van Genuchten soil water retention curves — linear stress factor; no soil-type-specific parameterization (sand, silt, clay fractions).",
+    "WB-008: No salinity/EC tracking — no salt balance, leaching requirement, or salinity stress factor in the water balance.",
+    "WB-009: No FAO-56 ET0 validation — compute_et0() uses simplified net radiation and no comparison against FAO-56 reference values or lysimeter data.",
+    "WB-010: No irrigation scheduling optimization — irrigation_recommendation() is rule-based; no optimization of irrigation timing/amount for yield, water use efficiency, or profit."
+  ],
+  "bottlenecks": [
+    "PERF-001: Single-threaded sequential simulation — no parallel/batch simulation support for parameter sweeps, Monte Carlo uncertainty analysis, or multi-scenario comparison.",
+    "PERF-002: No time-series data persistence — simulation history is returned in-memory only; no integration with TimescaleDBStorage or any persistence layer for historical analysis.",
+    "PERF-003: No streaming output — no WebSocket or SSE push mechanism for simulation results; synchronous batch simulation only, cannot power real-time dashboards.",
+    "PERF-004: No scenario management — no mechanism to define, save, and compare multiple simulation scenarios with parameter sweeps or sensitivity analysis.",
+    "PERF-005: No API surface — no REST, gRPC, or other API to expose digital twin functionality to external systems or the dashboard.",
+    "PERF-006: No configuration management — hardcoded simulation parameters (growth_rate, optimal_temp, max_crop_height); no YAML/JSON config with per-crop parameter profiles.",
+    "PERF-007: No logging or observability hooks — module-level logger defined but never used; no metrics, tracing, or structured logging for production debugging.",
+    "PERF-008: No digital twin versioning/lineage — no tracking of which model versions, parameters, or input data produced a given simulation result."
+  ],
+  "missing_algorithms": [
+    "WEED-001: Weed competition model — no weed population dynamics, competition for light/water/nutrients, or weed-crop interaction algorithms. weed_pressure is a static scalar with no biological basis.",
+    "HEAT-001: Soil heat flux calculation — no FAO-56 soil heat flux (G) estimation from temperature or net radiation. compute_et0() hardcodes G=0.0, acceptable for daily but not for sub-daily or energy balance studies.",
+    "ROOT-001: Root growth model — no dynamic root zone expansion, root water uptake by depth, or root architecture simulation. root_depth is a static parameter in WaterBalanceState.",
+    "YIELD-001: Yield prediction model — no harvest index × biomass calculation, grain quality metrics, or harvestable output estimation. total_growth is height difference only.",
+    "FORECAST-001: Weather forecast ingestion — no forecast API integration, no stochastic weather generation, and no seasonal climate scenario drivers. simulate_with_weather() accepts only historical weather dicts.",
+    "PHOTO-001: Photosynthesis model — no C3/C4 photosynthetic pathways, radiation use efficiency, or CO2 response curves. Growth is purely logistic with stress multipliers.",
+    "CALIB-001: Calibration/validation framework — no parameter optimization, no RMSE/MAE metrics against observed data, no model fidelity improvement mechanism.",
+    "UQ-001: Uncertainty quantification — no Monte Carlo simulation, no parameter uncertainty propagation, no prediction intervals on simulation results."
+  ]
+}

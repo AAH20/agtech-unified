@@ -7,6 +7,7 @@ from src.decision_support.api_gateway import APIGateway, TenantRegistry
 from src.decision_support.audit import AuditEvent, AuditEventType, AuditLogger
 from src.decision_support.dashboard import DashboardConfig, FarmDashboard
 from src.decision_support.drift import DriftDetector
+from src.decision_support.forecasting import ExponentialSmoother, ForecastResult
 from src.decision_support.gps_antispoof import GPSReading, GPSSpoofingDetector
 from src.decision_support.ml_models import (
     FeatureVector,
@@ -63,4 +64,6 @@ __all__ = [
     "ABTestManager",
     "Experiment",
     "DriftDetector",
+    "ExponentialSmoother",
+    "ForecastResult",
 ]

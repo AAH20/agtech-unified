@@ -14,6 +14,8 @@ Enhanced with:
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 import logging
 import os
@@ -22,7 +24,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +72,8 @@ class DomainEvent:
     version: int = 1
 
 
-EventHandler = Callable[[DomainEvent], None]
+EventHandler = Callable[[DomainEvent], Union[None, Any]]
+AsyncEventHandler = Callable[[DomainEvent], Any]
 
 
 @dataclass
@@ -337,7 +340,10 @@ class EventBus:
         """Publish with at-most-once semantics (no retry)."""
         for handler in handlers:
             try:
-                handler(event)
+                result = handler(event)
+                if inspect.isawaitable(result):
+                    # Schedule async handler without blocking
+                    self._schedule_async(result)
             except Exception:
                 logger.exception(
                     "Event handler %r failed for event %s",
@@ -356,7 +362,9 @@ class EventBus:
         """Invoke a handler with retry logic."""
         for attempt in range(self._max_retries + 1):
             try:
-                handler(event)
+                result = handler(event)
+                if inspect.isawaitable(result):
+                    self._schedule_async(result)
                 return
             except Exception:
                 if attempt < self._max_retries:
@@ -406,3 +414,110 @@ class EventBus:
         if self._event_store:
             return self._event_store.replay()
         return list(self._history)
+
+    def _schedule_async(self, coro: Any) -> None:
+        """Schedule an async handler coroutine without blocking the caller."""
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(coro)
+        except RuntimeError:
+            # No running event loop — create one to run the coroutine
+            asyncio.run(coro)
+
+    async def publish_async(
+        self, event: DomainEvent, delivery_guarantee: Optional[str] = None
+    ) -> int:
+        """Publish an event, awaiting all async handlers.
+
+        Async handlers are awaited concurrently. Sync handlers are called
+        inline. Delivery semantics (retry, DLQ) apply to both.
+
+        Returns the number of handlers invoked.
+        """
+        # Schema validation
+        if self._schema_registry and not self._schema_registry.validate(event):
+            logger.warning(
+                "Event %s failed schema validation, skipping",
+                event.event_id,
+            )
+            return 0
+
+        # Deduplication for exactly-once
+        if self._delivery_semantics == DeliverySemantics.EXACTLY_ONCE:
+            if event.event_id in self._processed_event_ids:
+                logger.debug(
+                    "Event %s already processed, skipping (exactly-once)",
+                    event.event_id,
+                )
+                return 0
+            self._processed_event_ids.add(event.event_id)
+
+        # Persist to event store
+        if self._event_store:
+            self._event_store.append(event)
+
+        self._history.append(event)
+        handlers = list(self._subscribers.get(event.event_type, ()))
+
+        if delivery_guarantee == "at_least_once":
+            return await self._publish_at_least_once_async(event, handlers)
+        elif self._delivery_semantics == DeliverySemantics.AT_MOST_ONCE:
+            return await self._publish_at_most_once_async(event, handlers)
+        elif self._delivery_semantics == DeliverySemantics.AT_LEAST_ONCE:
+            return await self._publish_at_least_once_async(event, handlers)
+        else:
+            return await self._publish_at_most_once_async(event, handlers)
+
+    async def _publish_at_most_once_async(
+        self, event: DomainEvent, handlers: List[EventHandler]
+    ) -> int:
+        """Async publish with at-most-once semantics."""
+        for handler in handlers:
+            try:
+                result = handler(event)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception:
+                logger.exception(
+                    "Event handler %r failed for event %s",
+                    getattr(handler, "__name__", handler),
+                    event.event_id,
+                )
+        return len(handlers)
+
+    async def _publish_at_least_once_async(
+        self, event: DomainEvent, handlers: List[EventHandler]
+    ) -> int:
+        """Async publish with at-least-once semantics (retry on failure)."""
+        for handler in handlers:
+            await self._invoke_with_retry_async(event, handler)
+        return len(handlers)
+
+    async def _invoke_with_retry_async(self, event: DomainEvent, handler: EventHandler) -> None:
+        """Invoke a handler with retry logic, supporting async handlers."""
+        for attempt in range(self._max_retries + 1):
+            try:
+                result = handler(event)
+                if inspect.isawaitable(result):
+                    await result
+                return
+            except Exception:
+                if attempt < self._max_retries:
+                    delay = self._base_retry_delay * (2**attempt)
+                    logger.warning(
+                        "Event handler %r failed for event %s (attempt %d/%d), retrying in %.2fs",
+                        getattr(handler, "__name__", handler),
+                        event.event_id,
+                        attempt + 1,
+                        self._max_retries + 1,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    logger.exception(
+                        "Event handler %r failed for event %s after %d attempts, moving to DLQ",
+                        getattr(handler, "__name__", handler),
+                        event.event_id,
+                        self._max_retries + 1,
+                    )
+                    self._dead_letter_queue.append(event)
