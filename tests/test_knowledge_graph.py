@@ -1,5 +1,7 @@
 """Test agricultural knowledge graph with entity management and queries."""
+
 import pytest
+
 from src.digital_twin.knowledge_graph import AgriKnowledgeGraph, Entity, Relationship
 
 
@@ -187,8 +189,14 @@ def test_from_dict_roundtrip():
 def test_entity_properties():
     """Entity properties are stored and retrievable."""
     kg = AgriKnowledgeGraph()
-    kg.add_entity(Entity(id="e_001", label="Field_A", entity_type="field",
-                        properties={"area_ha": 10.0, "soil_type": "loam"}))
+    kg.add_entity(
+        Entity(
+            id="e_001",
+            label="Field_A",
+            entity_type="field",
+            properties={"area_ha": 10.0, "soil_type": "loam"},
+        )
+    )
     e = kg.get_entity("e_001")
     assert e.properties["area_ha"] == 10.0
     assert e.properties["soil_type"] == "loam"
@@ -197,8 +205,9 @@ def test_entity_properties():
 def test_update_entity_properties():
     """Entity properties can be updated."""
     kg = AgriKnowledgeGraph()
-    kg.add_entity(Entity(id="e_001", label="Field_A", entity_type="field",
-                        properties={"area_ha": 10.0}))
+    kg.add_entity(
+        Entity(id="e_001", label="Field_A", entity_type="field", properties={"area_ha": 10.0})
+    )
     kg.update_entity_properties("e_001", {"area_ha": 15.0})
     e = kg.get_entity("e_001")
     assert e.properties["area_ha"] == 15.0
@@ -214,12 +223,15 @@ def test_update_entity_properties_missing_raises():
 def test_query_with_filters():
     """Query supports combined type and property filters."""
     kg = AgriKnowledgeGraph()
-    kg.add_entity(Entity(id="e_001", label="Field_A", entity_type="field",
-                        properties={"soil_type": "loam"}))
-    kg.add_entity(Entity(id="e_002", label="Field_B", entity_type="field",
-                        properties={"soil_type": "clay"}))
-    kg.add_entity(Entity(id="e_003", label="Wheat", entity_type="crop",
-                        properties={"soil_type": "loam"}))
+    kg.add_entity(
+        Entity(id="e_001", label="Field_A", entity_type="field", properties={"soil_type": "loam"})
+    )
+    kg.add_entity(
+        Entity(id="e_002", label="Field_B", entity_type="field", properties={"soil_type": "clay"})
+    )
+    kg.add_entity(
+        Entity(id="e_003", label="Wheat", entity_type="crop", properties={"soil_type": "loam"})
+    )
     results = kg.query(entity_type="field", properties={"soil_type": "loam"})
     assert len(results) == 1
     assert results[0].id == "e_001"

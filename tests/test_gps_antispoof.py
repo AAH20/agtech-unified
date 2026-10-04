@@ -1,9 +1,10 @@
 """Tests for GPSSpoofingDetector — signal analysis, anomaly detection."""
-import math
+
 import pytest
+
 from src.decision_support.gps_antispoof import (
-    GPSSpoofingDetector,
     GPSReading,
+    GPSSpoofingDetector,
     haversine_distance,
 )
 

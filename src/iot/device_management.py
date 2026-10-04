@@ -4,6 +4,7 @@ Provides DeviceRegistry for tracking agricultural IoT devices (soil sensors,
 weather stations, irrigation controllers) through their lifecycle: register,
 provision with config, monitor health metrics, and detect offline devices.
 """
+
 from __future__ import annotations
 
 import time

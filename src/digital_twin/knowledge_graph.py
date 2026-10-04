@@ -4,6 +4,7 @@ Neo4j-compatible interface backed by in-memory graph storage.
 Provides entity CRUD, relationship mapping, graph queries, and
 serialization for agricultural knowledge representation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Entity:
     """A knowledge graph entity (node)."""
+
     id: str
     label: str
     entity_type: str
@@ -25,6 +27,7 @@ class Entity:
 @dataclass
 class Relationship:
     """A knowledge graph relationship (edge)."""
+
     source: str
     target: str
     rel_type: str
@@ -62,8 +65,7 @@ class AgriKnowledgeGraph:
             return
         # Remove all relationships involving this entity
         self._relationships = [
-            r for r in self._relationships
-            if r.source != entity_id and r.target != entity_id
+            r for r in self._relationships if r.source != entity_id and r.target != entity_id
         ]
         # Clean adjacency lists
         self._adj.pop(entity_id, None)
@@ -202,19 +204,23 @@ class AgriKnowledgeGraph:
         """Deserialize a graph from a dictionary."""
         kg = cls()
         for e_data in data.get("entities", []):
-            kg.add_entity(Entity(
-                id=e_data["id"],
-                label=e_data["label"],
-                entity_type=e_data["entity_type"],
-                properties=dict(e_data.get("properties", {})),
-            ))
+            kg.add_entity(
+                Entity(
+                    id=e_data["id"],
+                    label=e_data["label"],
+                    entity_type=e_data["entity_type"],
+                    properties=dict(e_data.get("properties", {})),
+                )
+            )
         for r_data in data.get("relationships", []):
-            kg.add_relationship(Relationship(
-                source=r_data["source"],
-                target=r_data["target"],
-                rel_type=r_data["rel_type"],
-                properties=dict(r_data.get("properties", {})),
-            ))
+            kg.add_relationship(
+                Relationship(
+                    source=r_data["source"],
+                    target=r_data["target"],
+                    rel_type=r_data["rel_type"],
+                    properties=dict(r_data.get("properties", {})),
+                )
+            )
         return kg
 
     def clear(self) -> None:

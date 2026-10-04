@@ -1,8 +1,9 @@
 """Test Byzantine fault tolerance consensus for swarm decisions."""
+
 import pytest
+
 from src.multi_agent.consensus import (
     ByzantineConsensus,
-    ConsensusResult,
     ConsensusStatus,
 )
 

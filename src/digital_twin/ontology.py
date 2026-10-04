@@ -3,6 +3,7 @@
 Provides concept management, semantic search, hierarchy navigation,
 and RDF import/export using SKOS-compatible structures.
 """
+
 from __future__ import annotations
 
 import logging
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Concept:
     """An AGROVOC concept with labels and hierarchy."""
+
     id: str
     pref_label: str
     alt_labels: List[str] = field(default_factory=list)
@@ -26,6 +28,7 @@ class Concept:
 @dataclass
 class SearchResult:
     """A semantic search result with relevance score."""
+
     concept_id: str
     score: float
     matched_label: str
@@ -112,11 +115,13 @@ class AGROVOCOntology:
                     best_score = score
                     best_label = label
             if best_score > 0:
-                results.append(SearchResult(
-                    concept_id=cid,
-                    score=best_score,
-                    matched_label=best_label,
-                ))
+                results.append(
+                    SearchResult(
+                        concept_id=cid,
+                        score=best_score,
+                        matched_label=best_label,
+                    )
+                )
 
         results.sort(key=lambda r: r.score, reverse=True)
         return results[:top_k]
@@ -142,8 +147,8 @@ class AGROVOCOntology:
 
     def to_rdf(self):
         """Export ontology as an rdflib Graph with SKOS triples."""
-        from rdflib import Graph, Namespace, Literal, URIRef
-        from rdflib.namespace import RDF, RDFS
+        from rdflib import Graph, Literal, Namespace
+        from rdflib.namespace import RDF
 
         SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
         AGR = Namespace("http://aims.fao.org/aos/agrovoc/")
@@ -170,11 +175,11 @@ class AGROVOCOntology:
     @classmethod
     def from_rdf(cls, graph) -> "AGROVOCOntology":
         """Import ontology from an rdflib Graph."""
-        from rdflib import Namespace, Literal
+        from rdflib import Namespace
         from rdflib.namespace import RDF
 
         SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
-        AGR = Namespace("http://aims.fao.org/aos/agrovoc/")
+        Namespace("http://aims.fao.org/aos/agrovoc/")
 
         ont = cls()
         for uri in graph.subjects(RDF.type, SKOS.Concept):
@@ -188,13 +193,15 @@ class AGROVOCOntology:
             narrower = [str(n).split("/")[-1] for n in graph.objects(uri, SKOS.narrower)]
             related = [str(r).split("/")[-1] for r in graph.objects(uri, SKOS.related)]
 
-            ont.add_concept(Concept(
-                id=cid,
-                pref_label=pref_label,
-                alt_labels=alt_labels,
-                broader=broader,
-                narrower=narrower,
-                related=related,
-            ))
+            ont.add_concept(
+                Concept(
+                    id=cid,
+                    pref_label=pref_label,
+                    alt_labels=alt_labels,
+                    broader=broader,
+                    narrower=narrower,
+                    related=related,
+                )
+            )
 
         return ont

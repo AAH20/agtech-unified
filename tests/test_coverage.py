@@ -1,12 +1,15 @@
 """Test coverage path planning for agricultural drones."""
-import pytest
+
 import math
-from src.path_planning.coverage import CoveragePlanner, CoverageInstance
+
+import pytest
+
+from src.path_planning.coverage import CoverageInstance, CoveragePlanner
 
 
 def test_coverage_empty_field():
     """Empty field raises ValueError (need ≥3 points)."""
-    planner = CoveragePlanner()
+    CoveragePlanner()
     with pytest.raises(ValueError, match="Field boundary must have at least 3 points"):
         CoverageInstance(
             field_boundary=[],
@@ -17,7 +20,7 @@ def test_coverage_empty_field():
 
 def test_coverage_single_line_field():
     """Single line field raises ValueError (need ≥3 points)."""
-    planner = CoveragePlanner()
+    CoveragePlanner()
     with pytest.raises(ValueError, match="Field boundary must have at least 3 points"):
         CoverageInstance(
             field_boundary=[(0, 0), (10, 0)],
@@ -83,9 +86,9 @@ def test_coverage_result_contains_algorithm():
 
 def test_coverage_invalid_boundary():
     """Boundary with < 3 points raises ValueError."""
-    planner = CoveragePlanner()
+    CoveragePlanner()
     with pytest.raises(ValueError, match="Field boundary must have at least 3 points"):
-        instance = CoverageInstance(
+        CoverageInstance(
             field_boundary=[(0, 0), (1, 1)],
             swath_width=2.0,
             start_point=(0, 0),
@@ -94,9 +97,9 @@ def test_coverage_invalid_boundary():
 
 def test_coverage_zero_swath_width():
     """Zero swath width raises ValueError."""
-    planner = CoveragePlanner()
+    CoveragePlanner()
     with pytest.raises(ValueError, match="Swath width must be positive"):
-        instance = CoverageInstance(
+        CoverageInstance(
             field_boundary=[(0, 0), (10, 0), (10, 5), (0, 5)],
             swath_width=0,
             start_point=(0, 0),

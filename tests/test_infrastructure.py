@@ -1,10 +1,8 @@
 """Tests verifying all critical infrastructure files exist and are valid."""
-import json
-import os
-import tomllib
+
 from pathlib import Path
 
-import pytest
+import tomllib
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

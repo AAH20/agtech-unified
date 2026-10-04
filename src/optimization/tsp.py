@@ -1,10 +1,10 @@
 """TSP solver with Christofides algorithm and nearest-neighbor heuristic."""
+
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TSPInstance:
     """TSP problem instance with cities and distance matrix."""
+
     cities: List[str]
     distance_matrix: List[List[float]]
 
@@ -26,10 +27,14 @@ class TSPInstance:
         for i in range(n):
             for j in range(n):
                 for k in range(n):
-                    if self.distance_matrix[i][j] > self.distance_matrix[i][k] + self.distance_matrix[k][j] + 1e-9:
+                    if (
+                        self.distance_matrix[i][j]
+                        > self.distance_matrix[i][k] + self.distance_matrix[k][j] + 1e-9
+                    ):
                         logger.warning(
                             f"Non-Metric TSP: d({i},{j})={self.distance_matrix[i][j]:.2f} > "
-                            f"d({i},{k})+d({k},{j})={self.distance_matrix[i][k] + self.distance_matrix[k][j]:.2f}"
+                            f"d({i},{k})+d({k},{j})="
+                            f"{self.distance_matrix[i][k] + self.distance_matrix[k][j]:.2f}"
                         )
                         return
 
@@ -37,6 +42,7 @@ class TSPInstance:
 @dataclass
 class TSPResult:
     """TSP solution result."""
+
     tour: List[str]
     cost: float
     algorithm: str
@@ -128,7 +134,7 @@ class TSPSolver:
     def _prim_mst(self, dist: List[List[float]], n: int) -> List[Tuple[int, int]]:
         """Prim's algorithm for MST."""
         in_mst = [False] * n
-        key = [float('inf')] * n
+        key = [float("inf")] * n
         parent = [-1] * n
         key[0] = 0.0
 
@@ -146,7 +152,9 @@ class TSPSolver:
 
         return edges
 
-    def _min_weight_matching(self, dist: List[List[float]], odd_vertices: List[int]) -> List[Tuple[int, int]]:
+    def _min_weight_matching(
+        self, dist: List[List[float]], odd_vertices: List[int]
+    ) -> List[Tuple[int, int]]:
         """Greedy minimum-weight perfect matching (not optimal but fast)."""
         n = len(odd_vertices)
         if n == 0:

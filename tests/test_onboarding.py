@@ -1,7 +1,7 @@
 """Tests for onboarding and sizing module."""
 
-from src.onboarding.sizing import OrganizationProfiler
 from src.onboarding.modules import ModuleRegistry
+from src.onboarding.sizing import OrganizationProfiler
 
 
 def test_startup_tier():

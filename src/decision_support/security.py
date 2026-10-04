@@ -2,10 +2,11 @@
 
 Provides JWT validation, role-based access control, and rate limiting.
 """
+
 from __future__ import annotations
 
-import time
 import threading
+import time
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
@@ -108,7 +109,5 @@ class ZeroTrustAuth:
         """
         payload = self.validate_token(token)
         if required_role is not None and not self.authorize(payload, required_role):
-            raise AuthorizationError(
-                f"Role '{required_role}' required but not present"
-            )
+            raise AuthorizationError(f"Role '{required_role}' required but not present")
         return payload

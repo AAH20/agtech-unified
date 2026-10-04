@@ -1,10 +1,10 @@
 """VRP solver with Clarke-Wright savings algorithm."""
+
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VRPInstance:
     """VRP problem instance."""
+
     depot: Tuple[float, float]
     customers: List[Tuple[float, float]]
     demands: List[float]
@@ -34,6 +35,7 @@ class VRPInstance:
 @dataclass
 class VRPResult:
     """VRP solution result."""
+
     routes: List[List[int]]
     total_cost: float
     algorithm: str

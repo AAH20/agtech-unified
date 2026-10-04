@@ -1,4 +1,5 @@
 """Tests for FIWARE NGSI-LD context broker integration."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -128,8 +129,6 @@ class TestContextRegistration:
         result = broker.register_context(reg)
 
         args, kwargs = mock_session.post.call_args
-        assert args[0] == (
-            "http://broker.example:1026/ngsi-ld/v1/csourceRegistrations"
-        )
+        assert args[0] == ("http://broker.example:1026/ngsi-ld/v1/csourceRegistrations")
         assert kwargs["json"]["type"] == "ContextSourceRegistration"
         assert result["id"] == "urn:reg:1"

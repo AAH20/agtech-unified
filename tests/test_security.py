@@ -1,7 +1,8 @@
 """Tests for ZeroTrustAuth — JWT validation, RBAC, rate limiting."""
-import time
+
 import pytest
-from src.decision_support.security import ZeroTrustAuth, AuthenticationError, AuthorizationError
+
+from src.decision_support.security import AuthenticationError, AuthorizationError, ZeroTrustAuth
 
 
 class TestJWTValidation:

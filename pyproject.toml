@@ -71,3 +71,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+ignore = ["E741", "E402", "N803", "N806", "N815"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]

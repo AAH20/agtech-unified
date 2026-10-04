@@ -1,9 +1,10 @@
 """Decision support system for agricultural recommendations."""
+
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import List
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -11,16 +12,18 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FarmState:
     """Current state of the farm."""
-    soil_moisture: float      # 0.0 to 1.0
-    temperature: float       # Celsius
-    crop_height: float       # meters
-    nutrient_level: float    # 0.0 to 1.0
-    pest_pressure: float     # 0.0 to 1.0
+
+    soil_moisture: float  # 0.0 to 1.0
+    temperature: float  # Celsius
+    crop_height: float  # meters
+    nutrient_level: float  # 0.0 to 1.0
+    pest_pressure: float  # 0.0 to 1.0
 
 
 @dataclass
 class RecommendationResult:
     """Decision support result."""
+
     recommendations: List[str]
     priority_score: float
     algorithm: str

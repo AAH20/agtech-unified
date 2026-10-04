@@ -1,4 +1,5 @@
 """Audit logging for API access tracking and compliance."""
+
 from __future__ import annotations
 
 import hashlib
@@ -199,9 +200,7 @@ class AuditLogger:
             if event.previous_hash != previous_hash:
                 return False
             # Recompute hash over the event content as stored.
-            recomputed = hashlib.sha256(
-                event.to_json().encode("utf-8")
-            ).hexdigest()
+            recomputed = hashlib.sha256(event.to_json().encode("utf-8")).hexdigest()
             previous_hash = recomputed
         return True
 

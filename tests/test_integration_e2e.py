@@ -4,19 +4,15 @@ These tests validate the entire AgTech pipeline working together,
 from sensor data collection through simulation, decision-making,
 and action recommendation.
 """
-import pytest
-import math
-import time
 
-from src.iot.sensor_placement import SensorPlacement, PlacementInstance
-from src.digital_twin.simulator import DigitalTwin, SimulationState
 from src.decision_support.recommender import DecisionEngine, FarmState
-from src.multi_agent.task_allocation import TaskAllocator, AllocationInstance
-from src.optimization.tsp import TSPSolver, TSPInstance
-from src.optimization.vrp import VRPSolver, VRPInstance
-from src.path_planning.coverage import CoveragePlanner, CoverageInstance
-from src.genomics.protein import ProteinAnalyzer
+from src.digital_twin.simulator import DigitalTwin, SimulationState
 from src.genomics.crispr import CRISPRDesigner
+from src.genomics.protein import ProteinAnalyzer
+from src.iot.sensor_placement import PlacementInstance, SensorPlacement
+from src.multi_agent.task_allocation import AllocationInstance, TaskAllocator
+from src.optimization.vrp import VRPInstance, VRPSolver
+from src.path_planning.coverage import CoverageInstance, CoveragePlanner
 
 
 class TestFullPipeline:
@@ -139,15 +135,17 @@ class TestFullPipeline:
 
         # Step 2: Cost matrix (agent × task)
         cost_matrix = [
-            [10, 12, 15, 8, 9],   # drone_1
-            [11, 9, 14, 10, 8],   # drone_2
-            [20, 22, 18, 15, 16], # tractor_1
+            [10, 12, 15, 8, 9],  # drone_1
+            [11, 9, 14, 10, 8],  # drone_2
+            [20, 22, 18, 15, 16],  # tractor_1
         ]
 
         # Step 3: Multi-agent allocation
         allocator = TaskAllocator(algorithm="hungarian")
         alloc_instance = AllocationInstance(
-            agents=agents, tasks=tasks, cost_matrix=cost_matrix,
+            agents=agents,
+            tasks=tasks,
+            cost_matrix=cost_matrix,
         )
         alloc_result = allocator.allocate(alloc_instance)
 
@@ -258,17 +256,21 @@ class TestFullPipeline:
 
         # Step 2: Cost matrix based on distance from agent base to patrol zone
         cost_matrix = [
-            [5, 8, 15, 18],   # drone_north
-            [18, 15, 8, 5],   # drone_south
+            [5, 8, 15, 18],  # drone_north
+            [18, 15, 8, 5],  # drone_south
             [12, 6, 10, 14],  # drone_east
             [14, 10, 6, 12],  # drone_west
         ]
 
         # Step 3: Allocate tasks optimally
         allocator = TaskAllocator(algorithm="hungarian")
-        alloc_result = allocator.allocate(AllocationInstance(
-            agents=agents, tasks=tasks, cost_matrix=cost_matrix,
-        ))
+        alloc_result = allocator.allocate(
+            AllocationInstance(
+                agents=agents,
+                tasks=tasks,
+                cost_matrix=cost_matrix,
+            )
+        )
 
         # Step 4: Verify optimal allocation
         assert alloc_result.algorithm == "hungarian"
@@ -278,11 +280,13 @@ class TestFullPipeline:
 
         # Step 5: Plan coverage path for the patrol area
         planner = CoveragePlanner()
-        coverage = planner.plan(CoverageInstance(
-            field_boundary=[(0, 0), (30, 0), (30, 30), (0, 30)],
-            swath_width=5.0,
-            start_point=(0, 0),
-        ))
+        coverage = planner.plan(
+            CoverageInstance(
+                field_boundary=[(0, 0), (30, 0), (30, 30), (0, 30)],
+                swath_width=5.0,
+                start_point=(0, 0),
+            )
+        )
 
         # Step 6: Verify coverage
         assert coverage.coverage_ratio > 0.8

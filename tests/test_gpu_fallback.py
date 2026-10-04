@@ -1,5 +1,7 @@
 """Tests for GPU fallback mechanism."""
+
 import pytest
+
 from src.optimization.gpu_fallback import GPUFallback
 
 

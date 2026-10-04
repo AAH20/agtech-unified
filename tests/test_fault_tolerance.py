@@ -1,14 +1,14 @@
 """Test multi-agent fault tolerance: task reassignment and leader election."""
+
 import pytest
+
 from src.multi_agent.fault_tolerance import (
-    TaskReassignment,
     LeaderElection,
-    AgentInfo,
-    TaskInfo,
+    TaskReassignment,
 )
 
-
 # ── TaskReassignment tests ───────────────────────────────────────────
+
 
 def test_reassignment_creation():
     """TaskReassignment can be instantiated."""
@@ -63,6 +63,7 @@ def test_reassign_unknown_agent_raises():
 
 
 # ── LeaderElection tests ─────────────────────────────────────────────
+
 
 def test_leader_election_creation():
     """LeaderElection can be instantiated."""

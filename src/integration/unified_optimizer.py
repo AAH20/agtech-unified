@@ -3,16 +3,17 @@
 Addresses GAP-017: consumers no longer need to know which specific solver
 to import. One OptimizationProblem in, one OptimizationResult out.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, List, Optional, Tuple
 
-from src.optimization.tsp import TSPSolver, TSPInstance
-from src.optimization.vrp import VRPSolver, VRPInstance
 from src.optimization.gpu_tsp import GPUTSPSolver
 from src.optimization.gpu_vrp import GPUVRPSolver
+from src.optimization.tsp import TSPInstance, TSPSolver
+from src.optimization.vrp import VRPInstance, VRPSolver
 
 
 class SolverType(str, Enum):
@@ -32,6 +33,7 @@ class OptimizationProblem:
         TSP/GPU_TSP:    cities, distance_matrix
         VRP/GPU_VRP:    depot, customers, demands, vehicle_capacity, distance_matrix
     """
+
     solver_type: SolverType
     cities: Optional[List[str]] = None
     distance_matrix: Optional[List[List[float]]] = None
@@ -53,6 +55,7 @@ class OptimizationResult:
         algorithm: Algorithm name reported by the underlying solver.
         solver_type: Which solver produced this result.
     """
+
     solution: List[Any]
     cost: float
     algorithm: str

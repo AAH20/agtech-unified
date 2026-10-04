@@ -8,8 +8,13 @@ class ModuleRegistry:
         "startup": ["basics", "sensors", "alerts"],
         "smb": ["basics", "sensors", "alerts", "analytics", "reporting"],
         "enterprise": [
-            "basics", "sensors", "alerts", "analytics",
-            "reporting", "integrations", "sla",
+            "basics",
+            "sensors",
+            "alerts",
+            "analytics",
+            "reporting",
+            "integrations",
+            "sla",
         ],
     }
 

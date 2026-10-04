@@ -1,13 +1,11 @@
 """Thread-safety tests for ZeroTrustAuth, MQTTClient, AlertManager."""
+
 import asyncio
 import threading
-import time
 
-import pytest
-
-from src.decision_support.security import ZeroTrustAuth, AuthenticationError
-from src.iot.data_pipeline import MQTTClient
 from src.decision_support.alerts import AlertManager, AlertSeverity, Threshold
+from src.decision_support.security import ZeroTrustAuth
+from src.iot.data_pipeline import MQTTClient
 
 
 class TestZeroTrustAuthConcurrency:
@@ -127,7 +125,10 @@ class TestMQTTClientConcurrency:
         def subscribe_unsubscribe():
             try:
                 for i in range(20):
-                    cb = lambda t, p: None
+
+                    def cb(t, p):
+                        return None
+
                     client.subscribe(f"topic/{i % 3}", cb)
                     client.unsubscribe(f"topic/{i % 3}", cb)
             except Exception as e:
@@ -237,9 +238,7 @@ class TestAlertManagerConcurrency:
         def add_thresholds():
             try:
                 for i in range(10):
-                    manager.add_threshold(
-                        Threshold(metric=f"metric_{i}", min_value=0.5)
-                    )
+                    manager.add_threshold(Threshold(metric=f"metric_{i}", min_value=0.5))
             except Exception as e:
                 errors.append(e)
 

@@ -1,6 +1,8 @@
 """Test IoT sensor placement optimization (Set Cover reduction)."""
+
 import pytest
-from src.iot.sensor_placement import SensorPlacement, PlacementInstance
+
+from src.iot.sensor_placement import PlacementInstance, SensorPlacement
 
 
 def test_placement_empty():
@@ -83,7 +85,7 @@ def test_placement_result_contains_algorithm():
 
 def test_placement_zero_radius():
     """Zero coverage radius raises ValueError."""
-    placement = SensorPlacement()
+    SensorPlacement()
     with pytest.raises(ValueError, match="Coverage radius must be positive"):
         PlacementInstance(
             sensor_positions=[(0, 0)],

@@ -1,5 +1,5 @@
 """Tests for 2-opt local search."""
-import pytest
+
 from src.optimization.local_search import TwoOpt
 
 

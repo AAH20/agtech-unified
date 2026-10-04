@@ -1,11 +1,12 @@
 """Test multi-agent swarm coordination for agricultural robots."""
+
 import time
+
 import pytest
+
 from src.multi_agent.swarm import (
-    SwarmCoordinator,
-    Agent,
-    Task,
     AgentStatus,
+    SwarmCoordinator,
     TaskStatus,
 )
 

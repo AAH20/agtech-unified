@@ -1,5 +1,4 @@
 """Tests for ML model interfaces and yield prediction."""
-import math
 
 import pytest
 

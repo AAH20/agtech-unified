@@ -1,5 +1,7 @@
 """Test AGROVOC ontology integration for agricultural knowledge."""
+
 import pytest
+
 from src.digital_twin.ontology import AGROVOCOntology, Concept
 
 
@@ -96,7 +98,8 @@ def test_rdf_export_contains_concepts():
     g = ont.to_rdf()
     assert len(g) > 0
     # Check that prefLabel triple exists
-    from rdflib import Namespace, Literal
+    from rdflib import Namespace
+
     SKOS = Namespace("http://www.w3.org/2004/02/skos/core#")
     AGR = Namespace("http://aims.fao.org/aos/agrovoc/")
     wheat = AGR["c_001"]

@@ -1,12 +1,12 @@
 """Test agricultural IoT streaming pipeline integration."""
-import pytest
-import time
+
 import json
+import time
+
 from src.iot.data_pipeline import (
-    MQTTClient,
     KafkaStream,
+    MQTTClient,
     TimescaleDBStorage,
-    SensorReading,
 )
 
 
@@ -77,11 +77,14 @@ class TestKafkaStreaming:
         stream.start()
 
         for i in range(10):
-            stream.produce("sensor-events", {
-                "sensor_id": f"sensor-{i % 3}",
-                "value": float(i),
-                "timestamp": time.time(),
-            })
+            stream.produce(
+                "sensor-events",
+                {
+                    "sensor_id": f"sensor-{i % 3}",
+                    "value": float(i),
+                    "timestamp": time.time(),
+                },
+            )
 
         assert stream.get_topic_size("sensor-events") == 10
 
@@ -158,12 +161,15 @@ class TestEndToEndPipeline:
 
         # Produce sensor readings to Kafka
         for i in range(5):
-            kafka.produce("sensor-readings", {
-                "sensor_id": "temp-1",
-                "value": 20.0 + i,
-                "unit": "celsius",
-                "timestamp": time.time() + i,
-            })
+            kafka.produce(
+                "sensor-readings",
+                {
+                    "sensor_id": "temp-1",
+                    "value": 20.0 + i,
+                    "unit": "celsius",
+                    "timestamp": time.time() + i,
+                },
+            )
 
         # Consume and store
         messages = kafka.consume("sensor-readings", timeout=0.5, max_messages=5)
@@ -192,12 +198,15 @@ class TestEndToEndPipeline:
 
         # Stage 2: Publish sensor data via MQTT
         for i in range(3):
-            mqtt.publish("farm/sensors/soil", {
-                "sensor_id": "soil-1",
-                "value": 30.0 + i,
-                "unit": "percent",
-                "timestamp": time.time() + i,
-            })
+            mqtt.publish(
+                "farm/sensors/soil",
+                {
+                    "sensor_id": "soil-1",
+                    "value": 30.0 + i,
+                    "unit": "percent",
+                    "timestamp": time.time() + i,
+                },
+            )
 
         # Stage 3: Consume from Kafka and store in TimescaleDB
         messages = kafka.consume("pipeline", timeout=0.5, max_messages=3)
@@ -227,12 +236,15 @@ class TestEndToEndPipeline:
 
         values = [10.0, 20.0, 30.0, 40.0, 50.0]
         for val in values:
-            mqtt.publish("sensors/temp", {
-                "sensor_id": "temp-agg",
-                "value": val,
-                "unit": "c",
-                "timestamp": time.time(),
-            })
+            mqtt.publish(
+                "sensors/temp",
+                {
+                    "sensor_id": "temp-agg",
+                    "value": val,
+                    "unit": "c",
+                    "timestamp": time.time(),
+                },
+            )
 
         messages = kafka.consume("agg-pipeline", timeout=0.5, max_messages=5)
         for msg in messages:

@@ -4,6 +4,7 @@ Builds NGSI-LD compliant entity payloads for the core agricultural
 model types defined by the FIWARE Smart Data Models programme
 (https://smartdatamodels.org): Crop, Soil, Weather, and Device.
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple

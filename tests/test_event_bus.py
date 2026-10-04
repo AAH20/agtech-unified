@@ -1,5 +1,4 @@
 """Test cross-module event bus: pub/sub, domain events, handlers."""
-import pytest
 
 from src.integration.event_bus import DomainEvent, EventBus, EventType
 

@@ -1,4 +1,5 @@
 """Test IoT data validation: schema validation, range checks, anomaly detection."""
+
 import math
 
 from src.iot.data_validation import (
@@ -6,9 +7,7 @@ from src.iot.data_validation import (
     RangeChecker,
     Schema,
     SchemaValidator,
-    ValidationResult,
 )
-
 
 SOIL_SCHEMA = Schema(
     fields={

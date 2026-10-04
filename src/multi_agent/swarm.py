@@ -1,17 +1,19 @@
 """Multi-agent swarm coordination for agricultural robots."""
+
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
-import logging
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class AgentStatus(Enum):
     """Status of a swarm agent."""
+
     ACTIVE = "active"
     FAILED = "failed"
     BUSY = "busy"
@@ -19,6 +21,7 @@ class AgentStatus(Enum):
 
 class TaskStatus(Enum):
     """Status of a swarm task."""
+
     PENDING = "pending"
     ASSIGNED = "assigned"
     COMPLETED = "completed"
@@ -28,6 +31,7 @@ class TaskStatus(Enum):
 @dataclass
 class Agent:
     """A swarm agent (e.g., agricultural robot)."""
+
     agent_id: str
     capabilities: List[str] = field(default_factory=list)
     status: AgentStatus = AgentStatus.ACTIVE
@@ -38,6 +42,7 @@ class Agent:
 @dataclass
 class Task:
     """A task to be executed by the swarm."""
+
     task_id: str
     requirements: List[str] = field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
@@ -184,8 +189,7 @@ class SwarmCoordinator:
         """
         assignments: Dict[str, str] = {}
         active_agents = {
-            aid: a for aid, a in self._agents.items()
-            if a.status == AgentStatus.ACTIVE
+            aid: a for aid, a in self._agents.items() if a.status == AgentStatus.ACTIVE
         }
 
         for task_id, task in self._tasks.items():

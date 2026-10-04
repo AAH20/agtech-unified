@@ -1,7 +1,9 @@
 """GPU fallback to CPU on CUDA failure."""
+
 from __future__ import annotations
-from typing import Any, Callable, Optional
+
 import logging
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 

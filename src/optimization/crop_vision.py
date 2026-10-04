@@ -9,6 +9,7 @@ Orchestrates three ONNX models through :class:`EdgeAIInference`:
 Each stage returns a typed result dataclass; :meth:`CropVisionPipeline.analyze_field`
 runs all three and produces a combined field-health report.
 """
+
 from __future__ import annotations
 
 import logging
@@ -125,8 +126,7 @@ class CropVisionPipeline:
             logits = self._primary_output(res)  # (B, C) — one row per image
             if logits.ndim != 2 or logits.shape[1] != len(DISEASE_CLASSES):
                 raise ValueError(
-                    f"Disease model must output (B, {len(DISEASE_CLASSES)}), "
-                    f"got {logits.shape}"
+                    f"Disease model must output (B, {len(DISEASE_CLASSES)}), " f"got {logits.shape}"
                 )
             for row in logits:
                 probs = _softmax(row)
@@ -156,8 +156,7 @@ class CropVisionPipeline:
             logits = self._primary_output(res)  # (B, C) — one row per image
             if logits.ndim != 2 or logits.shape[1] != len(WEED_CLASSES):
                 raise ValueError(
-                    f"Weed model must output (B, {len(WEED_CLASSES)}), "
-                    f"got {logits.shape}"
+                    f"Weed model must output (B, {len(WEED_CLASSES)}), " f"got {logits.shape}"
                 )
             for row in logits:
                 probs = _softmax(row)
@@ -265,10 +264,7 @@ class CropVisionPipeline:
                 f"(confidence {disease.confidence:.0%})"
             )
         if weed.label not in ("none", "unavailable") and weed.coverage_ratio > 0.2:
-            recs.append(
-                f"Spot-spray {weed.label} weeds "
-                f"(coverage {weed.coverage_ratio:.0%})"
-            )
+            recs.append(f"Spot-spray {weed.label} weeds " f"(coverage {weed.coverage_ratio:.0%})")
         if yield_t_per_ha < 3.0:
             recs.append("Low yield forecast — review irrigation and fertilization")
         return recs

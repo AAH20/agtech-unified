@@ -1,13 +1,15 @@
 """Test multi-agent collision avoidance for agricultural swarm robots."""
+
 import pytest
+
 from src.multi_agent.collision_avoidance import (
     CollisionAvoidance,
     Position,
     Velocity,
 )
 
-
 # ── Position / Velocity helpers ──────────────────────────────────────
+
 
 def test_position_distance():
     """Distance between two positions is computed correctly."""
@@ -23,6 +25,7 @@ def test_position_distance_zero():
 
 
 # ── CollisionAvoidance tests ─────────────────────────────────────────
+
 
 def test_collision_avoidance_creation():
     """CollisionAvoidance can be instantiated with safety radius."""

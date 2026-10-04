@@ -1,15 +1,14 @@
 """Test agricultural IoT data pipeline: MQTT, Kafka, TimescaleDB."""
-import pytest
-import time
-import json
-from src.iot.data_pipeline import (
-    MQTTClient,
-    KafkaStream,
-    TimescaleDBStorage,
-    SensorReading,
-    TimeSeriesQuery,
-)
 
+import json
+import time
+
+from src.iot.data_pipeline import (
+    KafkaStream,
+    MQTTClient,
+    SensorReading,
+    TimescaleDBStorage,
+)
 
 # ===========================================================================
 # MQTT Client Tests
@@ -60,7 +59,10 @@ class TestMQTTClient:
         client.connect()
 
         received = []
-        cb = lambda t, p: received.append(p)
+
+        def cb(t, p):
+            return received.append(p)
+
         client.subscribe("sensors/soil", cb)
         client.publish("sensors/soil", "data1")
         assert len(received) == 1
@@ -184,19 +186,17 @@ class TestTimescaleDBStorage:
         storage.connect()
 
         now = time.time()
-        storage.insert("sensor_readings", {
-            "time": now - 3600, "sensor_id": "s1", "value": 10.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": now - 1800, "sensor_id": "s1", "value": 20.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": now, "sensor_id": "s1", "value": 30.0, "unit": "c"
-        })
-
-        results = storage.query(
-            "sensor_readings", sensor_id="s1", start_time=now - 2000
+        storage.insert(
+            "sensor_readings", {"time": now - 3600, "sensor_id": "s1", "value": 10.0, "unit": "c"}
         )
+        storage.insert(
+            "sensor_readings", {"time": now - 1800, "sensor_id": "s1", "value": 20.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": now, "sensor_id": "s1", "value": 30.0, "unit": "c"}
+        )
+
+        results = storage.query("sensor_readings", sensor_id="s1", start_time=now - 2000)
         assert len(results) == 2
         assert results[0]["value"] == 20.0
         assert results[1]["value"] == 30.0
@@ -207,9 +207,10 @@ class TestTimescaleDBStorage:
         storage.connect()
 
         for val in [10.0, 20.0, 30.0]:
-            storage.insert("sensor_readings", {
-                "time": time.time(), "sensor_id": "s1", "value": val, "unit": "c"
-            })
+            storage.insert(
+                "sensor_readings",
+                {"time": time.time(), "sensor_id": "s1", "value": val, "unit": "c"},
+            )
 
         avg = storage.aggregate("sensor_readings", "s1", "avg")
         assert avg == 20.0
@@ -220,9 +221,10 @@ class TestTimescaleDBStorage:
         storage.connect()
 
         for val in [15.0, 5.0, 25.0]:
-            storage.insert("sensor_readings", {
-                "time": time.time(), "sensor_id": "s1", "value": val, "unit": "c"
-            })
+            storage.insert(
+                "sensor_readings",
+                {"time": time.time(), "sensor_id": "s1", "value": val, "unit": "c"},
+            )
 
         assert storage.aggregate("sensor_readings", "s1", "min") == 5.0
         assert storage.aggregate("sensor_readings", "s1", "max") == 25.0
@@ -255,12 +257,12 @@ class TestTimescaleDBStorage:
         storage.connect()
 
         now = time.time()
-        storage.insert("sensor_readings", {
-            "time": now - 100, "sensor_id": "s1", "value": 10.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": now, "sensor_id": "s1", "value": 20.0, "unit": "c"
-        })
+        storage.insert(
+            "sensor_readings", {"time": now - 100, "sensor_id": "s1", "value": 10.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": now, "sensor_id": "s1", "value": 20.0, "unit": "c"}
+        )
 
         latest = storage.query_latest("sensor_readings", "s1")
         assert latest is not None
@@ -272,15 +274,15 @@ class TestTimescaleDBStorage:
         storage.connect()
 
         now = time.time()
-        storage.insert("sensor_readings", {
-            "time": now - 7200, "sensor_id": "s1", "value": 1.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": now - 3600, "sensor_id": "s1", "value": 2.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": now, "sensor_id": "s1", "value": 3.0, "unit": "c"
-        })
+        storage.insert(
+            "sensor_readings", {"time": now - 7200, "sensor_id": "s1", "value": 1.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": now - 3600, "sensor_id": "s1", "value": 2.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": now, "sensor_id": "s1", "value": 3.0, "unit": "c"}
+        )
 
         deleted = storage.delete_old_data("sensor_readings", now - 5000)
         assert deleted == 1
@@ -291,15 +293,15 @@ class TestTimescaleDBStorage:
         storage = TimescaleDBStorage()
         storage.connect()
 
-        storage.insert("sensor_readings", {
-            "time": time.time(), "sensor_id": "s1", "value": 1.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": time.time(), "sensor_id": "s2", "value": 2.0, "unit": "c"
-        })
-        storage.insert("sensor_readings", {
-            "time": time.time(), "sensor_id": "s1", "value": 3.0, "unit": "c"
-        })
+        storage.insert(
+            "sensor_readings", {"time": time.time(), "sensor_id": "s1", "value": 1.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": time.time(), "sensor_id": "s2", "value": 2.0, "unit": "c"}
+        )
+        storage.insert(
+            "sensor_readings", {"time": time.time(), "sensor_id": "s1", "value": 3.0, "unit": "c"}
+        )
 
         ids = storage.get_sensor_ids("sensor_readings")
         assert set(ids) == {"s1", "s2"}

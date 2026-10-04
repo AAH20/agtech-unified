@@ -1,10 +1,11 @@
 """IoT sensor placement optimization (greedy Set Cover)."""
+
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Set
-import logging
+from typing import List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PlacementInstance:
     """Sensor placement problem instance."""
+
     sensor_positions: List[Tuple[float, float]]
     target_positions: List[Tuple[float, float]]
     coverage_radius: float
@@ -24,6 +26,7 @@ class PlacementInstance:
 @dataclass
 class PlacementResult:
     """Sensor placement result."""
+
     selected_sensors: List[int]
     coverage_ratio: float
     algorithm: str

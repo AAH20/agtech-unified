@@ -1,10 +1,11 @@
 """Coverage path planning for agricultural drones (boustrophedon pattern)."""
+
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
-import logging
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CoverageInstance:
     """Coverage planning problem instance."""
+
     field_boundary: List[Tuple[float, float]]
     swath_width: float
     start_point: Tuple[float, float]
@@ -26,6 +28,7 @@ class CoverageInstance:
 @dataclass
 class CoverageResult:
     """Coverage planning result."""
+
     path: List[Tuple[float, float]]
     total_distance: float
     coverage_ratio: float
@@ -43,7 +46,9 @@ class CoveragePlanner:
         """Plan coverage path for a field boundary."""
         if not instance.field_boundary:
             return CoverageResult(
-                path=[], total_distance=0.0, coverage_ratio=0.0,
+                path=[],
+                total_distance=0.0,
+                coverage_ratio=0.0,
                 algorithm=self.algorithm,
             )
 
@@ -56,7 +61,6 @@ class CoveragePlanner:
         """Boustrophedon (lawnmower) coverage pattern."""
         boundary = instance.field_boundary
         swath = instance.swath_width
-        start = instance.start_point
 
         # Find bounding box
         xs = [p[0] for p in boundary]

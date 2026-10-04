@@ -1,5 +1,7 @@
 """2-opt local search improvement for TSP tours."""
+
 from __future__ import annotations
+
 from typing import List
 
 
@@ -31,7 +33,7 @@ class TwoOpt:
                     old_cost = distance_matrix[a][b] + distance_matrix[c][d]
                     new_cost = distance_matrix[a][c] + distance_matrix[b][d]
                     if new_cost < old_cost - 1e-9:
-                        current[i + 1:j + 1] = reversed(current[i + 1:j + 1])
+                        current[i + 1 : j + 1] = reversed(current[i + 1 : j + 1])
                         improved = True
 
         return current

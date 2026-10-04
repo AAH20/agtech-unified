@@ -1,8 +1,9 @@
 """Tests for the AgTech Unified API Gateway (REST endpoints)."""
+
 import pytest
 from fastapi.testclient import TestClient
 
-from src.decision_support.api_gateway import APIGateway, TenantRegistry, create_app
+from src.decision_support.api_gateway import APIGateway, TenantRegistry
 
 
 @pytest.fixture()
@@ -154,8 +155,7 @@ def test_add_and_list_readings(client, tenant_id, farm_id):
     """Adding and listing sensor readings for a farm."""
     resp = client.post(
         f"/api/v1/tenants/{tenant_id}/farms/{farm_id}/readings",
-        json={"sensor_id": "sensor-001", "metric": "soil_moisture",
-              "value": 0.35, "unit": "ratio"},
+        json={"sensor_id": "sensor-001", "metric": "soil_moisture", "value": 0.35, "unit": "ratio"},
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -165,8 +165,7 @@ def test_add_and_list_readings(client, tenant_id, farm_id):
     assert data["unit"] == "ratio"
     assert "timestamp" in data
 
-    resp2 = client.get(
-        f"/api/v1/tenants/{tenant_id}/farms/{farm_id}/readings")
+    resp2 = client.get(f"/api/v1/tenants/{tenant_id}/farms/{farm_id}/readings")
     assert resp2.status_code == 200
     readings = resp2.json()
     assert len(readings) == 1
@@ -192,8 +191,7 @@ def test_send_and_list_commands(client, tenant_id, farm_id):
     assert "id" in data
     assert "issued_at" in data
 
-    resp2 = client.get(
-        f"/api/v1/tenants/{tenant_id}/farms/{farm_id}/commands")
+    resp2 = client.get(f"/api/v1/tenants/{tenant_id}/farms/{farm_id}/commands")
     assert resp2.status_code == 200
     commands = resp2.json()
     assert len(commands) == 1

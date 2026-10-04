@@ -1,4 +1,5 @@
 """Alert management system for farm monitoring."""
+
 from __future__ import annotations
 
 import inspect
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class AlertSeverity(Enum):
     """Alert severity levels."""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -23,6 +25,7 @@ class AlertSeverity(Enum):
 @dataclass
 class Alert:
     """A single alert."""
+
     id: str
     timestamp: float
     severity: AlertSeverity
@@ -51,6 +54,7 @@ class Alert:
 @dataclass
 class Threshold:
     """Threshold configuration for a metric."""
+
     metric: str
     min_value: Optional[float] = None
     max_value: Optional[float] = None
@@ -60,6 +64,7 @@ class Threshold:
 @dataclass
 class NotificationChannel:
     """Notification channel configuration."""
+
     name: str
     channel_type: str
     target: str
@@ -158,9 +163,7 @@ class AlertManager:
         alerts.extend(self.check_value("pest_pressure", state.pest_pressure))
         return alerts
 
-    def get_active_alerts(
-        self, severity: Optional[AlertSeverity] = None
-    ) -> List[Alert]:
+    def get_active_alerts(self, severity: Optional[AlertSeverity] = None) -> List[Alert]:
         """Get all active (non-resolved) alerts."""
         alerts = [a for a in self._alerts if not a.resolved]
         if severity is not None:
@@ -205,12 +208,8 @@ class AlertManager:
     async def notify(self, alert: Alert) -> None:
         """Send notifications for an alert through all matching channels."""
         for channel in self._channels:
-            if self._severity_rank(alert.severity) >= self._severity_rank(
-                channel.min_severity
-            ):
-                logger.info(
-                    f"Notification via {channel.name}: {alert.message}"
-                )
+            if self._severity_rank(alert.severity) >= self._severity_rank(channel.min_severity):
+                logger.info(f"Notification via {channel.name}: {alert.message}")
 
         for handler in self._handlers:
             try:

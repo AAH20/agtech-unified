@@ -1,9 +1,9 @@
 """Test water balance and irrigation model for agricultural digital twin."""
+
 import pytest
+
 from src.digital_twin.water_balance import (
-    IrrigationSchedule,
     WaterBalanceModel,
-    WaterBalanceResult,
     WaterBalanceState,
 )
 

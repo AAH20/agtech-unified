@@ -1,11 +1,11 @@
 """ML model interfaces and yield prediction models for decision support."""
+
 from __future__ import annotations
 
 import logging
-import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -127,13 +127,11 @@ class LinearRegressionModel(SimpleMLModel):
         if any(len(row) != n_features for row in X):
             raise ValueError("All feature vectors must have the same length")
         if len(X) < n_features + 1:
-            raise ValueError(
-                f"Need at least {n_features + 1} samples for {n_features} features"
-            )
+            raise ValueError(f"Need at least {n_features + 1} samples for {n_features} features")
 
-        self._feature_names = list(feature_names) if feature_names else [
-            f"x{i}" for i in range(n_features)
-        ]
+        self._feature_names = (
+            list(feature_names) if feature_names else [f"x{i}" for i in range(n_features)]
+        )
         if len(self._feature_names) != n_features:
             raise ValueError("feature_names length must match feature count")
 
@@ -156,28 +154,26 @@ class LinearRegressionModel(SimpleMLModel):
         self._is_trained = True
         logger.info(
             "Trained %s v%s: %d features, %d samples, R^2=%.4f",
-            self.name, self.version, n_features, len(X), self._r_squared,
+            self.name,
+            self.version,
+            n_features,
+            len(X),
+            self._r_squared,
         )
 
-    def _compute_r_squared(
-        self, X: Sequence[Sequence[float]], y: Sequence[float]
-    ) -> float:
+    def _compute_r_squared(self, X: Sequence[Sequence[float]], y: Sequence[float]) -> float:
         """Compute R^2 of the fitted model on the training data."""
         n = len(y)
         mean_y = sum(y) / n
         ss_tot = sum((yi - mean_y) ** 2 for yi in y)
         if ss_tot < 1e-12:
             return 1.0
-        ss_res = sum(
-            (yi - self._raw_predict(row)) ** 2 for row, yi in zip(X, y)
-        )
+        ss_res = sum((yi - self._raw_predict(row)) ** 2 for row, yi in zip(X, y))
         return max(0.0, 1.0 - ss_res / ss_tot)
 
     def _raw_predict(self, features: Sequence[float]) -> float:
         """Compute the linear combination without validation."""
-        return self.intercept + sum(
-            w * x for w, x in zip(self.weights, features)
-        )
+        return self.intercept + sum(w * x for w, x in zip(self.weights, features))
 
     def predict(self, features: Sequence[float]) -> PredictionResult:
         """Predict the target value for a feature vector."""
@@ -207,9 +203,7 @@ class LinearRegressionModel(SimpleMLModel):
         if total < 1e-12:
             share = 1.0 / len(abs_weights)
             return {name: share for name in self._feature_names}
-        return {
-            name: w / total for name, w in zip(self._feature_names, abs_weights)
-        }
+        return {name: w / total for name, w in zip(self._feature_names, abs_weights)}
 
 
 class YieldPredictor:

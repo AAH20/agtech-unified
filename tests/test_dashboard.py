@@ -1,8 +1,7 @@
 """Test real-time farm monitoring dashboard."""
-import asyncio
-import json
 
-import pytest
+import asyncio
+
 from fastapi.testclient import TestClient
 
 from src.decision_support.dashboard import (
@@ -10,7 +9,6 @@ from src.decision_support.dashboard import (
     FarmDashboard,
     SensorReading,
 )
-from src.decision_support.recommender import FarmState
 
 
 def test_dashboard_initial_state():

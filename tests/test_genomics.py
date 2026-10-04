@@ -1,10 +1,12 @@
 """Test genomics module: CRISPR guide RNA design and protein sequence analysis."""
+
 import pytest
-from src.genomics.crispr import CRISPRDesigner, GuideRNA
+
+from src.genomics.crispr import CRISPRDesigner
 from src.genomics.protein import ProteinAnalyzer
 
-
 # === CRISPR Guide RNA Tests ===
+
 
 def test_grna_empty_sequence():
     """Empty DNA sequence raises ValueError."""
@@ -71,6 +73,7 @@ def test_grna_efficiency_score():
 
 
 # === Protein Analysis Tests ===
+
 
 def test_protein_empty_sequence():
     """Empty protein sequence raises ValueError."""

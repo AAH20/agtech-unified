@@ -1,10 +1,11 @@
 """Digital twin simulation engine for agriculture."""
+
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
-from typing import List, Optional
-import logging
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -12,15 +13,17 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SimulationState:
     """Current state of the agricultural system."""
+
     soil_moisture: float  # 0.0 to 1.0
-    temperature: float   # Celsius
-    crop_height: float   # meters
+    temperature: float  # Celsius
+    crop_height: float  # meters
     nutrient_level: float  # 0.0 to 1.0
 
 
 @dataclass
 class SimulationResult:
     """Result of a simulation run."""
+
     days_simulated: int
     final_state: SimulationState
     history: List[SimulationState]
@@ -52,12 +55,14 @@ class DigitalTwin:
         history = []
         for _ in range(days):
             state = self._step(state)
-            history.append(SimulationState(
-                soil_moisture=state.soil_moisture,
-                temperature=state.temperature,
-                crop_height=state.crop_height,
-                nutrient_level=state.nutrient_level,
-            ))
+            history.append(
+                SimulationState(
+                    soil_moisture=state.soil_moisture,
+                    temperature=state.temperature,
+                    crop_height=state.crop_height,
+                    nutrient_level=state.nutrient_level,
+                )
+            )
 
         total_growth = state.crop_height - initial_state.crop_height
 
@@ -78,7 +83,12 @@ class DigitalTwin:
 
         stress = temp_factor * water_factor * nutrient_factor
 
-        growth = self.growth_rate * state.crop_height * (1 - state.crop_height / self.max_crop_height) * stress
+        growth = (
+            self.growth_rate
+            * state.crop_height
+            * (1 - state.crop_height / self.max_crop_height)
+            * stress
+        )
         new_height = min(self.max_crop_height, state.crop_height + growth)
 
         # Soil moisture depletes

@@ -4,6 +4,7 @@ Provides PageRank for importance ranking and community detection
 for identifying clusters in agricultural knowledge graphs,
 supply chains, and sensor networks.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Graph:
     """Directed weighted graph for agricultural networks."""
+
     nodes: Set[str] = field(default_factory=set)
     edges: Dict[str, Dict[str, float]] = field(default_factory=lambda: defaultdict(dict))
     _reverse_edges: Dict[str, Dict[str, float]] = field(default_factory=lambda: defaultdict(dict))
@@ -80,6 +82,7 @@ class Graph:
 @dataclass
 class PageRankResult:
     """Result of PageRank computation."""
+
     scores: Dict[str, float]
     iterations: int
     converged: bool
@@ -89,6 +92,7 @@ class PageRankResult:
 @dataclass
 class CommunityDetectionResult:
     """Result of community detection."""
+
     communities: Dict[str, int]  # node_id -> community_id
     num_communities: int
     modularity: float
@@ -120,11 +124,13 @@ class GraphAlgorithms:
             PageRankResult with scores and convergence info.
         """
         if not graph.nodes:
-            return PageRankResult(scores={}, iterations=0, converged=True, damping_factor=damping_factor)
+            return PageRankResult(
+                scores={}, iterations=0, converged=True, damping_factor=damping_factor
+            )
 
         nodes = list(graph.nodes)
         n = len(nodes)
-        node_idx = {node: i for i, node in enumerate(nodes)}
+        {node: i for i, node in enumerate(nodes)}
 
         # Initialize scores uniformly
         scores = {node: 1.0 / n for node in nodes}
@@ -215,7 +221,9 @@ class GraphAlgorithms:
         node_weights: Dict[str, float] = {}
         total_weight = 0.0
         for node in nodes:
-            w = sum(graph.edges.get(node, {}).values()) + sum(graph._reverse_edges.get(node, {}).values())
+            w = sum(graph.edges.get(node, {}).values()) + sum(
+                graph._reverse_edges.get(node, {}).values()
+            )
             node_weights[node] = w
             total_weight += w
 
@@ -305,8 +313,12 @@ class GraphAlgorithms:
         for i in nodes:
             for j in nodes:
                 a_ij = graph.edge_weight(i, j)
-                k_i = sum(graph.edges.get(i, {}).values()) + sum(graph._reverse_edges.get(i, {}).values())
-                k_j = sum(graph.edges.get(j, {}).values()) + sum(graph._reverse_edges.get(j, {}).values())
+                k_i = sum(graph.edges.get(i, {}).values()) + sum(
+                    graph._reverse_edges.get(i, {}).values()
+                )
+                k_j = sum(graph.edges.get(j, {}).values()) + sum(
+                    graph._reverse_edges.get(j, {}).values()
+                )
                 if communities[i] == communities[j]:
                     q += a_ij - (k_i * k_j) / (2.0 * total_weight)
 

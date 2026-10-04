@@ -1,6 +1,8 @@
 """Test multi-agent task allocation for agricultural robots."""
+
 import pytest
-from src.multi_agent.task_allocation import TaskAllocator, AllocationInstance
+
+from src.multi_agent.task_allocation import AllocationInstance, TaskAllocator
 
 
 def test_allocation_empty():
@@ -99,7 +101,7 @@ def test_allocation_greedy_algorithm():
 
 def test_allocation_invalid_cost_matrix():
     """Non-square cost matrix raises ValueError."""
-    allocator = TaskAllocator()
+    TaskAllocator()
     with pytest.raises(ValueError, match="Cost matrix must be square"):
         AllocationInstance(
             agents=["A1", "A2"],

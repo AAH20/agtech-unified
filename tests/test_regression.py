@@ -1,20 +1,22 @@
 """Regression tests for known edge cases across all modules."""
+
 import asyncio
 import math
+
 import pytest
 
-from src.optimization.tsp import TSPSolver, TSPInstance
-from src.optimization.vrp import VRPSolver, VRPInstance
+from src.decision_support.alerts import AlertManager, Threshold
+from src.decision_support.recommender import DecisionEngine, FarmState
+from src.decision_support.security import AuthenticationError, ZeroTrustAuth
+from src.iot.data_pipeline import KafkaStream, MQTTClient, TimescaleDBStorage
 from src.multi_agent.consensus import ByzantineConsensus, ConsensusStatus
-from src.decision_support.security import ZeroTrustAuth, AuthenticationError, AuthorizationError
-from src.decision_support.alerts import AlertManager, AlertSeverity, Threshold, NotificationChannel
-from src.iot.data_pipeline import MQTTClient, KafkaStream, TimescaleDBStorage, SensorReading
-from src.decision_support.recommender import FarmState, DecisionEngine
-
+from src.optimization.tsp import TSPInstance, TSPSolver
+from src.optimization.vrp import VRPInstance, VRPSolver
 
 # ---------------------------------------------------------------------------
 # TSP Regression Tests
 # ---------------------------------------------------------------------------
+
 
 class TestTSPRegression:
     """Regression tests for TSP edge cases."""
@@ -36,10 +38,7 @@ class TestTSPRegression:
     def test_two_cities_round_trip(self):
         """Two cities must produce round trip cost."""
         solver = TSPSolver()
-        result = solver.solve(TSPInstance(
-            cities=["A", "B"],
-            distance_matrix=[[0, 5], [5, 0]]
-        ))
+        result = solver.solve(TSPInstance(cities=["A", "B"], distance_matrix=[[0, 5], [5, 0]]))
         assert result.cost == 10.0
 
     def test_non_square_matrix_raises(self):
@@ -50,20 +49,20 @@ class TestTSPRegression:
     def test_non_metric_still_solves(self):
         """Non-metric TSP must still produce a valid tour."""
         solver = TSPSolver(algorithm="christofides")
-        result = solver.solve(TSPInstance(
-            cities=["A", "B", "C"],
-            distance_matrix=[[0, 1, 100], [1, 0, 1], [100, 1, 0]]
-        ))
+        result = solver.solve(
+            TSPInstance(
+                cities=["A", "B", "C"], distance_matrix=[[0, 1, 100], [1, 0, 1], [100, 1, 0]]
+            )
+        )
         assert len(result.tour) == 3
         assert set(result.tour) == {"A", "B", "C"}
 
     def test_duplicate_city_names_produces_valid_tour(self):
         """Duplicate city names should still produce a valid tour."""
         solver = TSPSolver(algorithm="nearest_neighbor")
-        result = solver.solve(TSPInstance(
-            cities=["A", "A", "B"],
-            distance_matrix=[[0, 1, 2], [1, 0, 1], [2, 1, 0]]
-        ))
+        result = solver.solve(
+            TSPInstance(cities=["A", "A", "B"], distance_matrix=[[0, 1, 2], [1, 0, 1], [2, 1, 0]])
+        )
         assert len(result.tour) == 3
 
     def test_large_instance_completes(self):
@@ -71,8 +70,13 @@ class TestTSPRegression:
         solver = TSPSolver(algorithm="nearest_neighbor")
         n = 20
         coords = [(i, i * 2) for i in range(n)]
-        dist = [[math.sqrt((coords[i][0]-coords[j][0])**2 + (coords[i][1]-coords[j][1])**2)
-                 for j in range(n)] for i in range(n)]
+        dist = [
+            [
+                math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
+                for j in range(n)
+            ]
+            for i in range(n)
+        ]
         result = solver.solve(TSPInstance(cities=[f"c{i}" for i in range(n)], distance_matrix=dist))
         assert len(result.tour) == n
         assert result.cost > 0
@@ -82,6 +86,7 @@ class TestTSPRegression:
 # VRP Regression Tests
 # ---------------------------------------------------------------------------
 
+
 class TestVRPRegression:
     """Regression tests for VRP edge cases."""
 
@@ -89,33 +94,43 @@ class TestVRPRegression:
         """Zero capacity must raise ValueError."""
         with pytest.raises(ValueError, match="Capacity must be positive"):
             VRPInstance(
-                depot=(0, 0), customers=[(1, 0)], demands=[10],
-                vehicle_capacity=0, distance_matrix=[[0, 1], [1, 0]]
+                depot=(0, 0),
+                customers=[(1, 0)],
+                demands=[10],
+                vehicle_capacity=0,
+                distance_matrix=[[0, 1], [1, 0]],
             )
 
     def test_negative_capacity_raises(self):
         """Negative capacity must raise ValueError."""
         with pytest.raises(ValueError, match="Capacity must be positive"):
             VRPInstance(
-                depot=(0, 0), customers=[(1, 0)], demands=[10],
-                vehicle_capacity=-5, distance_matrix=[[0, 1], [1, 0]]
+                depot=(0, 0),
+                customers=[(1, 0)],
+                demands=[10],
+                vehicle_capacity=-5,
+                distance_matrix=[[0, 1], [1, 0]],
             )
 
     def test_demand_exceeds_capacity_raises(self):
         """Demand exceeding capacity must raise ValueError."""
         with pytest.raises(ValueError, match="Demand exceeds vehicle capacity"):
             VRPInstance(
-                depot=(0, 0), customers=[(1, 0)], demands=[200],
-                vehicle_capacity=100, distance_matrix=[[0, 1], [1, 0]]
+                depot=(0, 0),
+                customers=[(1, 0)],
+                demands=[200],
+                vehicle_capacity=100,
+                distance_matrix=[[0, 1], [1, 0]],
             )
 
     def test_empty_customers_returns_empty_routes(self):
         """Empty customer list must return empty routes."""
         solver = VRPSolver()
-        result = solver.solve(VRPInstance(
-            depot=(0, 0), customers=[], demands=[],
-            vehicle_capacity=100, distance_matrix=[]
-        ))
+        result = solver.solve(
+            VRPInstance(
+                depot=(0, 0), customers=[], demands=[], vehicle_capacity=100, distance_matrix=[]
+            )
+        )
         assert result.routes == []
         assert result.total_cost == 0.0
         assert result.num_vehicles == 0
@@ -123,20 +138,30 @@ class TestVRPRegression:
     def test_single_customer_single_route(self):
         """Single customer must produce one route."""
         solver = VRPSolver()
-        result = solver.solve(VRPInstance(
-            depot=(0, 0), customers=[(3, 4)], demands=[10],
-            vehicle_capacity=100, distance_matrix=[[0, 5], [5, 0]]
-        ))
+        result = solver.solve(
+            VRPInstance(
+                depot=(0, 0),
+                customers=[(3, 4)],
+                demands=[10],
+                vehicle_capacity=100,
+                distance_matrix=[[0, 5], [5, 0]],
+            )
+        )
         assert len(result.routes) == 1
         assert result.routes[0] == [0]
 
     def test_zero_demand_customer(self):
         """Zero demand customer should still be routed."""
         solver = VRPSolver()
-        result = solver.solve(VRPInstance(
-            depot=(0, 0), customers=[(1, 0)], demands=[0],
-            vehicle_capacity=100, distance_matrix=[[0, 1], [1, 0]]
-        ))
+        result = solver.solve(
+            VRPInstance(
+                depot=(0, 0),
+                customers=[(1, 0)],
+                demands=[0],
+                vehicle_capacity=100,
+                distance_matrix=[[0, 1], [1, 0]],
+            )
+        )
         assert len(result.routes) == 1
         assert result.routes[0] == [0]
 
@@ -144,6 +169,7 @@ class TestVRPRegression:
 # ---------------------------------------------------------------------------
 # Consensus Regression Tests
 # ---------------------------------------------------------------------------
+
 
 class TestConsensusRegression:
     """Regression tests for consensus edge cases."""
@@ -190,6 +216,7 @@ class TestConsensusRegression:
 # ---------------------------------------------------------------------------
 # Security Regression Tests
 # ---------------------------------------------------------------------------
+
 
 class TestSecurityRegression:
     """Regression tests for security edge cases."""
@@ -239,6 +266,7 @@ class TestSecurityRegression:
         for _ in range(3):
             auth.check_rate_limit("client", max_requests=3, window_seconds=0.01)
         import time
+
         time.sleep(0.02)
         assert auth.check_rate_limit("client", max_requests=3, window_seconds=0.01) is True
 
@@ -246,6 +274,7 @@ class TestSecurityRegression:
 # ---------------------------------------------------------------------------
 # Alert Manager Regression Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAlertRegression:
     """Regression tests for alert edge cases."""
@@ -298,6 +327,7 @@ class TestAlertRegression:
 # ---------------------------------------------------------------------------
 # Data Pipeline Regression Tests
 # ---------------------------------------------------------------------------
+
 
 class TestDataPipelineRegression:
     """Regression tests for data pipeline edge cases."""
@@ -363,6 +393,7 @@ class TestDataPipelineRegression:
 # Decision Engine Regression Tests
 # ---------------------------------------------------------------------------
 
+
 class TestDecisionEngineRegression:
     """Regression tests for decision engine edge cases."""
 
@@ -370,8 +401,11 @@ class TestDecisionEngineRegression:
         """All-zero farm state must produce recommendations."""
         engine = DecisionEngine()
         state = FarmState(
-            soil_moisture=0.0, temperature=0.0, crop_height=0.0,
-            nutrient_level=0.0, pest_pressure=0.0
+            soil_moisture=0.0,
+            temperature=0.0,
+            crop_height=0.0,
+            nutrient_level=0.0,
+            pest_pressure=0.0,
         )
         result = engine.recommend(state)
         assert result.priority_score > 0
@@ -381,8 +415,11 @@ class TestDecisionEngineRegression:
         """Extreme farm state must produce recommendations."""
         engine = DecisionEngine()
         state = FarmState(
-            soil_moisture=1.0, temperature=50.0, crop_height=2.0,
-            nutrient_level=1.0, pest_pressure=1.0
+            soil_moisture=1.0,
+            temperature=50.0,
+            crop_height=2.0,
+            nutrient_level=1.0,
+            pest_pressure=1.0,
         )
         result = engine.recommend(state)
         assert result.priority_score > 0
@@ -391,8 +428,11 @@ class TestDecisionEngineRegression:
         """Boundary values must produce consistent results."""
         engine = DecisionEngine()
         state = FarmState(
-            soil_moisture=0.2, temperature=38.0, crop_height=0.1,
-            nutrient_level=0.2, pest_pressure=0.7
+            soil_moisture=0.2,
+            temperature=38.0,
+            crop_height=0.1,
+            nutrient_level=0.2,
+            pest_pressure=0.7,
         )
         result = engine.recommend(state)
         assert 0.0 <= result.priority_score <= 1.0
@@ -402,8 +442,11 @@ class TestDecisionEngineRegression:
         """Priority score must never exceed 1.0."""
         engine = DecisionEngine()
         state = FarmState(
-            soil_moisture=0.0, temperature=50.0, crop_height=0.0,
-            nutrient_level=0.0, pest_pressure=1.0
+            soil_moisture=0.0,
+            temperature=50.0,
+            crop_height=0.0,
+            nutrient_level=0.0,
+            pest_pressure=1.0,
         )
         result = engine.recommend(state)
         assert result.priority_score <= 1.0

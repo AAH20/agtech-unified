@@ -1,4 +1,5 @@
 """Notification channel implementations for farm alerting."""
+
 from __future__ import annotations
 
 import json
@@ -93,7 +94,10 @@ class NotificationChannel:
                 last_error = str(exc)
                 logger.warning(
                     "Notification attempt %d/%d failed on %s: %s",
-                    attempt, self.max_retries, self.name, last_error,
+                    attempt,
+                    self.max_retries,
+                    self.name,
+                    last_error,
                 )
                 if attempt < self.max_retries:
                     time.sleep(self.retry_delay * (2 ** (attempt - 1)))
@@ -178,9 +182,7 @@ class SMSNotification(NotificationChannel):
     def _deliver(self, subject: str, message: str, **kwargs: Any) -> str:
         """Send an SMS via the Twilio-compatible API and return the SID."""
         body = f"{subject}: {message}" if subject else message
-        url = (
-            f"{self.api_url}/Accounts/{self.account_sid}/Messages.json"
-        )
+        url = f"{self.api_url}/Accounts/{self.account_sid}/Messages.json"
         payload = {
             "To": self.recipient,
             "From": self.from_number,
@@ -189,12 +191,8 @@ class SMSNotification(NotificationChannel):
         if self._http_post is not None:
             response = self._http_post(url, payload, self.timeout)
         else:
-            data = "&".join(
-                f"{k}={v}" for k, v in payload.items()
-            ).encode("utf-8")
-            req = urllib.request.Request(
-                url, data=data, method="POST"
-            )
+            data = "&".join(f"{k}={v}" for k, v in payload.items()).encode("utf-8")
+            req = urllib.request.Request(url, data=data, method="POST")
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 response = json.loads(resp.read().decode("utf-8"))
         return response.get("sid", f"sms-{int(time.time() * 1000)}")
@@ -220,20 +218,20 @@ class WebhookNotification(NotificationChannel):
 
     def _deliver(self, subject: str, message: str, **kwargs: Any) -> str:
         """POST a JSON payload to the webhook URL and return a message id."""
-        payload = json.dumps({
-            "subject": subject,
-            "message": message,
-            "recipient": self.recipient,
-            "channel": self.channel_type,
-            "timestamp": time.time(),
-            **kwargs,
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "subject": subject,
+                "message": message,
+                "recipient": self.recipient,
+                "channel": self.channel_type,
+                "timestamp": time.time(),
+                **kwargs,
+            }
+        ).encode("utf-8")
         if self._http_post is not None:
             self._http_post(self.recipient, payload, self.timeout, self.headers)
         else:
-            req = urllib.request.Request(
-                self.recipient, data=payload, method="POST"
-            )
+            req = urllib.request.Request(self.recipient, data=payload, method="POST")
             for key, value in self.headers.items():
                 req.add_header(key, value)
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:

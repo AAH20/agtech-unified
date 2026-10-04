@@ -1,10 +1,10 @@
 """Multi-agent task allocation using greedy and Hungarian algorithms."""
+
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AllocationInstance:
     """Task allocation problem instance."""
+
     agents: List[str]
     tasks: List[str]
     cost_matrix: List[List[float]]
@@ -29,6 +30,7 @@ class AllocationInstance:
 @dataclass
 class AllocationResult:
     """Task allocation result."""
+
     allocation: Dict[str, List[str]]
     total_cost: float
     algorithm: str
@@ -100,13 +102,13 @@ class TaskAllocator:
         for i in range(1, n + 1):
             p[0] = i
             j0 = 0
-            minv = [float('inf')] * (m + 1)
+            minv = [float("inf")] * (m + 1)
             used = [False] * (m + 1)
 
             while True:
                 used[j0] = True
                 i0 = p[j0]
-                delta = float('inf')
+                delta = float("inf")
                 j1 = 0
                 for j in range(1, m + 1):
                     if not used[j]:

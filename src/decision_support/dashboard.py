@@ -1,4 +1,5 @@
 """Real-time farm monitoring dashboard with WebSocket support."""
+
 from __future__ import annotations
 
 import asyncio
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SensorReading:
     """A single sensor reading."""
+
     timestamp: float
     sensor_id: str
     metric: str
@@ -29,6 +31,7 @@ class SensorReading:
 @dataclass
 class DashboardConfig:
     """Configuration for the farm dashboard."""
+
     update_interval: float = 1.0
     max_history: int = 1000
     enable_alerts: bool = True
@@ -77,10 +80,12 @@ class FarmDashboard:
             nutrient_level=kwargs.get("nutrient_level", current.nutrient_level),
             pest_pressure=kwargs.get("pest_pressure", current.pest_pressure),
         )
-        self._history.append({
-            "timestamp": time.time(),
-            "state": self.get_state_dict(),
-        })
+        self._history.append(
+            {
+                "timestamp": time.time(),
+                "state": self.get_state_dict(),
+            }
+        )
 
     def get_state_dict(self) -> Dict[str, Any]:
         """Get current state as a dictionary."""
@@ -134,20 +139,24 @@ class FarmDashboard:
             await websocket.accept()
             self.add_client(websocket)
             try:
-                await websocket.send_json({
-                    "type": "state",
-                    "data": self.get_state_dict(),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "state",
+                        "data": self.get_state_dict(),
+                    }
+                )
                 while True:
                     message = await websocket.receive_text()
                     try:
                         data = json.loads(message)
                         if data.get("action") == "update":
                             self.update_state(**data.get("state", {}))
-                            await self.broadcast({
-                                "type": "state",
-                                "data": self.get_state_dict(),
-                            })
+                            await self.broadcast(
+                                {
+                                    "type": "state",
+                                    "data": self.get_state_dict(),
+                                }
+                            )
                     except json.JSONDecodeError:
                         pass
             except WebSocketDisconnect:

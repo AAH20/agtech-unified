@@ -3,10 +3,10 @@
 Canonical data model for farm state across all modules. Replaces the
 unvalidated FarmState in decision_support.recommender (GAP-011, GAP-016).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-
 
 # Validation ranges for each field
 _RANGES = {
@@ -29,6 +29,7 @@ class FarmState:
         nutrient_level: 0.0 to 1.0  (NPK availability fraction)
         pest_pressure:  0.0 to 1.0  (infestation severity fraction)
     """
+
     soil_moisture: float
     temperature: float
     crop_height: float
@@ -41,9 +42,7 @@ class FarmState:
             if not isinstance(value, (int, float)):
                 raise TypeError(f"{field_name} must be numeric, got {type(value).__name__}")
             if not (lo <= value <= hi):
-                raise ValueError(
-                    f"{field_name} must be in [{lo}, {hi}], got {value}"
-                )
+                raise ValueError(f"{field_name} must be in [{lo}, {hi}], got {value}")
 
     def is_valid(self) -> bool:
         """Return True if all fields are within their valid ranges."""

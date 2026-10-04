@@ -1,7 +1,8 @@
 """Test VRP solver with savings algorithm (Clarke-Wright)."""
+
 import pytest
-import math
-from src.optimization.vrp import VRPSolver, VRPInstance
+
+from src.optimization.vrp import VRPInstance, VRPSolver
 
 
 def test_vrp_empty():
@@ -117,9 +118,9 @@ def test_vrp_route_cost_calculation():
 
 def test_vrp_invalid_capacity():
     """Zero or negative capacity raises ValueError."""
-    solver = VRPSolver()
+    VRPSolver()
     with pytest.raises(ValueError, match="Capacity must be positive"):
-        instance = VRPInstance(
+        VRPInstance(
             depot=(0, 0),
             customers=[(1, 0)],
             demands=[10],
@@ -130,9 +131,9 @@ def test_vrp_invalid_capacity():
 
 def test_vrp_demand_exceeds_capacity():
     """Customer demand exceeding capacity raises ValueError."""
-    solver = VRPSolver()
+    VRPSolver()
     with pytest.raises(ValueError, match="Demand exceeds vehicle capacity"):
-        instance = VRPInstance(
+        VRPInstance(
             depot=(0, 0),
             customers=[(1, 0)],
             demands=[200],

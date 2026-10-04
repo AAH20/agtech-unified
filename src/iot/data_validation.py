@@ -5,12 +5,13 @@ Three layers of defense for agricultural sensor data:
 - RangeChecker: standalone numeric range checks with warning thresholds
 - AnomalyDetector: rolling-window statistical anomaly detection
 """
+
 from __future__ import annotations
 
 import math
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Deque, Dict, List, Optional, Tuple, Type
+from typing import Any, Deque, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -61,19 +62,13 @@ class SchemaValidator:
                 min_value = spec.get("min")
                 max_value = spec.get("max")
                 if min_value is not None and value < min_value:
-                    errors.append(
-                        f"Field '{name}' value {value} below minimum {min_value}"
-                    )
+                    errors.append(f"Field '{name}' value {value} below minimum {min_value}")
                 if max_value is not None and value > max_value:
-                    errors.append(
-                        f"Field '{name}' value {value} above maximum {max_value}"
-                    )
+                    errors.append(f"Field '{name}' value {value} above maximum {max_value}")
 
             allowed = spec.get("allowed")
             if allowed is not None and value not in allowed:
-                errors.append(
-                    f"Field '{name}' value {value!r} not in allowed set {allowed}"
-                )
+                errors.append(f"Field '{name}' value {value!r} not in allowed set {allowed}")
 
         return ValidationResult(valid=not errors, errors=errors)
 

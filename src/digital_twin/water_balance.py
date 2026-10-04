@@ -4,10 +4,11 @@ Models soil water dynamics including precipitation, irrigation,
 evapotranspiration, drainage, and runoff. Provides irrigation
 scheduling and water stress assessment.
 """
+
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -16,20 +17,22 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WaterBalanceState:
     """Current water balance state of a field."""
-    soil_moisture: float          # Current soil moisture (m³/m³)
+
+    soil_moisture: float  # Current soil moisture (m³/m³)
     field_capacity: float = 0.30  # Field capacity (m³/m³)
-    wilting_point: float = 0.10   # Permanent wilting point (m³/m³)
-    root_depth: float = 0.5       # Root zone depth (m)
-    precipitation: float = 0.0    # Today's precipitation (mm)
-    irrigation: float = 0.0       # Today's irrigation (mm)
+    wilting_point: float = 0.10  # Permanent wilting point (m³/m³)
+    root_depth: float = 0.5  # Root zone depth (m)
+    precipitation: float = 0.0  # Today's precipitation (mm)
+    irrigation: float = 0.0  # Today's irrigation (mm)
     evapotranspiration: float = 0.0  # Today's ET (mm)
-    drainage: float = 0.0         # Today's drainage (mm)
-    runoff: float = 0.0           # Today's runoff (mm)
+    drainage: float = 0.0  # Today's drainage (mm)
+    runoff: float = 0.0  # Today's runoff (mm)
 
 
 @dataclass
 class IrrigationSchedule:
     """Irrigation schedule recommendation."""
+
     should_irrigate: bool
     amount_mm: float
     reason: str
@@ -39,6 +42,7 @@ class IrrigationSchedule:
 @dataclass
 class WaterBalanceResult:
     """Result of water balance simulation."""
+
     days_simulated: int
     final_state: WaterBalanceState
     history: List[WaterBalanceState]
@@ -117,17 +121,19 @@ class WaterBalanceModel:
             irr = irrigation_schedule[i]
 
             state = self._step(state, precip, et, irr)
-            history.append(WaterBalanceState(
-                soil_moisture=state.soil_moisture,
-                field_capacity=state.field_capacity,
-                wilting_point=state.wilting_point,
-                root_depth=state.root_depth,
-                precipitation=precip,
-                irrigation=irr,
-                evapotranspiration=et,
-                drainage=state.drainage,
-                runoff=state.runoff,
-            ))
+            history.append(
+                WaterBalanceState(
+                    soil_moisture=state.soil_moisture,
+                    field_capacity=state.field_capacity,
+                    wilting_point=state.wilting_point,
+                    root_depth=state.root_depth,
+                    precipitation=precip,
+                    irrigation=irr,
+                    evapotranspiration=et,
+                    drainage=state.drainage,
+                    runoff=state.runoff,
+                )
+            )
 
             total_precip += precip
             total_irr += irr
@@ -179,7 +185,9 @@ class WaterBalanceModel:
             new_moisture -= drainage * mm_to_m3m3
 
         # Evapotranspiration reduces soil moisture
-        et_mm = min(evapotranspiration, (new_moisture - self.wilting_point) * self.root_depth * 1000.0)
+        et_mm = min(
+            evapotranspiration, (new_moisture - self.wilting_point) * self.root_depth * 1000.0
+        )
         et_mm = max(0.0, et_mm)
         new_moisture -= et_mm * mm_to_m3m3
 

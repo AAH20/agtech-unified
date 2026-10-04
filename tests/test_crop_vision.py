@@ -1,4 +1,5 @@
 """Tests for CropVisionPipeline — disease detection, weed classification, yield prediction."""
+
 import numpy as np
 import pytest
 
@@ -12,9 +13,9 @@ from src.optimization.crop_vision import (
     WEED_CLASSES,
     CropVisionPipeline,
     DiseaseDetection,
+    FieldHealthReport,
     WeedClassification,
     YieldPrediction,
-    FieldHealthReport,
 )
 
 
@@ -35,8 +36,7 @@ def _make_classifier_model(path, num_classes):
     add_node = helper.make_node("Add", ["logits", "M_zero"], ["L"])
     softmax = helper.make_node("Softmax", ["L"], ["Y"], axis=1)
     graph = helper.make_graph(
-        [mean_node, mul_node, add_node, softmax],
-        "classifier", [X], [Y], [logits_init, zero_init]
+        [mean_node, mul_node, add_node, softmax], "classifier", [X], [Y], [logits_init, zero_init]
     )
     model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)])
     model.ir_version = 8

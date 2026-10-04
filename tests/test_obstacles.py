@@ -1,5 +1,5 @@
 """Tests for obstacle field path planning."""
-import pytest
+
 from src.path_planning.obstacles import ObstacleField
 
 

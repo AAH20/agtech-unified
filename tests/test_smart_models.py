@@ -1,4 +1,5 @@
 """Tests for FIWARE smart data models for agriculture."""
+
 import pytest
 
 from src.iot.smart_models import AgriculturalSmartModels

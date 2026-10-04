@@ -4,6 +4,7 @@ Provides the central event-driven backbone requested by GAP-008: modules
 publish domain events, interested modules subscribe, and no module needs
 a direct import of another to react to its state changes.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,6 +40,7 @@ class DomainEvent:
         event_id: Unique identifier (auto-generated).
         timestamp: Unix timestamp (auto-generated).
     """
+
     event_type: str
     source: str
     payload: Dict[str, Any] = field(default_factory=dict)

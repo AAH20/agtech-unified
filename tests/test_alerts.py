@@ -1,8 +1,6 @@
 """Test alert management system for farm monitoring."""
-import asyncio
-import time
 
-import pytest
+import asyncio
 
 from src.decision_support.alerts import (
     AlertManager,
@@ -72,12 +70,8 @@ def test_alert_manager_check_value_no_trigger():
 def test_alert_manager_check_state():
     """Check state evaluates all metrics."""
     manager = AlertManager()
-    manager.add_threshold(
-        Threshold(metric="soil_moisture", min_value=0.3)
-    )
-    manager.add_threshold(
-        Threshold(metric="temperature", max_value=35.0)
-    )
+    manager.add_threshold(Threshold(metric="soil_moisture", min_value=0.3))
+    manager.add_threshold(Threshold(metric="temperature", max_value=35.0))
     state = FarmState(
         soil_moisture=0.1,
         temperature=40.0,
@@ -208,9 +202,7 @@ def test_alert_manager_custom_handler():
         handler_calls.append(alert.id)
 
     manager.add_handler(custom_handler)
-    manager.add_threshold(
-        Threshold(metric="soil_moisture", min_value=0.3)
-    )
+    manager.add_threshold(Threshold(metric="soil_moisture", min_value=0.3))
     alerts = manager.check_value("soil_moisture", 0.1)
     asyncio.run(manager.notify(alerts[0]))
 

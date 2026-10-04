@@ -4,11 +4,12 @@ Provides model loading, image preprocessing, chunked batch inference,
 and latency benchmarking for on-device agricultural vision workloads
 (drone imagery tiles, crop/weed classification, yield regression).
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -119,9 +120,7 @@ class EdgeAIInference:
         self._model_path = str(path)
         self._input_name = self._session.get_inputs()[0].name
         self._output_names = [o.name for o in self._session.get_outputs()]
-        logger.info(
-            "Loaded ONNX model %s (providers=%s)", path, self._session.get_providers()
-        )
+        logger.info("Loaded ONNX model %s (providers=%s)", path, self._session.get_providers())
         return self.model_info
 
     @property
@@ -186,7 +185,9 @@ class EdgeAIInference:
                 raise ValueError(f"Expected HWC image with 3 channels, got shape {arr.shape}")
             if target_hw is not None and (arr.shape[0], arr.shape[1]) != target_hw:
                 arr = self._resize_nearest(arr, target_hw)
-            arr = arr.astype(np.float32) / 255.0 if arr.dtype == np.uint8 else arr.astype(np.float32)
+            arr = (
+                arr.astype(np.float32) / 255.0 if arr.dtype == np.uint8 else arr.astype(np.float32)
+            )
             arr = (arr - np.asarray(mean, dtype=np.float32)) / np.asarray(std, dtype=np.float32)
             batch.append(np.transpose(arr, (2, 0, 1)))  # HWC -> CHW
         return np.stack(batch, axis=0).astype(np.float32)

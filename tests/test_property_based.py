@@ -1,16 +1,19 @@
 """Property-based tests using hypothesis for TSP/VRP/consensus invariants."""
+
 import math
+
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from src.optimization.tsp import TSPSolver, TSPInstance
-from src.optimization.vrp import VRPSolver, VRPInstance
 from src.multi_agent.consensus import ByzantineConsensus, ConsensusStatus
-
+from src.optimization.tsp import TSPInstance, TSPSolver
+from src.optimization.vrp import VRPInstance, VRPSolver
 
 # ---------------------------------------------------------------------------
 # Strategies
 # ---------------------------------------------------------------------------
+
 
 @st.composite
 def metric_tsp_instances(draw, min_cities=2, max_cities=8):
@@ -26,8 +29,13 @@ def metric_tsp_instances(draw, min_cities=2, max_cities=8):
             max_size=n,
         )
     )
-    dist = [[math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
-             for j in range(n)] for i in range(n)]
+    dist = [
+        [
+            math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
+            for j in range(n)
+        ]
+        for i in range(n)
+    ]
     cities = [f"city_{i}" for i in range(n)]
     return TSPInstance(cities=cities, distance_matrix=dist)
 
@@ -55,8 +63,13 @@ def vrp_instances(draw, min_customers=1, max_customers=6):
         )
     )
     total = n + 1
-    dist = [[math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
-             for j in range(total)] for i in range(total)]
+    dist = [
+        [
+            math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
+            for j in range(total)
+        ]
+        for i in range(total)
+    ]
     return VRPInstance(
         depot=(0.0, 0.0),
         customers=coords[1:],
@@ -77,6 +90,7 @@ def consensus_configs(draw):
 # ---------------------------------------------------------------------------
 # TSP Property Tests
 # ---------------------------------------------------------------------------
+
 
 class TestTSPProperties:
     """Property-based invariants for TSP solver."""
@@ -114,10 +128,7 @@ class TestTSPProperties:
         assert math.isfinite(result.cost)
         # Cost should be at most n * max_edge (loose upper bound)
         n = len(instance.cities)
-        max_edge = max(
-            instance.distance_matrix[i][j]
-            for i in range(n) for j in range(n)
-        )
+        max_edge = max(instance.distance_matrix[i][j] for i in range(n) for j in range(n))
         assert result.cost <= n * max_edge + 1e-9
 
     @given(instance=metric_tsp_instances())
@@ -134,6 +145,7 @@ class TestTSPProperties:
 # ---------------------------------------------------------------------------
 # VRP Property Tests
 # ---------------------------------------------------------------------------
+
 
 class TestVRPProperties:
     """Property-based invariants for VRP solver."""
@@ -185,6 +197,7 @@ class TestVRPProperties:
 # Consensus Property Tests
 # ---------------------------------------------------------------------------
 
+
 class TestConsensusProperties:
     """Property-based invariants for Byzantine consensus."""
 
@@ -231,6 +244,7 @@ class TestConsensusProperties:
         result = consensus.tally_votes(votes)
         # Check if any value has >= quorum votes
         from collections import Counter
+
         counts = Counter(votes)
         max_count = max(counts.values()) if counts else 0
         if max_count >= consensus.quorum:

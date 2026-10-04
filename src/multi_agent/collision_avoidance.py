@@ -1,10 +1,11 @@
 """Multi-agent collision avoidance for agricultural swarm robots."""
+
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Position:
     """2D position of an agent."""
+
     x: float
     y: float
 
@@ -30,6 +32,7 @@ class Position:
 @dataclass
 class Velocity:
     """2D velocity vector."""
+
     vx: float
     vy: float
 

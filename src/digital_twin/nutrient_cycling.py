@@ -4,12 +4,13 @@ Models nitrogen (N), phosphorus (P), and potassium (K) dynamics
 in the soil-plant system. Includes mineralization, immobilization,
 plant uptake, leaching, and fertilizer application.
 """
+
 from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +18,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NutrientState:
     """Current nutrient state of a field."""
-    nitrogen: float       # kg/ha (plant-available N)
-    phosphorus: float     # kg/ha (plant-available P)
-    potassium: float      # kg/ha (plant-available K)
+
+    nitrogen: float  # kg/ha (plant-available N)
+    phosphorus: float  # kg/ha (plant-available P)
+    potassium: float  # kg/ha (plant-available K)
     organic_matter: float  # % soil organic matter
-    pH: float = 6.5       # Soil pH
-    crop_uptake_n: float = 0.0   # Today's N uptake (kg/ha)
-    crop_uptake_p: float = 0.0   # Today's P uptake (kg/ha)
-    crop_uptake_k: float = 0.0   # Today's K uptake (kg/ha)
-    leaching_n: float = 0.0      # Today's N leaching (kg/ha)
+    pH: float = 6.5  # Soil pH
+    crop_uptake_n: float = 0.0  # Today's N uptake (kg/ha)
+    crop_uptake_p: float = 0.0  # Today's P uptake (kg/ha)
+    crop_uptake_k: float = 0.0  # Today's K uptake (kg/ha)
+    leaching_n: float = 0.0  # Today's N leaching (kg/ha)
     mineralization_n: float = 0.0  # Today's N mineralization (kg/ha)
     immobilization_n: float = 0.0  # Today's N immobilization (kg/ha)
 
@@ -33,15 +35,17 @@ class NutrientState:
 @dataclass
 class FertilizerApplication:
     """Fertilizer application event."""
-    nitrogen: float = 0.0    # kg/ha N
+
+    nitrogen: float = 0.0  # kg/ha N
     phosphorus: float = 0.0  # kg/ha P
-    potassium: float = 0.0   # kg/ha K
-    day: int = 0             # Day of application
+    potassium: float = 0.0  # kg/ha K
+    day: int = 0  # Day of application
 
 
 @dataclass
 class NutrientBudget:
     """Nutrient budget summary."""
+
     total_n_applied: float
     total_p_applied: float
     total_k_applied: float
@@ -59,6 +63,7 @@ class NutrientBudget:
 @dataclass
 class NutrientCyclingResult:
     """Result of nutrient cycling simulation."""
+
     days_simulated: int
     final_state: NutrientState
     history: List[NutrientState]
@@ -201,19 +206,21 @@ class NutrientCyclingModel:
             state.potassium = max(0.0, state.potassium)
 
             # Record daily state
-            history.append(NutrientState(
-                nitrogen=state.nitrogen,
-                phosphorus=state.phosphorus,
-                potassium=state.potassium,
-                organic_matter=state.organic_matter,
-                pH=state.pH,
-                crop_uptake_n=n_uptake,
-                crop_uptake_p=p_uptake,
-                crop_uptake_k=k_uptake,
-                leaching_n=n_leached,
-                mineralization_n=mineralized,
-                immobilization_n=immobilized,
-            ))
+            history.append(
+                NutrientState(
+                    nitrogen=state.nitrogen,
+                    phosphorus=state.phosphorus,
+                    potassium=state.potassium,
+                    organic_matter=state.organic_matter,
+                    pH=state.pH,
+                    crop_uptake_n=n_uptake,
+                    crop_uptake_p=p_uptake,
+                    crop_uptake_k=k_uptake,
+                    leaching_n=n_leached,
+                    mineralization_n=mineralized,
+                    immobilization_n=immobilized,
+                )
+            )
 
         n_ue = (total_n_uptake / total_n_applied) if total_n_applied > 0 else 0.0
         p_ue = (total_p_uptake / total_p_applied) if total_p_applied > 0 else 0.0

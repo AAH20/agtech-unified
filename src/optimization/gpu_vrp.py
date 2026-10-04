@@ -1,9 +1,10 @@
 """GPU-accelerated VRP solver using PyTorch tensors."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import torch
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GPUVRPResult:
     """GPU VRP solution result."""
+
     routes: List[List[int]]
     total_cost: float
     algorithm: str
@@ -29,22 +31,33 @@ class GPUVRPSolver:
         self.algorithm = algorithm
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    def solve(self, depot: Tuple[float, float], customers: List[Tuple[float, float]],
-              demands: List[float], vehicle_capacity: float,
-              distance_matrix: List[List[float]]) -> GPUVRPResult:
+    def solve(
+        self,
+        depot: Tuple[float, float],
+        customers: List[Tuple[float, float]],
+        demands: List[float],
+        vehicle_capacity: float,
+        distance_matrix: List[List[float]],
+    ) -> GPUVRPResult:
         """Solve VRP instance using GPU acceleration."""
         n = len(customers)
         if n == 0:
-            return GPUVRPResult(routes=[], total_cost=0.0, algorithm=self.algorithm, device=self.device)
+            return GPUVRPResult(
+                routes=[], total_cost=0.0, algorithm=self.algorithm, device=self.device
+            )
 
         if self.algorithm == "savings":
             routes, total_cost = self._gpu_savings(distance_matrix, demands, vehicle_capacity)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
-        return GPUVRPResult(routes=routes, total_cost=total_cost, algorithm=self.algorithm, device=self.device)
+        return GPUVRPResult(
+            routes=routes, total_cost=total_cost, algorithm=self.algorithm, device=self.device
+        )
 
-    def compute_savings_batch(self, distance_matrices: List[List[List[float]]]) -> List[torch.Tensor]:
+    def compute_savings_batch(
+        self, distance_matrices: List[List[List[float]]]
+    ) -> List[torch.Tensor]:
         """Compute savings matrices for multiple VRP instances in batch.
 
         Args:
@@ -82,8 +95,9 @@ class GPUVRPSolver:
 
         return savings
 
-    def _gpu_savings(self, distance_matrix: List[List[float]],
-                     demands: List[float], capacity: float) -> Tuple[List[List[int]], float]:
+    def _gpu_savings(
+        self, distance_matrix: List[List[float]], demands: List[float], capacity: float
+    ) -> Tuple[List[List[int]], float]:
         """Clarke-Wright savings algorithm with GPU-computed savings."""
         n = len(demands)
         dist = torch.tensor(distance_matrix, dtype=torch.float32, device=self.device)

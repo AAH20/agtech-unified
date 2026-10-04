@@ -3,12 +3,12 @@
 Provides signal quality analysis, anomaly detection, and spoofing checks
 for GPS readings from field sensors and autonomous vehicles.
 """
+
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-
 
 EARTH_RADIUS_KM = 6371.0
 
@@ -16,6 +16,7 @@ EARTH_RADIUS_KM = 6371.0
 @dataclass
 class GPSReading:
     """A single GPS reading from an IoT device."""
+
     latitude: float
     longitude: float
     altitude: float
@@ -28,9 +29,7 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     dlon = math.radians(lon2 - lon1)
     a = (
         math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlon / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
     )
     c = 2 * math.asin(math.sqrt(a))
     return EARTH_RADIUS_KM * c
@@ -104,26 +103,32 @@ class GPSSpoofingDetector:
                 continue
 
             dist_km = haversine_distance(
-                prev.latitude, prev.longitude,
-                curr.latitude, curr.longitude,
+                prev.latitude,
+                prev.longitude,
+                curr.latitude,
+                curr.longitude,
             )
             speed_kmh = (dist_km / dt) * 3600.0
 
             if speed_kmh > self.max_speed:
-                anomalies.append({
-                    "type": "impossible_speed",
-                    "index": i,
-                    "speed_kmh": speed_kmh,
-                    "max_speed": self.max_speed,
-                })
+                anomalies.append(
+                    {
+                        "type": "impossible_speed",
+                        "index": i,
+                        "speed_kmh": speed_kmh,
+                        "max_speed": self.max_speed,
+                    }
+                )
 
             if dist_km > self.max_position_jump:
-                anomalies.append({
-                    "type": "position_jump",
-                    "index": i,
-                    "distance_km": dist_km,
-                    "max_jump": self.max_position_jump,
-                })
+                anomalies.append(
+                    {
+                        "type": "position_jump",
+                        "index": i,
+                        "distance_km": dist_km,
+                        "max_jump": self.max_position_jump,
+                    }
+                )
 
         return anomalies
 

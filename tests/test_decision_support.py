@@ -1,5 +1,5 @@
 """Test decision support system for agricultural recommendations."""
-import pytest
+
 from src.decision_support.recommender import DecisionEngine, FarmState
 
 

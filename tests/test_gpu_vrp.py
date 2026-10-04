@@ -1,7 +1,8 @@
 """Test GPU-accelerated VRP solver."""
+
 import pytest
-import math
-from src.optimization.gpu_vrp import GPUVRPSolver, GPUVRPResult
+
+from src.optimization.gpu_vrp import GPUVRPSolver
 
 
 def test_gpu_vrp_empty():

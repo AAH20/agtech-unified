@@ -1,10 +1,10 @@
 """CRISPR guide RNA design and analysis."""
+
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-from typing import List, Optional
 import logging
+from dataclasses import dataclass
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GuideRNA:
     """CRISPR guide RNA with metadata."""
+
     sequence: str
     pam: str
     gc_content: float
@@ -46,20 +47,22 @@ class CRISPRDesigner:
                     continue
 
                 guide_seq = seq[guide_start:pam_start]
-                pam = seq[pam_start:pam_start + 3]
+                pam = seq[pam_start : pam_start + 3]
 
                 gc_content = self._gc_content(guide_seq)
                 off_target = self._off_target_score(guide_seq)
                 efficiency = self._efficiency_score(guide_seq, gc_content)
 
-                guides.append(GuideRNA(
-                    sequence=guide_seq,
-                    pam=pam,
-                    gc_content=gc_content,
-                    off_target_score=off_target,
-                    efficiency_score=efficiency,
-                    position=guide_start,
-                ))
+                guides.append(
+                    GuideRNA(
+                        sequence=guide_seq,
+                        pam=pam,
+                        gc_content=gc_content,
+                        off_target_score=off_target,
+                        efficiency_score=efficiency,
+                        position=guide_start,
+                    )
+                )
 
         if not guides:
             raise ValueError("No PAM site found in sequence")
@@ -80,7 +83,7 @@ class CRISPRDesigner:
         # GC content far from 0.5 increases off-target risk
         gc_penalty = abs(gc - 0.5) * 2
         # Low complexity penalty
-        unique_kmers = len(set(sequence[i:i+3] for i in range(len(sequence) - 2)))
+        unique_kmers = len(set(sequence[i : i + 3] for i in range(len(sequence) - 2)))
         complexity = unique_kmers / max(1, len(sequence) - 2)
         complexity_penalty = 1.0 - complexity
         return min(1.0, (gc_penalty + complexity_penalty) / 2)
@@ -92,7 +95,7 @@ class CRISPRDesigner:
         # Penalize poly-T (terminates transcription)
         poly_t_penalty = 0.0
         for i in range(len(sequence) - 3):
-            if sequence[i:i+4] == "TTTT":
+            if sequence[i : i + 4] == "TTTT":
                 poly_t_penalty = 0.3
                 break
         # G at position 20 (adjacent to PAM) is favorable

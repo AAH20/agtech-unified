@@ -1,9 +1,10 @@
 """Test nutrient cycling model for agricultural digital twin."""
+
 import pytest
+
 from src.digital_twin.nutrient_cycling import (
     FertilizerApplication,
     NutrientCyclingModel,
-    NutrientCyclingResult,
     NutrientState,
 )
 

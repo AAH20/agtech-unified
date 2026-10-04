@@ -4,18 +4,20 @@ Implements a PBFT-style (Practical Byzantine Fault Tolerance) consensus
 protocol for agricultural robot swarms. Tolerates up to f faulty nodes
 in a system of n >= 3f+1 nodes.
 """
+
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class ConsensusStatus(Enum):
     """Status of a consensus decision."""
+
     PENDING = "pending"
     COMMITTED = "committed"
     REJECTED = "rejected"
@@ -24,6 +26,7 @@ class ConsensusStatus(Enum):
 @dataclass
 class ConsensusResult:
     """Result of a consensus round."""
+
     status: ConsensusStatus
     value: Optional[str] = None
     total_nodes: int = 0

@@ -1,9 +1,10 @@
 """GPU-accelerated TSP solver using PyTorch tensors."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import torch
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GPUTSPResult:
     """GPU TSP solution result."""
+
     tour: List[str]
     cost: float
     algorithm: str
@@ -38,7 +40,9 @@ class GPUTSPSolver:
             return GPUTSPResult(tour=[], cost=0.0, algorithm=self.algorithm, device=self.device)
 
         if len(cities) == 1:
-            return GPUTSPResult(tour=cities[:], cost=0.0, algorithm=self.algorithm, device=self.device)
+            return GPUTSPResult(
+                tour=cities[:], cost=0.0, algorithm=self.algorithm, device=self.device
+            )
 
         dist_tensor = torch.tensor(distance_matrix, dtype=torch.float32, device=self.device)
 
@@ -55,11 +59,15 @@ class GPUTSPSolver:
 
         return GPUTSPResult(tour=tour, cost=cost, algorithm=self.algorithm, device=self.device)
 
-    def solve_batch(self, instances: List[Tuple[List[str], List[List[float]]]]) -> List[GPUTSPResult]:
+    def solve_batch(
+        self, instances: List[Tuple[List[str], List[List[float]]]]
+    ) -> List[GPUTSPResult]:
         """Solve multiple TSP instances in batch on GPU."""
         return [self.solve(cities, dist) for cities, dist in instances]
 
-    def compute_distance_matrix_batch(self, coordinates_batch: List[List[Tuple[float, float]]]) -> torch.Tensor:
+    def compute_distance_matrix_batch(
+        self, coordinates_batch: List[List[Tuple[float, float]]]
+    ) -> torch.Tensor:
         """Compute distance matrices for multiple instances in batch using GPU broadcasting.
 
         Args:
@@ -74,11 +82,13 @@ class GPUTSPSolver:
         coords_padded = torch.zeros(batch_size, max_n, 2, dtype=torch.float32, device=self.device)
         for i, coords in enumerate(coordinates_batch):
             if coords:
-                coords_padded[i, :len(coords)] = torch.tensor(coords, dtype=torch.float32, device=self.device)
+                coords_padded[i, : len(coords)] = torch.tensor(
+                    coords, dtype=torch.float32, device=self.device
+                )
 
         # Broadcasting: (B, N, 1, 2) - (B, 1, N, 2) -> (B, N, N, 2)
         diff = coords_padded.unsqueeze(2) - coords_padded.unsqueeze(1)
-        dist = torch.sqrt((diff ** 2).sum(dim=-1))
+        dist = torch.sqrt((diff**2).sum(dim=-1))
 
         return dist
 
@@ -92,7 +102,7 @@ class GPUTSPSolver:
 
         for _ in range(n - 1):
             masked_dist = dist[current].clone()
-            masked_dist[visited] = float('inf')
+            masked_dist[visited] = float("inf")
             nearest = torch.argmin(masked_dist).item()
             tour.append(nearest)
             visited[nearest] = True
@@ -150,8 +160,8 @@ class GPUTSPSolver:
                 j_best = j_vals[best_idx].item()
 
                 # Reverse segment [i_best+1, j_best]
-                segment = tour_tensor[i_best + 1:j_best + 1]
-                tour_tensor[i_best + 1:j_best + 1] = segment.flip(0)
+                segment = tour_tensor[i_best + 1 : j_best + 1]
+                tour_tensor[i_best + 1 : j_best + 1] = segment.flip(0)
                 improved = True
 
         return tour_tensor.tolist()

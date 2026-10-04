@@ -1,4 +1,5 @@
 """Tests for notification channel implementations."""
+
 import json
 
 import pytest
@@ -95,9 +96,7 @@ class TestEmailNotification:
 
     def test_plaintext_body_is_delivered(self, smtp):
         """The message body reaches the MIME message."""
-        channel = EmailNotification(
-            name="email-ops", recipient="ops@farm.example", use_tls=False
-        )
+        channel = EmailNotification(name="email-ops", recipient="ops@farm.example", use_tls=False)
         channel.send("Subject here", "Body text")
         server = FakeSMTP.instances[0]
         assert not server.starttls_called
@@ -137,9 +136,7 @@ class TestSMSNotification:
             captured.update(payload)
             return {"sid": "SM1"}
 
-        channel = SMSNotification(
-            name="sms-ops", recipient="+15551234567", http_post=fake_post
-        )
+        channel = SMSNotification(name="sms-ops", recipient="+15551234567", http_post=fake_post)
         channel.send("URGENT", "Irrigate now")
         assert captured["Body"].startswith("URGENT")
         assert "Irrigate now" in captured["Body"]

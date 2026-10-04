@@ -3,6 +3,7 @@
 Provides a thin client for the NGSI-LD API (ETSI GS CIM 009) covering
 entity CRUD, subscriptions, and context source registrations.
 """
+
 from __future__ import annotations
 
 import logging
@@ -81,9 +82,7 @@ class NGSILDBroker:
         resp.raise_for_status()
         return resp.json()
 
-    def update_entity(
-        self, entity_id: str, attributes: Dict[str, Any]
-    ) -> None:
+    def update_entity(self, entity_id: str, attributes: Dict[str, Any]) -> None:
         """Update entity attributes via PATCH /entities/{id}/attrs."""
         resp = self.session.patch(
             self._url(f"/entities/{entity_id}/attrs"),
@@ -163,9 +162,7 @@ class NGSILDBroker:
     # Context source registration
     # ------------------------------------------------------------------
 
-    def register_context(
-        self, registration: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def register_context(self, registration: Dict[str, Any]) -> Dict[str, Any]:
         """Register a context source via POST /csourceRegistrations."""
         resp = self.session.post(
             self._url("/csourceRegistrations"),

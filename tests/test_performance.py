@@ -3,19 +3,17 @@
 Tests that each module completes within acceptable time bounds
 and that the full pipeline meets latency requirements.
 """
-import pytest
-import time
-import math
 
-from src.iot.sensor_placement import SensorPlacement, PlacementInstance
-from src.digital_twin.simulator import DigitalTwin, SimulationState
+import math
+import time
+
 from src.decision_support.recommender import DecisionEngine, FarmState
-from src.multi_agent.task_allocation import TaskAllocator, AllocationInstance
-from src.optimization.tsp import TSPSolver, TSPInstance
-from src.optimization.vrp import VRPSolver, VRPInstance
-from src.path_planning.coverage import CoveragePlanner, CoverageInstance
-from src.genomics.protein import ProteinAnalyzer
-from src.genomics.crispr import CRISPRDesigner
+from src.digital_twin.simulator import DigitalTwin, SimulationState
+from src.iot.sensor_placement import PlacementInstance, SensorPlacement
+from src.multi_agent.task_allocation import AllocationInstance, TaskAllocator
+from src.optimization.tsp import TSPInstance, TSPSolver
+from src.optimization.vrp import VRPInstance, VRPSolver
+from src.path_planning.coverage import CoverageInstance, CoveragePlanner
 
 
 class TestSensorPlacementPerformance:
@@ -59,8 +57,10 @@ class TestDigitalTwinPerformance:
         """30-day simulation completes quickly."""
         twin = DigitalTwin()
         state = SimulationState(
-            soil_moisture=0.5, temperature=25.0,
-            crop_height=0.1, nutrient_level=0.5,
+            soil_moisture=0.5,
+            temperature=25.0,
+            crop_height=0.1,
+            nutrient_level=0.5,
         )
         start = time.perf_counter()
         result = twin.simulate(state, days=30)
@@ -72,8 +72,10 @@ class TestDigitalTwinPerformance:
         """Full-year (365-day) simulation completes quickly."""
         twin = DigitalTwin()
         state = SimulationState(
-            soil_moisture=0.6, temperature=22.0,
-            crop_height=0.05, nutrient_level=0.6,
+            soil_moisture=0.6,
+            temperature=22.0,
+            crop_height=0.05,
+            nutrient_level=0.6,
         )
         start = time.perf_counter()
         result = twin.simulate(state, days=365)
@@ -90,8 +92,11 @@ class TestDecisionEnginePerformance:
         """Single decision completes in milliseconds."""
         engine = DecisionEngine()
         state = FarmState(
-            soil_moisture=0.3, temperature=28.0,
-            crop_height=0.4, nutrient_level=0.5, pest_pressure=0.2,
+            soil_moisture=0.3,
+            temperature=28.0,
+            crop_height=0.4,
+            nutrient_level=0.5,
+            pest_pressure=0.2,
         )
         start = time.perf_counter()
         result = engine.recommend(state)
@@ -128,8 +133,11 @@ class TestFullPipelinePerformance:
 
         # Sensor data ingestion
         farm_state = FarmState(
-            soil_moisture=0.15, temperature=35.0,
-            crop_height=0.3, nutrient_level=0.4, pest_pressure=0.2,
+            soil_moisture=0.15,
+            temperature=35.0,
+            crop_height=0.3,
+            nutrient_level=0.4,
+            pest_pressure=0.2,
         )
 
         # Decision engine
@@ -146,20 +154,27 @@ class TestFullPipelinePerformance:
 
         # Simulate 14 days
         twin = DigitalTwin()
-        sim = twin.simulate(SimulationState(
-            soil_moisture=0.2, temperature=30.0,
-            crop_height=0.1, nutrient_level=0.3,
-        ), days=14)
+        sim = twin.simulate(
+            SimulationState(
+                soil_moisture=0.2,
+                temperature=30.0,
+                crop_height=0.1,
+                nutrient_level=0.3,
+            ),
+            days=14,
+        )
 
         # Decision on final state
         engine = DecisionEngine()
-        decision = engine.recommend(FarmState(
-            soil_moisture=sim.final_state.soil_moisture,
-            temperature=30.0,
-            crop_height=sim.final_state.crop_height,
-            nutrient_level=sim.final_state.nutrient_level,
-            pest_pressure=0.1,
-        ))
+        decision = engine.recommend(
+            FarmState(
+                soil_moisture=sim.final_state.soil_moisture,
+                temperature=30.0,
+                crop_height=sim.final_state.crop_height,
+                nutrient_level=sim.final_state.nutrient_level,
+                pest_pressure=0.1,
+            )
+        )
 
         elapsed = time.perf_counter() - start
         assert elapsed < 2.0
@@ -170,8 +185,13 @@ class TestFullPipelinePerformance:
         solver = TSPSolver(algorithm="christofides")
         n = 20
         coords = [(i * 1.0, (i % 5) * 2.0) for i in range(n)]
-        dist = [[math.sqrt((coords[i][0]-coords[j][0])**2 + (coords[i][1]-coords[j][1])**2)
-                 for j in range(n)] for i in range(n)]
+        dist = [
+            [
+                math.sqrt((coords[i][0] - coords[j][0]) ** 2 + (coords[i][1] - coords[j][1]) ** 2)
+                for j in range(n)
+            ]
+            for i in range(n)
+        ]
         instance = TSPInstance(cities=[f"C{i}" for i in range(n)], distance_matrix=dist)
 
         start = time.perf_counter()
@@ -193,15 +213,20 @@ class TestFullPipelinePerformance:
                 if i == 0 and j == 0:
                     dist[i][j] = 0.0
                 elif i == 0:
-                    dist[i][j] = math.sqrt(customers[j-1][0]**2 + customers[j-1][1]**2)
+                    dist[i][j] = math.sqrt(customers[j - 1][0] ** 2 + customers[j - 1][1] ** 2)
                 elif j == 0:
-                    dist[i][j] = math.sqrt(customers[i-1][0]**2 + customers[i-1][1]**2)
+                    dist[i][j] = math.sqrt(customers[i - 1][0] ** 2 + customers[i - 1][1] ** 2)
                 else:
-                    dist[i][j] = math.sqrt((customers[i-1][0]-customers[j-1][0])**2 +
-                                           (customers[i-1][1]-customers[j-1][1])**2)
+                    dist[i][j] = math.sqrt(
+                        (customers[i - 1][0] - customers[j - 1][0]) ** 2
+                        + (customers[i - 1][1] - customers[j - 1][1]) ** 2
+                    )
         instance = VRPInstance(
-            depot=(0, 0), customers=customers, demands=demands,
-            vehicle_capacity=50.0, distance_matrix=dist,
+            depot=(0, 0),
+            customers=customers,
+            demands=demands,
+            vehicle_capacity=50.0,
+            distance_matrix=dist,
         )
 
         start = time.perf_counter()

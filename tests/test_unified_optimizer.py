@@ -1,4 +1,5 @@
 """Test unified optimizer interface wrapping TSP/VRP/GPU solvers behind one API."""
+
 import pytest
 
 from src.integration.unified_optimizer import (

@@ -1,9 +1,10 @@
 """Multi-agent fault tolerance: task reassignment and leader election."""
+
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AgentInfo:
     """Information about an agent in the fault-tolerance system."""
+
     agent_id: str
     capabilities: List[str] = field(default_factory=list)
     is_active: bool = True
@@ -19,6 +21,7 @@ class AgentInfo:
 @dataclass
 class TaskInfo:
     """Information about a task assigned to an agent."""
+
     task_id: str
     assigned_agent: Optional[str] = None
     requirements: List[str] = field(default_factory=list)
@@ -47,7 +50,9 @@ class TaskReassignment:
             capabilities=capabilities or [],
         )
 
-    def assign_task(self, task_id: str, agent_id: str, requirements: Optional[List[str]] = None) -> None:
+    def assign_task(
+        self, task_id: str, agent_id: str, requirements: Optional[List[str]] = None
+    ) -> None:
         """Assign a task to an agent.
 
         Args:
@@ -105,9 +110,7 @@ class TaskReassignment:
             if agent_id in exclude or not agent.is_active:
                 continue
             if all(req in agent.capabilities for req in task.requirements):
-                load = sum(
-                    1 for t in self._tasks.values() if t.assigned_agent == agent_id
-                )
+                load = sum(1 for t in self._tasks.values() if t.assigned_agent == agent_id)
                 if load < best_load:
                     best_load = load
                     best_agent = agent_id

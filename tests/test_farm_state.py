@@ -1,4 +1,5 @@
 """Test shared FarmState model with validation."""
+
 import pytest
 
 from src.integration.farm_state import FarmState

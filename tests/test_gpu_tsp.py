@@ -1,7 +1,8 @@
 """Test GPU-accelerated TSP solver."""
+
 import pytest
-import math
-from src.optimization.gpu_tsp import GPUTSPSolver, GPUTSPResult
+
+from src.optimization.gpu_tsp import GPUTSPSolver
 
 
 def test_gpu_tsp_empty_instance():
@@ -32,10 +33,7 @@ def test_gpu_tsp_triangle():
     """GPU TSP with equilateral triangle returns valid tour."""
     solver = GPUTSPSolver()
     dist = 10.0
-    result = solver.solve(
-        ["A", "B", "C"],
-        [[0, dist, dist], [dist, 0, dist], [dist, dist, 0]]
-    )
+    result = solver.solve(["A", "B", "C"], [[0, dist, dist], [dist, 0, dist], [dist, dist, 0]])
     assert len(result.tour) == 3
     assert set(result.tour) == {"A", "B", "C"}
     assert result.cost == pytest.approx(30.0)
@@ -45,8 +43,7 @@ def test_gpu_tsp_nearest_neighbor():
     """GPU nearest neighbor produces valid tour."""
     solver = GPUTSPSolver(algorithm="nearest_neighbor")
     result = solver.solve(
-        ["A", "B", "C", "D"],
-        [[0, 1, 2, 3], [1, 0, 1, 2], [2, 1, 0, 1], [3, 2, 1, 0]]
+        ["A", "B", "C", "D"], [[0, 1, 2, 3], [1, 0, 1, 2], [2, 1, 0, 1], [3, 2, 1, 0]]
     )
     assert len(result.tour) == 4
     assert set(result.tour) == {"A", "B", "C", "D"}
@@ -57,8 +54,7 @@ def test_gpu_tsp_two_opt():
     """GPU 2-opt improves or maintains tour quality."""
     solver = GPUTSPSolver(algorithm="two_opt")
     result = solver.solve(
-        ["A", "B", "C", "D"],
-        [[0, 1, 2, 3], [1, 0, 1, 2], [2, 1, 0, 1], [3, 2, 1, 0]]
+        ["A", "B", "C", "D"], [[0, 1, 2, 3], [1, 0, 1, 2], [2, 1, 0, 1], [3, 2, 1, 0]]
     )
     assert len(result.tour) == 4
     assert set(result.tour) == {"A", "B", "C", "D"}
