@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-import pickle
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -74,38 +74,47 @@ class SimpleMLModel(ABC):
             )
 
     def save(self, path: str) -> None:
-        """Save the model to a file (pickle or joblib based on extension)."""
+        """Save the model to a JSON file."""
         if not self._is_trained:
             raise RuntimeError(f"Model {self.name} is not trained")
-        if path.endswith(".joblib"):
-            try:
-                import joblib
-
-                joblib.dump(self, path)
-            except ImportError:
-                # Fall back to pickle
-                with open(path, "wb") as f:
-                    pickle.dump(self, f)
-        else:
-            with open(path, "wb") as f:
-                pickle.dump(self, f)
+        state = {
+            "name": self.name,
+            "version": self.version,
+            "is_trained": self._is_trained,
+            "feature_names": self._feature_names,
+            "model_type": self.__class__.__name__,
+        }
+        # Subclasses add their parameters via _get_params()
+        if hasattr(self, "_get_params"):
+            state["params"] = self._get_params()
+        with open(path, "w") as f:
+            json.dump(state, f)
         logger.info("Saved model %s to %s", self.name, path)
 
     @staticmethod
     def load(path: str) -> "SimpleMLModel":
-        """Load a model from a file."""
+        """Load a model from a JSON file."""
         if not os.path.exists(path):
             raise FileNotFoundError(f"Model file not found: {path}")
-        if path.endswith(".joblib"):
-            try:
-                import joblib
+        with open(path, "r") as f:
+            state = json.load(f)
+        model_type = state.get("model_type", "LinearRegressionModel")
+        if model_type == "LinearRegressionModel":
+            model = LinearRegressionModel(name=state["name"], version=state["version"])
+        elif model_type == "DecisionTreeClassifier":
+            from src.decision_support.ml_models import DecisionTreeClassifier
 
-                model = joblib.load(path)
-                return model
-            except ImportError:
-                pass
-        with open(path, "rb") as f:
-            model = pickle.load(f)
+            model = DecisionTreeClassifier(name=state["name"], version=state["version"])
+        elif model_type == "IsolationForestModel":
+            from src.decision_support.ml_models import IsolationForestModel
+
+            model = IsolationForestModel(name=state["name"], version=state["version"])
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+        model._is_trained = state["is_trained"]
+        model._feature_names = state["feature_names"]
+        if "params" in state and hasattr(model, "_set_params"):
+            model._set_params(state["params"])
         logger.info("Loaded model from %s", path)
         return model
 
@@ -237,6 +246,14 @@ class LinearRegressionModel(SimpleMLModel):
             share = 1.0 / len(abs_weights)
             return {name: share for name in self._feature_names}
         return {name: w / total for name, w in zip(self._feature_names, abs_weights)}
+
+    def _get_params(self) -> Dict[str, Any]:
+        return {"weights": self.weights, "intercept": self.intercept, "r_squared": self._r_squared}
+
+    def _set_params(self, params: Dict[str, Any]) -> None:
+        self.weights = params["weights"]
+        self.intercept = params["intercept"]
+        self._r_squared = params.get("r_squared")
 
 
 class DecisionTreeClassifier(SimpleMLModel):
@@ -374,6 +391,18 @@ class DecisionTreeClassifier(SimpleMLModel):
             share = 1.0 / len(self._feature_names)
             return {name: share for name in self._feature_names}
         return {k: v / total for k, v in self._feature_importance.items()}
+
+    def _get_params(self) -> Dict[str, Any]:
+        return {
+            "max_depth": self.max_depth,
+            "tree": self._tree,
+            "feature_importance": self._feature_importance,
+        }
+
+    def _set_params(self, params: Dict[str, Any]) -> None:
+        self.max_depth = params["max_depth"]
+        self._tree = params["tree"]
+        self._feature_importance = params.get("feature_importance", {})
 
 
 class IsolationForestModel(SimpleMLModel):
@@ -582,6 +611,20 @@ class CrossValidator:
             r2 = metrics.r_squared(test_y, predictions)
             scores.append(r2)
         return scores
+
+    def _get_params(self) -> Dict[str, Any]:
+        return {
+            "n_estimators": self.n_estimators,
+            "sample_size": self.sample_size,
+            "trees": self._trees,
+            "threshold": self._threshold,
+        }
+
+    def _set_params(self, params: Dict[str, Any]) -> None:
+        self.n_estimators = params["n_estimators"]
+        self.sample_size = params["sample_size"]
+        self._trees = params["trees"]
+        self._threshold = params.get("threshold", 0.5)
 
 
 class FeatureEngine:
