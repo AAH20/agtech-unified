@@ -63,7 +63,7 @@ flowchart TD
     subgraph AI["AI / Optimization"]
         CV[Computer Vision<br/>CNN / ViT / SAM]
         YP[Yield Prediction<br/>LSTM / RF / XGBoost]
-        OPT[Optimization Engine<br/>OR-Tools / GA / RL]
+        OE[Optimization Engine<br/>OR-Tools / GA / RL]
         PP[Path Planning<br/>TSP-CPP / MAPF]
     end
 
@@ -96,10 +96,10 @@ flowchart TD
     DL -->|Imagery| CV
     CV -->|Features| YP
     DL -->|Sensor Data| YP
-    YP -->|Predictions| OPT
-    DT -->|Simulation| OPT
-    OPT -->|Routes| PP
-    OPT -->|Prescriptions| DS
+    YP -->|Predictions| OE
+    DT -->|Simulation| OE
+    OE -->|Routes| PP
+    OE -->|Prescriptions| DS
     PP -->|Flight Plans| DS
 
     %% Application connections
@@ -110,7 +110,7 @@ flowchart TD
 
     %% Cross-layer connections
     GE -->|Traits| KG
-    GE -->|Constraints| OPT
+    GE -->|Constraints| OE
     MA -->|Swarm Cmds| D
     MA -->|Task Alloc| R
     MA -->|Coord| PP
@@ -172,15 +172,15 @@ sequenceDiagram
     participant F as Farmer
     participant DS as Decision Support
     participant MA as Multi-Agent Orchestrator
-    participant OPT as Optimization Engine
+    participant OE as Optimization Engine
     participant D as Drone Fleet
     participant R as Ground Robots
     participant PP as Path Planner
 
     F->>DS: View farm status / Set goals
     DS->>MA: Task requirements
-    MA->>OPT: Resource allocation request
-    OPT-->>MA: Allocation plan
+    MA->>OE: Resource allocation request
+    OE-->>MA: Allocation plan
     MA->>PP: Route optimization request
     PP-->>MA: Optimized paths
     MA->>D: Swarm commands (coverage paths)
