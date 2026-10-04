@@ -9,7 +9,13 @@ from src.iot.data_pipeline import (
     TimescaleDBStorage,
     TimeSeriesQuery,
 )
-from src.iot.data_validation import RangeChecker, Schema, SchemaValidator, ValidationResult
+from src.iot.data_validation import (
+    RangeChecker,
+    RateOfChangeValidator,
+    Schema,
+    SchemaValidator,
+    ValidationResult,
+)
 from src.iot.device_management import Device, DeviceRegistry, DeviceStatus, HealthStatus
 from src.iot.sensor_placement import PlacementInstance, PlacementResult, SensorPlacement
 from src.iot.smart_models import AgriculturalSmartModels
@@ -28,6 +34,7 @@ __all__ = [
     "Schema",
     "SchemaValidator",
     "RangeChecker",
+    "RateOfChangeValidator",
     "DeviceStatus",
     "HealthStatus",
     "Device",

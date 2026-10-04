@@ -431,3 +431,72 @@ class QualityScorer:
         anomaly_rate = max(0.0, min(1.0, anomaly_rate))
 
         return 0.4 * completeness + 0.3 * freshness + 0.3 * (1.0 - anomaly_rate)
+
+
+# ===========================================================================
+# Rate-of-Change Validation (IOT: spike/drift detection)
+# ===========================================================================
+
+
+class RateOfChangeValidator:
+    """Detects implausible jumps between consecutive sensor readings.
+
+    Tracks per-sensor reading history and flags:
+    - Spike: instantaneous rate of change exceeds max_rate units/second
+    - Drift: cumulative one-directional movement exceeds drift_threshold
+    """
+
+    def __init__(
+        self,
+        max_rate: float = 10.0,
+        drift_threshold: float = 50.0,
+        history: int = 100,
+    ) -> None:
+        if max_rate <= 0:
+            raise ValueError("max_rate must be positive")
+        if drift_threshold <= 0:
+            raise ValueError("drift_threshold must be positive")
+        if history < 2:
+            raise ValueError("history must be at least 2")
+        self.max_rate = max_rate
+        self.drift_threshold = drift_threshold
+        self.history = history
+        self._sensor_history: Dict[str, Deque[Tuple[float, float]]] = {}
+
+    def check(self, sensor_id: str, value: float, timestamp: float) -> bool:
+        """Check a reading. Returns True if it violates rate-of-change limits."""
+        history = self._sensor_history.setdefault(sensor_id, deque(maxlen=self.history))
+
+        if not history:
+            history.append((timestamp, float(value)))
+            return False
+
+        last_ts, last_val = history[-1]
+        dt = timestamp - last_ts
+        if dt <= 0:
+            # Non-monotonic timestamp: still record but skip rate check
+            history.append((timestamp, float(value)))
+            return False
+
+        rate = abs(float(value) - last_val) / dt
+        if rate > self.max_rate:
+            history.append((timestamp, float(value)))
+            return True
+
+        # Drift: cumulative movement from the oldest point in history
+        oldest_ts, oldest_val = history[0]
+        drift = abs(float(value) - oldest_val)
+        if drift > self.drift_threshold:
+            history.append((timestamp, float(value)))
+            return True
+
+        history.append((timestamp, float(value)))
+        return False
+
+    def get_history(self, sensor_id: str) -> List[Tuple[float, float]]:
+        """Return the reading history for a sensor as (timestamp, value) pairs."""
+        return list(self._sensor_history.get(sensor_id, []))
+
+    def reset(self) -> None:
+        """Clear all per-sensor state."""
+        self._sensor_history.clear()

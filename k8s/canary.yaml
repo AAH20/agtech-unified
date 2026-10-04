@@ -1,0 +1,45 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: agtech-unified
+  labels:
+    app: agtech-unified
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agtech-unified
+  service:
+    port: 8000
+    targetPort: 8000
+    gateways:
+      - public-gateway.istio-system.svc.cluster.local
+    hosts:
+      - agtech.example.com
+  analysis:
+    interval: 30s
+    threshold: 5
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 99
+        interval: 1m
+      - name: request-duration
+        thresholdRange:
+          max: 500
+        interval: 1m
+    webhooks:
+      - name: load-test
+        type: pre-rollout
+        url: http://flagger-loadtester.test/
+        timeout: 5s
+        metadata:
+          cmd: "hey -z 1m -q 10 -c 2 http://agtech-unified-canary:8000/"
+      - name: rollback
+        type: rollback
+        url: http://flagger-loadtester.test/
+        timeout: 5s
+        metadata:
+          cmd: "rollback"

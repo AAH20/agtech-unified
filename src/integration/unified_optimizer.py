@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, List, Optional, Tuple
 
+from src.integration.event_bus import DomainEvent, EventBus, EventType
 from src.optimization.gpu_tsp import GPUTSPSolver
 from src.optimization.gpu_vrp import GPUVRPSolver
 from src.optimization.tsp import TSPInstance, TSPSolver
@@ -74,18 +75,53 @@ class UnifiedOptimizer:
         ))
     """
 
+    def __init__(self, bus: Optional[EventBus] = None) -> None:
+        self._bus = bus
+
+    def set_bus(self, bus: EventBus) -> None:
+        """Attach an event bus for lifecycle event publishing."""
+        self._bus = bus
+
     def solve(self, problem: OptimizationProblem) -> OptimizationResult:
         """Solve a single problem with the appropriate backend solver."""
+        if self._bus:
+            self._bus.publish(
+                DomainEvent(
+                    event_type=EventType.OPTIMIZATION_STARTED,
+                    source="optimizer.unified",
+                    payload={
+                        "solver_type": problem.solver_type.value,
+                        "algorithm": problem.algorithm,
+                    },
+                )
+            )
+
         st = problem.solver_type
         if st == SolverType.TSP:
-            return self._solve_tsp(problem)
+            result = self._solve_tsp(problem)
         elif st == SolverType.VRP:
-            return self._solve_vrp(problem)
+            result = self._solve_vrp(problem)
         elif st == SolverType.GPU_TSP:
-            return self._solve_gpu_tsp(problem)
+            result = self._solve_gpu_tsp(problem)
         elif st == SolverType.GPU_VRP:
-            return self._solve_gpu_vrp(problem)
-        raise ValueError(f"Unknown solver type: {st!r}")
+            result = self._solve_gpu_vrp(problem)
+        else:
+            raise ValueError(f"Unknown solver type: {st!r}")
+
+        if self._bus:
+            self._bus.publish(
+                DomainEvent(
+                    event_type=EventType.OPTIMIZATION_COMPLETED,
+                    source="optimizer.unified",
+                    payload={
+                        "solver_type": result.solver_type.value,
+                        "algorithm": result.algorithm,
+                        "cost": result.cost,
+                    },
+                )
+            )
+
+        return result
 
     def solve_batch(self, problems: List[OptimizationProblem]) -> List[OptimizationResult]:
         """Solve multiple problems, returning one result per problem."""

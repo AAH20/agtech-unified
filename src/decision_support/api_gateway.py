@@ -194,9 +194,37 @@ class HealthResponse(BaseModel):
 def create_app(
     registry: Optional[TenantRegistry] = None,
     auth: Any = None,
+    rate_limit: Optional[int] = None,
+    rate_window: float = 60.0,
 ) -> FastAPI:
     app = FastAPI(title="AgTech Unified API", version="1.0.0")
     reg = registry or _registry
+
+    # Rate limiting state: client_id -> list of timestamps
+    _rate_limit_hits: Dict[str, List[float]] = {}
+
+    def _get_client_id(request: Request) -> str:
+        """Identify client by IP address."""
+        return request.client.host if request.client else "unknown"
+
+    def _is_rate_limited(client_id: str) -> bool:
+        """Check if client has exceeded the rate limit."""
+        if rate_limit is None:
+            return False
+        now = time.time()
+        window_start = now - rate_window
+        hits = _rate_limit_hits.get(client_id, [])
+        # Remove old entries
+        hits = [t for t in hits if t > window_start]
+        _rate_limit_hits[client_id] = hits
+        return len(hits) >= rate_limit
+
+    def _record_hit(client_id: str) -> None:
+        """Record a request hit for rate limiting."""
+        if rate_limit is None:
+            return
+        now = time.time()
+        _rate_limit_hits.setdefault(client_id, []).append(now)
 
     def _farm_resp(f: Farm) -> FarmResponse:
         return FarmResponse(
@@ -248,14 +276,43 @@ def create_app(
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next):
-        """Add correlation ID, measure latency, and audit the request."""
+        """Add correlation ID, measure latency, audit, and enforce rate limiting."""
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         start = time.monotonic()
+
+        # Rate limiting check
+        client_id = _get_client_id(request)
+        if _is_rate_limited(client_id):
+            latency_ms = (time.monotonic() - start) * 1000.0
+            response = Response(
+                content='{"detail": "Rate limit exceeded. Try again later."}',
+                status_code=429,
+                media_type="application/json",
+                headers={
+                    "X-Request-ID": request_id,
+                    "X-Response-Time-Ms": f"{latency_ms:.2f}",
+                    "Retry-After": str(int(rate_window)),
+                },
+            )
+            if rate_limit is not None:
+                response.headers["X-RateLimit-Limit"] = str(rate_limit)
+                response.headers["X-RateLimit-Remaining"] = "0"
+            return response
+
+        _record_hit(client_id)
         response = await call_next(request)
         latency_ms = (time.monotonic() - start) * 1000.0
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Response-Time-Ms"] = f"{latency_ms:.2f}"
+
+        # Rate limit headers
+        if rate_limit is not None:
+            hits = _rate_limit_hits.get(client_id, [])
+            remaining = max(0, rate_limit - len(hits))
+            response.headers["X-RateLimit-Limit"] = str(rate_limit)
+            response.headers["X-RateLimit-Remaining"] = str(remaining)
+
         # Audit the request
         try:
             tenant_id = request.path_params.get("tenant_id")
@@ -469,10 +526,14 @@ class APIGateway:
         self,
         registry: Optional[TenantRegistry] = None,
         auth: Any = None,
+        rate_limit: Optional[int] = None,
+        rate_window: float = 60.0,
     ) -> None:
         self.registry = registry or TenantRegistry()
         self.auth = auth
-        self.app = create_app(self.registry, auth=self.auth)
+        self.app = create_app(
+            self.registry, auth=self.auth, rate_limit=rate_limit, rate_window=rate_window
+        )
 
     def create_tenant(self, name: str) -> str:
         return self.registry.create_tenant(name)

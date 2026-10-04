@@ -1,0 +1,77 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agtech-unified
+  labels:
+    app: agtech-unified
+spec:
+  podSelector:
+    matchLabels:
+      app: agtech-unified
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: agtech-unified
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: agtech-unified
+      ports:
+        - protocol: TCP
+          port: 8000
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app: timescaledb
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mqtt-broker
+      ports:
+        - protocol: TCP
+          port: 1883
+        - protocol: TCP
+          port: 8883
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

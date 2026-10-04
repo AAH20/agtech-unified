@@ -262,3 +262,268 @@ class LeaderElection:
     def leader(self) -> Optional[str]:
         """Get the current leader, or None if no leader elected."""
         return self._leader
+
+
+class DeadlockDetector:
+    """Detects deadlocks in multi-agent wait-for graphs.
+
+    A deadlock occurs when there is a cycle in the wait-for graph,
+    meaning agents are circularly waiting for each other.
+    """
+
+    def __init__(self) -> None:
+        self._wait_for: Dict[str, List[str]] = {}
+
+    def add_wait_edge(self, waiter: str, waited_for: str) -> None:
+        """Add a wait-for edge: waiter is waiting for waited_for.
+
+        Args:
+            waiter: The agent that is waiting.
+            waited_for: The agent being waited for.
+        """
+        if waiter not in self._wait_for:
+            self._wait_for[waiter] = []
+        if waited_for not in self._wait_for[waiter]:
+            self._wait_for[waiter].append(waited_for)
+
+    def remove_wait_edge(self, waiter: str, waited_for: str) -> None:
+        """Remove a wait-for edge.
+
+        Args:
+            waiter: The agent that was waiting.
+            waited_for: The agent that was being waited for.
+        """
+        if waiter in self._wait_for and waited_for in self._wait_for[waiter]:
+            self._wait_for[waiter].remove(waited_for)
+
+    def clear(self) -> None:
+        """Clear all wait-for edges."""
+        self._wait_for.clear()
+
+    def detect_deadlock(self) -> bool:
+        """Detect if there is a cycle in the wait-for graph.
+
+        Uses DFS to detect cycles.
+
+        Returns:
+            True if a deadlock (cycle) is detected.
+        """
+        visited: Dict[str, int] = {}  # 0=unvisited, 1=visiting, 2=visited
+
+        def has_cycle(node: str) -> bool:
+            """DFS to detect cycle from node."""
+            visited[node] = 1  # visiting
+            for neighbor in self._wait_for.get(node, []):
+                if visited.get(neighbor, 0) == 1:
+                    return True  # Back edge = cycle
+                if visited.get(neighbor, 0) == 0:
+                    if has_cycle(neighbor):
+                        return True
+            visited[node] = 2  # visited
+            return False
+
+        for node in self._wait_for:
+            if visited.get(node, 0) == 0:
+                if has_cycle(node):
+                    return True
+        return False
+
+
+class DeadlockResolver:
+    """Resolves deadlocks by selecting a victim agent to break the cycle.
+
+    Uses priority-based victim selection: the agent with the lowest
+    priority is chosen as the victim to minimize impact.
+    """
+
+    def __init__(self) -> None:
+        self._wait_for: Dict[str, List[str]] = {}
+        self._priorities: Dict[str, int] = {}
+        self._reassignment_callback = None
+
+    def add_wait_edge(self, waiter: str, waited_for: str) -> None:
+        """Add a wait-for edge.
+
+        Args:
+            waiter: The agent that is waiting.
+            waited_for: The agent being waited for.
+        """
+        if waiter not in self._wait_for:
+            self._wait_for[waiter] = []
+        if waited_for not in self._wait_for[waiter]:
+            self._wait_for[waiter].append(waited_for)
+
+    def remove_wait_edge(self, waiter: str, waited_for: str) -> None:
+        """Remove a wait-for edge.
+
+        Args:
+            waiter: The agent that was waiting.
+            waited_for: The agent that was being waited for.
+        """
+        if waiter in self._wait_for and waited_for in self._wait_for[waiter]:
+            self._wait_for[waiter].remove(waited_for)
+
+    def set_priority(self, agent_id: str, priority: int) -> None:
+        """Set priority for an agent (higher = more important).
+
+        Args:
+            agent_id: The agent to set priority for.
+            priority: Priority value.
+        """
+        self._priorities[agent_id] = priority
+
+    def set_reassignment_callback(self, callback) -> None:
+        """Set callback for task reassignment when victim is selected.
+
+        Args:
+            callback: Function to call with victim agent_id.
+        """
+        self._reassignment_callback = callback
+
+    def detect_deadlock(self) -> bool:
+        """Detect if there is a cycle in the wait-for graph.
+
+        Returns:
+            True if a deadlock is detected.
+        """
+        visited: Dict[str, int] = {}
+
+        def has_cycle(node: str) -> bool:
+            visited[node] = 1
+            for neighbor in self._wait_for.get(node, []):
+                if visited.get(neighbor, 0) == 1:
+                    return True
+                if visited.get(neighbor, 0) == 0:
+                    if has_cycle(neighbor):
+                        return True
+            visited[node] = 2
+            return False
+
+        for node in self._wait_for:
+            if visited.get(node, 0) == 0:
+                if has_cycle(node):
+                    return True
+        return False
+
+    def resolve_deadlock(self) -> Optional[str]:
+        """Resolve deadlock by selecting a victim agent.
+
+        The victim is the agent with the lowest priority in the cycle.
+        If priorities are equal, selects deterministically (first found).
+
+        Returns:
+            The victim agent ID, or None if no deadlock.
+        """
+        if not self.detect_deadlock():
+            return None
+
+        # Find all agents in cycles
+        cycle_agents = self._find_cycle_agents()
+        if not cycle_agents:
+            return None
+
+        # Select victim: lowest priority (or first if tied)
+        victim = min(cycle_agents, key=lambda a: self._priorities.get(a, 0))
+
+        # Trigger reassignment callback if set
+        if self._reassignment_callback is not None:
+            self._reassignment_callback(victim)
+
+        logger.info("Deadlock resolved by selecting victim: %s", victim)
+        return victim
+
+    def resolve_and_recover(self) -> Optional[str]:
+        """Detect deadlock, select victim, and break the cycle.
+
+        This is the full recovery action: it removes the victim's outgoing
+        wait-for edges to break the cycle, then triggers the reassignment
+        callback so the victim's tasks are reassigned to other agents.
+
+        Returns:
+            The victim agent ID, or None if no deadlock was found.
+        """
+        if not self.detect_deadlock():
+            return None
+
+        cycle_agents = self._find_cycle_agents()
+        if not cycle_agents:
+            return None
+
+        victim = min(cycle_agents, key=lambda a: self._priorities.get(a, 0))
+
+        # Break the cycle: remove all outgoing edges from the victim
+        edges_to_remove = list(self._wait_for.get(victim, []))
+        for waited_for in edges_to_remove:
+            self.remove_wait_edge(victim, waited_for)
+
+        # Trigger reassignment callback
+        if self._reassignment_callback is not None:
+            self._reassignment_callback(victim)
+
+        logger.info(
+            "Deadlock resolved: victim=%s, removed %d edge(s)",
+            victim,
+            len(edges_to_remove),
+        )
+        return victim
+
+    def get_cycle_path(self) -> Optional[List[str]]:
+        """Return the actual cycle path if a deadlock exists.
+
+        Returns:
+            List of agent IDs forming the cycle (e.g., ["A", "B", "C"]),
+            or None if no deadlock.
+        """
+        visited: Dict[str, int] = {}
+        path: List[str] = []
+
+        def dfs(node: str) -> Optional[List[str]]:
+            visited[node] = 1
+            path.append(node)
+            for neighbor in self._wait_for.get(node, []):
+                if visited.get(neighbor, 0) == 1:
+                    cycle_start = path.index(neighbor)
+                    return path[cycle_start:]
+                if visited.get(neighbor, 0) == 0:
+                    result = dfs(neighbor)
+                    if result is not None:
+                        return result
+            path.pop()
+            visited[node] = 2
+            return None
+
+        for node in self._wait_for:
+            if visited.get(node, 0) == 0:
+                result = dfs(node)
+                if result is not None:
+                    return result
+        return None
+
+    def _find_cycle_agents(self) -> List[str]:
+        """Find all agents that are part of a cycle.
+
+        Returns:
+            List of agent IDs in cycles.
+        """
+        visited: Dict[str, int] = {}
+        in_cycle: Dict[str, bool] = {}
+
+        def dfs(node: str, path: List[str]) -> None:
+            visited[node] = 1
+            path.append(node)
+            for neighbor in self._wait_for.get(node, []):
+                if visited.get(neighbor, 0) == 1:
+                    # Found cycle - mark all agents in the cycle
+                    cycle_start = path.index(neighbor)
+                    for agent in path[cycle_start:]:
+                        in_cycle[agent] = True
+                elif visited.get(neighbor, 0) == 0:
+                    dfs(neighbor, path)
+            path.pop()
+            visited[node] = 2
+
+        for node in self._wait_for:
+            if visited.get(node, 0) == 0:
+                dfs(node, [])
+
+        return [agent for agent, is_cycle in in_cycle.items() if is_cycle]

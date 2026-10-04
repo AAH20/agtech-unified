@@ -18,6 +18,8 @@ except ImportError:
     GPUVRPResult = None
     GPUVRPSolver = None
 from src.optimization.local_search import TwoOpt
+from src.optimization.simulated_annealing import SimulatedAnnealingTSP
+from src.optimization.three_opt import ThreeOpt
 from src.optimization.tsp import TSPInstance, TSPResult, TSPSolver
 from src.optimization.vrp import VRPInstance, VRPResult, VRPSolver
 
@@ -33,6 +35,8 @@ __all__ = [
     "GPUVRPResult",
     "GPUVRPSolver",
     "TwoOpt",
+    "ThreeOpt",
+    "SimulatedAnnealingTSP",
     "GPUFallback",
     "EdgeAIInference",
     "InferenceResult",

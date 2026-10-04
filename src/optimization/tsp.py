@@ -90,6 +90,8 @@ class TSPSolver:
             result = self._christofides(instance)
         elif self.algorithm == "nearest_neighbor":
             result = self._nearest_neighbor(instance)
+        elif self.algorithm == "multi_start_nn":
+            result = self._multi_start_nn(instance)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
@@ -184,6 +186,40 @@ class TSPSolver:
         tour = [instance.cities[i] for i in tour_indices]
         cost = self._tour_cost(tour_indices, instance.distance_matrix)
         return TSPResult(tour=tour, cost=cost, algorithm="nearest_neighbor")
+
+    def _multi_start_nn(self, instance: TSPInstance) -> TSPResult:
+        """Multi-start nearest-neighbor heuristic for TSP.
+
+        Runs NN from every city as the starting point and returns the best tour.
+        This mitigates the sensitivity of single-start NN to the choice of origin.
+        """
+        n = len(instance.cities)
+        if n <= 2:
+            tour = instance.cities[:]
+            cost = self._tour_cost(list(range(n)), instance.distance_matrix)
+            return TSPResult(tour=tour, cost=cost, algorithm="multi_start_nn")
+
+        best_tour: List[int] = []
+        best_cost = float("inf")
+
+        for start in range(n):
+            unvisited = set(range(n)) - {start}
+            tour_indices = [start]
+            current = start
+
+            while unvisited:
+                nearest = min(unvisited, key=lambda j: instance.distance_matrix[current][j])
+                tour_indices.append(nearest)
+                unvisited.remove(nearest)
+                current = nearest
+
+            cost = self._tour_cost(tour_indices, instance.distance_matrix)
+            if cost < best_cost:
+                best_cost = cost
+                best_tour = tour_indices
+
+        tour = [instance.cities[i] for i in best_tour]
+        return TSPResult(tour=tour, cost=best_cost, algorithm="multi_start_nn")
 
     def _prim_mst(self, dist: List[List[float]], n: int) -> List[Tuple[int, int]]:
         """Prim's algorithm for MST."""

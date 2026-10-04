@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Iterator, List, Optional
 
+from src.integration.event_bus import DomainEvent, EventBus, EventType
 from src.integration.farm_state import FarmState
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,7 @@ class DigitalTwin:
         self.growth_rate = profile["growth_rate"]
         self.crop_coefficient = profile["crop_coefficient"]
         self._current_state: Optional[SimulationState] = None
+        self._bus: Optional[EventBus] = None
 
     def ingest_sensor_data(self, state: FarmState) -> SimulationState:
         """Ingest a FarmState from IoT sensors and update the simulation state.
@@ -135,6 +137,19 @@ class DigitalTwin:
             disease_pressure=getattr(state, "disease_pressure", 0.0),
             weed_pressure=getattr(state, "weed_pressure", 0.0),
         )
+        if self._bus:
+            self._bus.publish(
+                DomainEvent(
+                    event_type=EventType.SENSOR_READING_RECEIVED,
+                    source="digital_twin.simulator",
+                    payload={
+                        "soil_moisture": state.soil_moisture,
+                        "temperature": state.temperature,
+                        "crop_height": state.crop_height,
+                        "nutrient_level": state.nutrient_level,
+                    },
+                )
+            )
         return self._current_state
 
     def get_current_state(self) -> Optional[SimulationState]:

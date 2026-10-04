@@ -1,0 +1,438 @@
+{
+  "audit_metadata": {
+    "timestamp": "2026-10-04T10:15:00+03:00",
+    "auditor": "Wave 2 Path Planning Audit",
+    "modules_audited": [
+      "src/path_planning/coverage.py",
+      "src/path_planning/obstacles.py",
+      "src/path_planning/__init__.py"
+    ],
+    "tests_audited": [
+      "tests/test_coverage.py",
+      "tests/test_obstacles.py"
+    ],
+    "test_results": "14 passed, 1 warning in 0.31s",
+    "ruff_status": "All checks passed",
+    "total_gaps_identified": 32,
+    "severity_distribution": {
+      "critical": 8,
+      "high": 12,
+      "medium": 8,
+      "low": 4
+    }
+  },
+  "bottlenecks": [
+    {
+      "id": "PPV2-B001",
+      "category": "path_efficiency",
+      "severity": "critical",
+      "title": "Boustrophedon uses bounding-box approximation, not actual field boundary",
+      "description": "The _boustrophedon() method computes min_x/max_x/min_y/max_y from the boundary polygon and generates parallel lines spanning the full bounding box. For non-rectangular fields (L-shaped, T-shaped, convex polygons), this covers area outside the field, wasting time, fuel, and chemicals. The coverage_ratio is computed against the bounding-box area, not the true polygon area, so it overestimates coverage quality.",
+      "code_location": "src/path_planning/coverage.py:66-98",
+      "impact": "Up to 30-40% wasted coverage on irregular fields; inaccurate coverage_ratio metric",
+      "recommendation": "Use polygon clipping (e.g., Sutherland-Hodgman) to compute the actual intersection of each swath line with the field boundary. Compute coverage_ratio against true polygon area (shoelace formula)."
+    },
+    {
+      "id": "PPV2-B002",
+      "category": "path_efficiency",
+      "severity": "high",
+      "title": "start_point parameter is ignored in path generation",
+      "description": "CoverageInstance accepts a start_point field, but _boustrophedon() always starts the path at (min_x, min_y) regardless of start_point. The test test_coverage_path_starts_at_start_point passes only because it uses start_point=(0,0) which coincides with (min_x, min_y). For any other start point, the path does not start where the user specified.",
+      "code_location": "src/path_planning/coverage.py:72-86",
+      "impact": "Cannot start coverage from a specific location (e.g., nearest field edge, previous exit point); forces unnecessary transit",
+      "recommendation": "Generate the boustrophedon pattern starting from the y-level closest to start_point[1], and begin the first pass from start_point[0]."
+    },
+    {
+      "id": "PPV2-B003",
+      "category": "path_efficiency",
+      "severity": "high",
+      "title": "No headland turn optimization — sharp 180-degree turns at field edges",
+      "description": "The path alternates between (min_x, y) and (max_x, y) with instantaneous direction reversal. Real agricultural vehicles (tractors, drones) cannot make zero-radius turns. This causes skipped rows, soil compaction, and increased fuel consumption.",
+      "code_location": "src/path_planning/coverage.py:78-86",
+      "impact": "Unexecutable paths for real vehicles; skipped coverage at turn points",
+      "recommendation": "Add headland turn patterns (loop, skip, U-turn, fish-tail) with configurable turning radius. Insert turn waypoints between passes."
+    },
+    {
+      "id": "PPV2-B004",
+      "category": "path_efficiency",
+      "severity": "medium",
+      "title": "No path smoothing or curvature constraints",
+      "description": "The generated path consists of straight-line segments with sharp corners. No Dubins paths, Bézier curves, or spline smoothing is applied. This limits executability for vehicles with minimum turning radius constraints.",
+      "code_location": "src/path_planning/coverage.py:72-86",
+      "impact": "Increased vehicle wear, energy consumption, and potential missed coverage",
+      "recommendation": "Add post-processing step with Dubins path smoothing or cubic spline interpolation respecting minimum turning radius."
+    },
+    {
+      "id": "PPV2-B005",
+      "category": "path_efficiency",
+      "severity": "medium",
+      "title": "Fixed pass direction — no optimization for field aspect ratio",
+      "description": "Passes are always generated in the Y direction (horizontal lines). For fields that are much wider than tall, vertical passes (X direction) would be shorter and have fewer turns. The algorithm does not choose the optimal pass direction.",
+      "code_location": "src/path_planning/coverage.py:71-86",
+      "impact": "Suboptimal path length for elongated fields; more turns than necessary",
+      "recommendation": "Compare total path length for X-direction vs Y-direction passes and choose the shorter one."
+    },
+    {
+      "id": "PPV2-B006",
+      "category": "path_efficiency",
+      "severity": "medium",
+      "title": "No swath overlap control",
+      "description": "The algorithm places passes exactly swath_width apart with no overlap. Real operations need 5-10% overlap to ensure complete coverage, especially at field edges and with GPS drift.",
+      "code_location": "src/path_planning/coverage.py:85",
+      "impact": "Gaps in coverage due to GPS drift and edge effects",
+      "recommendation": "Add configurable overlap parameter (default 5-10%) and adjust pass spacing to swath_width * (1 - overlap)."
+    },
+    {
+      "id": "PPV2-B007",
+      "category": "path_efficiency",
+      "severity": "low",
+      "title": "No partial coverage or priority zone support",
+      "description": "The planner always covers the entire field. Precision agriculture often requires targeted coverage of pest hotspots, nutrient-deficient zones, or field edges only.",
+      "code_location": "src/path_planning/coverage.py:45-58",
+      "impact": "Cannot perform targeted/precision coverage operations",
+      "recommendation": "Add support for priority zones (sub-polygons) and partial coverage patterns."
+    },
+    {
+      "id": "PPV2-B008",
+      "category": "path_efficiency",
+      "severity": "low",
+      "title": "No energy or battery constraint modeling",
+      "description": "The planner does not consider vehicle energy consumption or battery life. Long paths may exceed vehicle range, and no recharge/refuel stop planning is provided.",
+      "code_location": "src/path_planning/coverage.py:45-58",
+      "impact": "Planned paths may exceed vehicle range; no energy-aware planning",
+      "recommendation": "Add energy model with consumption rate per distance/turn and recharge stop insertion."
+    }
+  ],
+  "missing_algorithms": [
+    {
+      "id": "PPV2-M001",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No A* pathfinding algorithm",
+      "description": "A* is the standard heuristic search for grid-based and graph-based pathfinding. Essential for obstacle-aware path planning in agricultural fields with trees, rocks, buildings, and other hazards. The current module has no graph-based pathfinding at all.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot plan optimal paths around obstacles; limited to simple rectangular fields",
+      "recommendation": "Implement A* with configurable heuristics (Manhattan, Euclidean, Chebyshev) on a grid representation of the field."
+    },
+    {
+      "id": "PPV2-M002",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No spiral coverage pattern",
+      "description": "Spiral coverage (center-out or center-in) is optimal for circular or near-circular fields and for operations that need to converge on a central point (e.g., irrigation pivots). The module only supports boustrophedon.",
+      "code_location": "src/path_planning/coverage.py:42-58",
+      "impact": "Cannot efficiently cover circular/irregular fields; suboptimal for center-focused operations",
+      "recommendation": "Implement spiral coverage with configurable starting radius, angular step, and direction (inward/outward)."
+    },
+    {
+      "id": "PPV2-M003",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No wavefront (brushfire) coverage algorithm",
+      "description": "Wavefront propagation is a simple, effective grid-based coverage algorithm that naturally handles obstacles by propagating from the start point and covering reachable cells. It is the standard alternative to boustrophedon for obstacle-rich environments.",
+      "code_location": "src/path_planning/coverage.py:42-58",
+      "impact": "No obstacle-aware coverage pattern; cannot handle fields with interior obstacles",
+      "recommendation": "Implement wavefront propagation on a grid representation with obstacle cells marked as blocked."
+    },
+    {
+      "id": "PPV2-M004",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No multi-robot/multi-drone coverage coordination",
+      "description": "The module plans paths for a single vehicle only. Agricultural operations increasingly use multiple drones/vehicles that need coordinated coverage to avoid collisions, minimize overlap, and balance workload.",
+      "code_location": "src/path_planning/coverage.py:42-58",
+      "impact": "Cannot scale to multi-vehicle operations; no collision avoidance between vehicles",
+      "recommendation": "Implement multi-robot coverage with field decomposition, task allocation, and inter-vehicle collision avoidance."
+    },
+    {
+      "id": "PPV2-M005",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No RRT/RRT* algorithm for kinematic constraints",
+      "description": "Rapidly-exploring Random Trees are essential for high-dimensional path planning with non-holonomic vehicle constraints (e.g., minimum turning radius for tractors). The current module has no sampling-based planning.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot handle vehicle kinematic constraints or complex obstacle fields",
+      "recommendation": "Implement RRT and RRT* with steering models for agricultural vehicles."
+    },
+    {
+      "id": "PPV2-M006",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No Dijkstra's algorithm (baseline shortest path)",
+      "description": "Dijkstra's algorithm is the baseline for shortest-path computation without heuristics. Needed as a fallback when no admissible heuristic is available and for computing distance fields.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "No guaranteed optimal path without A* heuristic; no distance field computation",
+      "recommendation": "Implement Dijkstra as baseline shortest-path algorithm."
+    },
+    {
+      "id": "PPV2-M007",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No D* Lite for dynamic replanning",
+      "description": "D* Lite is essential for incremental replanning when obstacles are discovered during execution (e.g., newly detected rocks, animals, or other drones). The current module has no replanning capability.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot replan paths when environment changes during execution",
+      "recommendation": "Implement D* Lite for efficient incremental replanning."
+    },
+    {
+      "id": "PPV2-M008",
+      "category": "missing_algorithm",
+      "severity": "medium",
+      "title": "No PRM (Probabilistic Roadmap) for multi-query planning",
+      "description": "PRM pre-computes a roadmap in complex environments that can be reused for multiple queries. Useful for repeated operations in the same field.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Repeated planning in same field is inefficient",
+      "recommendation": "Implement PRM for multi-query path planning scenarios."
+    },
+    {
+      "id": "PPV2-M009",
+      "category": "missing_algorithm",
+      "severity": "medium",
+      "title": "No Voronoi-based coverage for obstacle-rich fields",
+      "description": "Voronoi diagrams maximize clearance from obstacles, which is useful for safety-critical operations near hazards. The current module has no clearance-maximizing patterns.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "No safety-maximizing paths near obstacles",
+      "recommendation": "Implement Voronoi-based coverage for obstacle-rich environments."
+    },
+    {
+      "id": "PPV2-M010",
+      "category": "missing_algorithm",
+      "severity": "medium",
+      "title": "No boustrophedon variant with adaptive swath width",
+      "description": "The current implementation uses a fixed swath_width. Variable-rate application and precision agriculture require adaptive swath width based on soil/pest maps.",
+      "code_location": "src/path_planning/coverage.py:63",
+      "impact": "Cannot support variable-rate application or adaptive coverage",
+      "recommendation": "Add support for spatially-varying swath width based on application maps."
+    },
+    {
+      "id": "PPV2-M011",
+      "category": "missing_algorithm",
+      "severity": "low",
+      "title": "No zigzag/diagonal coverage pattern",
+      "description": "Diagonal patterns can reduce total path length for certain field shapes (e.g., diamond-shaped fields). The module only supports axis-aligned boustrophedon.",
+      "code_location": "src/path_planning/coverage.py:71-86",
+      "impact": "Suboptimal path length for some field geometries",
+      "recommendation": "Implement diagonal boustrophedon as alternative pattern."
+    },
+    {
+      "id": "PPV2-M012",
+      "category": "missing_algorithm",
+      "severity": "low",
+      "title": "No genetic algorithm or metaheuristic coverage optimization",
+      "description": "For complex multi-objective coverage (minimize distance, time, energy, overlap), metaheuristics like genetic algorithms can find near-optimal solutions. The module has no optimization-based planning.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot optimize for multiple competing objectives",
+      "recommendation": "Add genetic algorithm or simulated annealing for multi-objective coverage optimization."
+    }
+  ],
+  "benchmark_gaps": [
+    {
+      "id": "PPV2-T001",
+      "category": "collision_detection",
+      "severity": "critical",
+      "title": "No line-segment vs obstacle collision detection",
+      "description": "ObstacleField only provides point-in-obstacle detection (is_obstacle). There is no method to check if a line segment (path between two waypoints) intersects an obstacle. This means a path can pass through an obstacle even if both endpoints are outside it.",
+      "code_location": "src/path_planning/obstacles.py:15-20",
+      "impact": "Paths may collide with obstacles; no path validation possible",
+      "recommendation": "Implement segment-obstacle intersection test (e.g., distance from segment to circle center vs radius)."
+    },
+    {
+      "id": "PPV2-T002",
+      "category": "collision_detection",
+      "severity": "critical",
+      "title": "No path validation — planned paths are never checked against obstacles",
+      "description": "There is no method to validate an entire path (list of waypoints) against the obstacle field. The CoveragePlanner and ObstacleField are completely independent — paths are generated without any obstacle awareness.",
+      "code_location": "src/path_planning/coverage.py:45-58, src/path_planning/obstacles.py:9-38",
+      "impact": "Generated paths may pass through obstacles; no safety guarantee",
+      "recommendation": "Add ObstacleField.validate_path(path) that checks all segments and returns collision points. Integrate into CoveragePlanner."
+    },
+    {
+      "id": "PPV2-T003",
+      "category": "collision_detection",
+      "severity": "high",
+      "title": "No dynamic obstacle support",
+      "description": "ObstacleField only handles static circular obstacles. Real agricultural environments have moving obstacles (animals, other vehicles, workers) and newly discovered obstacles. No API for adding/removing obstacles at runtime.",
+      "code_location": "src/path_planning/obstacles.py:9-13",
+      "impact": "Cannot handle dynamic environments; no runtime obstacle updates",
+      "recommendation": "Add add_obstacle(), remove_obstacle(), and update_obstacle() methods. Support moving obstacles with velocity vectors."
+    },
+    {
+      "id": "PPV2-T004",
+      "category": "collision_detection",
+      "severity": "high",
+      "title": "Only circular obstacles — no polygon or line-segment obstacles",
+      "description": "ObstacleField only supports circular obstacles (cx, cy, r). Real fields have rectangular buildings, linear fences, hedgerows, and power lines that are better represented as polygons or line segments.",
+      "code_location": "src/path_planning/obstacles.py:12",
+      "impact": "Cannot accurately model many real-world obstacles",
+      "recommendation": "Add support for polygon obstacles and line-segment obstacles with appropriate collision tests."
+    },
+    {
+      "id": "PPV2-T005",
+      "category": "collision_detection",
+      "severity": "high",
+      "title": "avoid_path detour is not collision-free",
+      "description": "The avoid_path method generates a rectangular detour around the obstacle with a fixed 1.0 safety buffer. It does not check whether the detour waypoints themselves are inside other obstacles, nor whether the detour is optimal. The detour may cut corners or pass through other obstacles.",
+      "code_location": "src/path_planning/obstacles.py:22-31",
+      "impact": "Detour paths may collide with other obstacles; suboptimal detour geometry",
+      "recommendation": "Implement tangent-based detour generation that computes optimal waypoints around the obstacle and validates against all obstacles."
+    },
+    {
+      "id": "PPV2-T006",
+      "category": "collision_detection",
+      "severity": "medium",
+      "title": "Safety buffer is hardcoded to 1.0",
+      "description": "The safety buffer in avoid_path is fixed at 1.0 meter. Different operations (spraying, planting, inspection) and different vehicle sizes require different safety margins.",
+      "code_location": "src/path_planning/obstacles.py:30",
+      "impact": "Cannot configure safety margins for different operations",
+      "recommendation": "Make safety buffer a configurable parameter in ObstacleField constructor."
+    },
+    {
+      "id": "PPV2-T007",
+      "category": "collision_detection",
+      "severity": "medium",
+      "title": "No no-fly zone or geofence support",
+      "description": "Regulatory no-fly zones (airports, military bases, populated areas) must be avoided. The module has no concept of exclusion zones or geofencing.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Potential regulatory violations; cannot enforce airspace restrictions",
+      "recommendation": "Add geofence support with polygon no-fly zones and automatic path clipping."
+    },
+    {
+      "id": "PPV2-T008",
+      "category": "collision_detection",
+      "severity": "medium",
+      "title": "No terrain or elevation consideration",
+      "description": "Agricultural fields have slopes and elevation changes that affect vehicle speed, energy consumption, and safety. The module operates in 2D only.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Inaccurate time/energy estimates; potential safety issues on steep slopes",
+      "recommendation": "Add DEM (Digital Elevation Model) integration for terrain-aware planning."
+    },
+    {
+      "id": "PPV2-T009",
+      "category": "collision_detection",
+      "severity": "medium",
+      "title": "No wind or weather consideration",
+      "description": "Wind affects drone flight time, spray drift, and energy consumption. The module ignores weather conditions entirely.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Inaccurate time estimates; unsafe operations in high wind",
+      "recommendation": "Add weather data integration for wind-aware planning and spray drift modeling."
+    },
+    {
+      "id": "PPV2-T010",
+      "category": "collision_detection",
+      "severity": "low",
+      "title": "No GPS waypoint export (GPX, GeoJSON, KML)",
+      "description": "Paths need to be exported in standard formats for drone flight controllers and farm management software. The module only returns a list of tuples.",
+      "code_location": "src/path_planning/coverage.py:29-36",
+      "impact": "Cannot directly use paths with commercial drone systems",
+      "recommendation": "Add export methods for GPX, GeoJSON, and KML formats."
+    },
+    {
+      "id": "PPV2-T011",
+      "category": "collision_detection",
+      "severity": "low",
+      "title": "No 3D terrain following",
+      "description": "Drones may need to follow terrain at constant altitude above ground level. The module plans in 2D only.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot maintain constant AGL altitude over varying terrain",
+      "recommendation": "Add terrain-following altitude profile generation."
+    },
+    {
+      "id": "PPV2-T012",
+      "category": "collision_detection",
+      "severity": "low",
+      "title": "No path execution monitoring or deviation detection",
+      "description": "No mechanism to detect if the vehicle deviates from the planned path or if execution fails. No feedback loop for path tracking.",
+      "code_location": "src/path_planning/ (entire module)",
+      "impact": "Cannot detect or recover from path execution failures",
+      "recommendation": "Add path tracking with deviation detection and recovery behaviors."
+    }
+  ],
+  "test_gaps": [
+    {
+      "id": "PPV2-TEST001",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "No tests for non-rectangular field boundaries",
+      "description": "All tests use rectangular fields. No tests for L-shaped, T-shaped, convex, or concave polygons where the bounding-box approximation would fail.",
+      "code_location": "tests/test_coverage.py",
+      "impact": "Bounding-box approximation bugs would not be caught",
+      "recommendation": "Add tests with L-shaped and triangular fields to verify correct coverage_ratio and path generation."
+    },
+    {
+      "id": "PPV2-TEST002",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "No tests for start_point other than (0,0)",
+      "description": "test_coverage_path_starts_at_start_point only tests start_point=(0,0) which coincides with (min_x, min_y). The start_point parameter is effectively untested for other values.",
+      "code_location": "tests/test_coverage.py:63-72",
+      "impact": "start_point handling bugs would not be caught",
+      "recommendation": "Add tests with start_point at various locations (center, edge, corner) to verify correct path initiation."
+    },
+    {
+      "id": "PPV2-TEST003",
+      "category": "test_coverage",
+      "severity": "medium",
+      "title": "No tests for obstacle-aware path generation",
+      "description": "No tests verify that generated paths avoid obstacles. The CoveragePlanner and ObstacleField are tested independently but never together.",
+      "code_location": "tests/test_coverage.py, tests/test_obstacles.py",
+      "impact": "Integration bugs between coverage and obstacle avoidance would not be caught",
+      "recommendation": "Add integration tests that plan coverage paths with obstacles and verify collision-free paths."
+    },
+    {
+      "id": "PPV2-TEST004",
+      "category": "test_coverage",
+      "severity": "medium",
+      "title": "No tests for path optimality or efficiency",
+      "description": "Tests verify path continuity and basic properties but not path optimality. No tests compare path length against theoretical minimum or verify that wider swaths produce proportionally shorter paths.",
+      "code_location": "tests/test_coverage.py",
+      "impact": "Suboptimal path generation would not be caught",
+      "recommendation": "Add tests that verify path length is within a bound of the theoretical minimum for simple fields."
+    },
+    {
+      "id": "PPV2-TEST005",
+      "category": "test_coverage",
+      "severity": "medium",
+      "title": "No tests for avoid_path detour validity",
+      "description": "test_avoid_path_returns_waypoints only checks that waypoints are returned and are tuples. No tests verify that the detour actually avoids the obstacle or that the detour waypoints are collision-free.",
+      "code_location": "tests/test_obstacles.py:18-23",
+      "impact": "Invalid detour paths would not be caught",
+      "recommendation": "Add tests that verify detour waypoints are outside the obstacle and that the detour path does not intersect the obstacle."
+    },
+    {
+      "id": "PPV2-TEST006",
+      "category": "test_coverage",
+      "severity": "low",
+      "title": "No property-based tests for coverage planning",
+      "description": "No hypothesis-based tests for coverage path invariants. Missing: path continuity for random boundaries, swath overlap bounds, complete coverage for simple boundaries, path cost monotonicity.",
+      "code_location": "tests/test_coverage.py",
+      "impact": "Edge cases in coverage generation would not be caught",
+      "recommendation": "Add hypothesis tests for coverage path invariants using random boundary shapes."
+    }
+  ],
+  "summary": {
+    "total_gaps": 32,
+    "by_category": {
+      "path_efficiency": 8,
+      "missing_algorithm": 12,
+      "collision_detection": 12,
+      "test_coverage": 6
+    },
+    "by_severity": {
+      "critical": 8,
+      "high": 12,
+      "medium": 8,
+      "low": 4
+    },
+    "key_findings": [
+      "Boustrophedon uses bounding-box approximation, not actual field boundary — up to 30-40% wasted coverage on irregular fields",
+      "start_point parameter is completely ignored in path generation",
+      "No line-segment collision detection — paths can pass through obstacles",
+      "CoveragePlanner and ObstacleField are completely independent — no integration",
+      "No dynamic obstacle support — only static circular obstacles",
+      "Missing 4 critical algorithms: A*, spiral, wavefront, multi-robot coverage",
+      "No path validation — planned paths are never checked against obstacles",
+      "avoid_path detour is not guaranteed collision-free",
+      "All tests use rectangular fields — non-rectangular field handling is untested"
+    ]
+  }
+}

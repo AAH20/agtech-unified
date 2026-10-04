@@ -7,6 +7,8 @@ import math
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
 
+from src.iot.spatial_index import coverage_sets
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,8 +53,9 @@ class SensorPlacement:
 
         if self.algorithm == "greedy":
             return self._greedy(instance)
-        else:
-            raise ValueError(f"Unknown algorithm: {self.algorithm}")
+        if self.algorithm == "greedy_indexed":
+            return self._greedy_indexed(instance)
+        raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
     def _greedy(self, instance: PlacementInstance) -> PlacementResult:
         """Greedy Set Cover: iteratively select sensor covering most uncovered targets."""
@@ -98,5 +101,44 @@ class SensorPlacement:
             selected_sensors=selected,
             coverage_ratio=coverage_ratio,
             algorithm="greedy",
+            covered_targets=covered_targets,
+        )
+
+    def _greedy_indexed(self, instance: PlacementInstance) -> PlacementResult:
+        """Greedy Set Cover using a k-d tree for coverage pre-computation.
+
+        Identical selection to _greedy; the coverage matrix is built via
+        spatial range queries instead of brute-force O(S*T) distance checks.
+        """
+        n_targets = len(instance.target_positions)
+        coverage = coverage_sets(
+            instance.sensor_positions,
+            instance.target_positions,
+            instance.coverage_radius,
+        )
+
+        selected: List[int] = []
+        uncovered = set(range(n_targets))
+
+        while uncovered:
+            best_sensor = -1
+            best_count = 0
+            for i, covered in enumerate(coverage):
+                count = len(covered & uncovered)
+                if count > best_count:
+                    best_count = count
+                    best_sensor = i
+            if best_sensor == -1 or best_count == 0:
+                break
+            selected.append(best_sensor)
+            uncovered -= coverage[best_sensor]
+
+        covered_targets = set(range(n_targets)) - uncovered
+        coverage_ratio = len(covered_targets) / n_targets if n_targets > 0 else 0.0
+
+        return PlacementResult(
+            selected_sensors=selected,
+            coverage_ratio=coverage_ratio,
+            algorithm="greedy_indexed",
             covered_targets=covered_targets,
         )

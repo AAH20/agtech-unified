@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agtech-unified
+  labels:
+    app: agtech-unified
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: agtech-unified

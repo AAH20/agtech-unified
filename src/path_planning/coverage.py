@@ -58,9 +58,15 @@ class CoveragePlanner:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
     def _boustrophedon(self, instance: CoverageInstance) -> CoverageResult:
-        """Boustrophedon (lawnmower) coverage pattern."""
+        """Boustrophedon (lawnmower) coverage pattern.
+
+        The path starts at the configured start_point and then follows
+        a back-and-forth pattern covering the field bounding box.
+        Passes are generated both above and below the start point.
+        """
         boundary = instance.field_boundary
         swath = instance.swath_width
+        start = instance.start_point
 
         # Find bounding box
         xs = [p[0] for p in boundary]
@@ -68,22 +74,54 @@ class CoveragePlanner:
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
 
-        # Generate parallel lines in Y direction
-        path = []
+        # Generate pass rows
+        rows: List[float] = []
         y = min_y
-        direction = 1  # 1 = left to right, -1 = right to left
+        while y <= max_y:
+            rows.append(y)
+            y += swath
+
+        # Find the row closest to start y
+        start_y = start[1]
+        closest_row_idx = min(range(len(rows)), key=lambda i: abs(rows[i] - start_y))
+
+        # Generate path
+        path = [start]
         num_passes = 0
 
-        while y <= max_y:
-            if direction == 1:
+        # Direction for each row: even index = left to right, odd index = right to left
+        def row_direction(idx: int) -> int:
+            return 1 if idx % 2 == 0 else -1
+
+        # First pass: from start to the edge at the start row
+        start_row = rows[closest_row_idx]
+        if row_direction(closest_row_idx) == 1:
+            path.append((max_x, start_row))
+        else:
+            path.append((min_x, start_row))
+        num_passes += 1
+
+        # Go up from the start row
+        for i in range(closest_row_idx + 1, len(rows)):
+            y = rows[i]
+            if row_direction(i) == 1:
                 path.append((min_x, y))
                 path.append((max_x, y))
             else:
                 path.append((max_x, y))
                 path.append((min_x, y))
             num_passes += 1
-            y += swath
-            direction *= -1
+
+        # Go down from the row below the start row
+        for i in range(closest_row_idx - 1, -1, -1):
+            y = rows[i]
+            if row_direction(i) == 1:
+                path.append((min_x, y))
+                path.append((max_x, y))
+            else:
+                path.append((max_x, y))
+                path.append((min_x, y))
+            num_passes += 1
 
         # Calculate total distance
         total_distance = 0.0

@@ -1,0 +1,38 @@
+{
+  "missing_algorithms": [
+    "No multi-factor scoring algorithm for tier recommendation — only employee count is used; no weighted combination of farm size, sensor density, data volume, compliance needs",
+    "No module dependency graph or topological sort — modules are returned as a flat list with no ordering constraints or prerequisite resolution",
+    "No gradual rollout / canary percentage algorithm for feature flags",
+    "No backward-compatibility or migration algorithm for onboarding state when tiers change",
+    "No heuristic or ML-based tier refinement — no feedback loop to adjust thresholds based on actual usage patterns",
+    "No recommendation explanation algorithm — recommend_tier returns a bare string with no reasoning, confidence, or alternative-tier suggestions",
+    "No per-module completion estimation algorithm (time, cost, complexity scoring)",
+    "No dependency resolution algorithm for inter-module prerequisites (e.g., 'analytics' requires 'sensors' to be configured first)"
+  ],
+  "bottlenecks": [
+    "Hard-coded magic-number thresholds (10, 500) in OrganizationProfiler with no named constants or config-driven override — requires code change to adjust boundaries",
+    "Revenue parameter is accepted but silently dead — test_revenue_ignored confirms it has zero effect; either remove it or wire it into scoring",
+    "ModuleRegistry uses a static dict — adding a tier or module requires editing source code; no plugin/registry extension point",
+    "No caching of tier lookups or module lists; repeated calls rebuild data (trivial now, becomes real with dynamic registries)",
+    "Flat module list with no lazy loading — all modules for a tier are always returned even if the user only needs a subset",
+    "No async/concurrent module initialization — onboarding wizard would block on each module setup sequentially",
+    "examples/onboarding_demo.py is broken: references tier='starter' (nonexistent) and fields=10 (unknown param) — demo cannot run",
+    "test_all_recommended_modules_importable only asserts module_name.isidentifier() — it is a name-shape check, not an actual import or smoke test; gives false confidence"
+  ],
+  "benchmark_gaps": [
+    "No guided setup wizard: no step-by-step interactive flow, no progress tracking, no skip/resume, no per-step validation",
+    "No configuration templates: no per-tier YAML/JSON config scaffolds, no .env generation, no config validation or schema",
+    "No feature flags: no per-tier feature toggles, no gradual rollout, no experimentation framework, no kill-switch",
+    "No dependency management: no inter-module dependency graph, no external service dependency declarations (DB, MQ, object store), no health checks or readiness probes",
+    "No onboarding state persistence: no database or file-backed store for tracking which steps are completed across sessions",
+    "No onboarding API: no REST/gRPC endpoints for programmatic access to tier recommendation or module listing",
+    "No onboarding CLI: no `agtech onboard init` / `agtech onboard status` command",
+    "No metrics or telemetry: no instrumentation to track onboarding completion rates, drop-off points, or module setup duration",
+    "No multi-language or accessibility support in onboarding flow",
+    "No A/B testing framework for onboarding variants",
+    "No rollback or undo mechanism for completed onboarding steps",
+    "No notification/reminder system for incomplete onboarding steps",
+    "No integration with identity providers (SSO, OAuth) for enterprise onboarding",
+    "No data import/migration tooling for existing farms transitioning into the platform"
+  ]
+}

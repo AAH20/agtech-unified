@@ -16,6 +16,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from src.iot.consistent_hash import ConsistentHashRing
+
 logger = logging.getLogger(__name__)
 
 
@@ -862,15 +864,17 @@ class RetentionPolicy:
 class PartitionAssigner:
     """Consistent partition assignment for horizontal scaling.
 
-    Uses simple hash-based partitioning for sensor IDs.
+    Uses a consistent hash ring (MD5-based) so assignments are stable
+    across process restarts, unlike Python's salted hash().
     """
 
     def __init__(self, num_partitions: int = 4) -> None:
         self.num_partitions = num_partitions
+        self._ring = ConsistentHashRing(num_partitions=num_partitions)
 
     def get_partition(self, key: str) -> int:
         """Get the partition number for a key."""
-        return hash(key) % self.num_partitions
+        return self._ring.get_partition(key)
 
 
 # ===========================================================================

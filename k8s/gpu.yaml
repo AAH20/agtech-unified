@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agtech-unified-gpu
+  labels:
+    app: agtech-unified
+    component: gpu-solver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agtech-unified
+      component: gpu-solver
+  template:
+    metadata:
+      labels:
+        app: agtech-unified
+        component: gpu-solver
+    spec:
+      nodeSelector:
+        gpu: "true"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: gpu-solver
+          image: agtech-unified:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: GPU_ENABLED
+              value: "true"
+            - name: AGTECH_GPU_WORKER
+              value: "true"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              cpu: "4"
+              memory: 8Gi
+            requests:
+              cpu: "2"
+              memory: 4Gi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false

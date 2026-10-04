@@ -8,10 +8,111 @@ scheduling and water stress assessment.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+class SolarGeometry:
+    """Solar geometry calculations for FAO-56 evapotranspiration.
+
+    Implements solar declination, sunset hour angle, extraterrestrial
+    radiation, and daylight hours per FAO-56 guidelines.
+    """
+
+    @staticmethod
+    def solar_declination(day_of_year: int) -> float:
+        """Calculate solar declination angle (radians).
+
+        Args:
+            day_of_year: Day of year (1-365).
+
+        Returns:
+            Solar declination in radians.
+        """
+        return 0.409 * math.sin(2.0 * math.pi / 365.0 * day_of_year - 1.39)
+
+    @staticmethod
+    def sunset_hour_angle(latitude: float, declination: float) -> float:
+        """Calculate sunset hour angle (radians).
+
+        Args:
+            latitude: Latitude in radians.
+            declination: Solar declination in radians.
+
+        Returns:
+            Sunset hour angle in radians.
+        """
+        cos_omega = -math.tan(latitude) * math.tan(declination)
+        # Clamp to [-1, 1] for polar day/night
+        cos_omega = max(-1.0, min(1.0, cos_omega))
+        return math.acos(cos_omega)
+
+    @staticmethod
+    def extraterrestrial_radiation(latitude: float, day_of_year: int) -> float:
+        """Calculate extraterrestrial radiation Ra (MJ/m²/day).
+
+        Args:
+            latitude: Latitude in radians.
+            day_of_year: Day of year (1-365).
+
+        Returns:
+            Extraterrestrial radiation in MJ/m²/day.
+        """
+        declination = SolarGeometry.solar_declination(day_of_year)
+        omega = SolarGeometry.sunset_hour_angle(latitude, declination)
+        # Inverse relative distance Earth-Sun (symmetric around solstices)
+        ref = 172 if day_of_year <= 183 else 355
+        dr = 1.0 + 0.033 * math.cos(2.0 * math.pi / 365.0 * (day_of_year - ref))
+        gs = 0.0820  # MJ/m²/min
+        lat_rad = latitude
+        ra = (
+            (24.0 * 60.0 / math.pi)
+            * gs
+            * dr
+            * (
+                omega * math.sin(lat_rad) * math.sin(declination)
+                + math.cos(lat_rad) * math.cos(declination) * math.sin(omega)
+            )
+        )
+        return max(0.0, ra)
+
+    @staticmethod
+    def daylight_hours(latitude: float, day_of_year: int) -> float:
+        """Calculate daylight hours.
+
+        Args:
+            latitude: Latitude in radians.
+            day_of_year: Day of year (1-365).
+
+        Returns:
+            Number of daylight hours.
+        """
+        declination = SolarGeometry.solar_declination(day_of_year)
+        omega = SolarGeometry.sunset_hour_angle(latitude, declination)
+        return 24.0 / math.pi * omega
+
+    @staticmethod
+    def solar_radiation_from_sunshine(
+        ra: float, sunset_hour_angle: float, sunshine_fraction: float
+    ) -> float:
+        """Estimate solar radiation from sunshine hours (MJ/m²/day).
+
+        Args:
+            ra: Extraterrestrial radiation (MJ/m²/day).
+            sunset_hour_angle: Sunset hour angle (radians).
+            sunshine_fraction: Fraction of sunshine hours (0-1).
+
+        Returns:
+            Estimated solar radiation in MJ/m²/day.
+        """
+        # Angstrom formula: Rs = (a + b * n/N) * Ra
+        # where a=0.25, b=0.50 per FAO-56
+        a = 0.25
+        b = 0.50
+        return (a + b * sunshine_fraction) * ra
 
 
 @dataclass
@@ -298,8 +399,6 @@ class WaterBalanceModel:
         Returns:
             Reference ET in mm/day.
         """
-        import math
-
         t_max = weather.get("temp_max", 30.0)
         t_min = weather.get("temp_min", 20.0)
         rh_max = weather.get("humidity_max", 80.0)
@@ -329,8 +428,21 @@ class WaterBalanceModel:
         # Psychrometric constant
         gamma = 0.000665 * 101.3 * ((293.0 - 0.0065 * 100.0) / 293.0) ** 5.26
 
+        # Compute extraterrestrial radiation using solar geometry when possible
+        lat = weather.get("latitude", 35.0)
+        doy = int(weather.get("day_of_year", 180))
+        ra = SolarGeometry.extraterrestrial_radiation(math.radians(lat), doy)
+        # Estimate solar radiation from Ra and sunshine fraction
+        dec = SolarGeometry.solar_declination(doy)
+        omega = SolarGeometry.sunset_hour_angle(math.radians(lat), dec)
+        # Estimate sunshine fraction from provided solar_rad if available
+        if solar_rad > 0:
+            sunshine_fraction = min(1.0, solar_rad / max(ra, 1e-6))
+            rs = SolarGeometry.solar_radiation_from_sunshine(ra, omega, sunshine_fraction)
+        else:
+            rs = SolarGeometry.solar_radiation_from_sunshine(ra, omega, 0.7)
         # Net radiation (simplified)
-        rns = 0.77 * solar_rad
+        rns = 0.77 * rs
         # Net longwave radiation
         sigma = 4.903e-9
         rnl = (
@@ -338,7 +450,7 @@ class WaterBalanceModel:
             * ((t_max + 273.16) ** 4 + (t_min + 273.16) ** 4)
             / 2.0
             * (0.34 - 0.14 * math.sqrt(ea))
-            * (1.35 * solar_rad / (0.75 * solar_rad + 2.45) - 0.35)
+            * (1.35 * rs / (0.75 * rs + 2.45) - 0.35)
         )
         rn = max(0.0, rns - rnl)
 

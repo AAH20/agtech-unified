@@ -37,6 +37,8 @@ class EventType:
     TASK_COMPLETED = "task_completed"
     RECOMMENDATION_PRODUCED = "recommendation_produced"
     ROUTE_PLANNED = "route_planned"
+    OPTIMIZATION_STARTED = "optimization_started"
+    OPTIMIZATION_COMPLETED = "optimization_completed"
 
 
 class DeliverySemantics(str, Enum):

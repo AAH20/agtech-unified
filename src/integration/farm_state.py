@@ -63,6 +63,8 @@ class FarmState:
         except (ValueError, TypeError):
             return False
 
+    SCHEMA_VERSION = 1
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary."""
         return {
@@ -72,6 +74,7 @@ class FarmState:
             "nutrient_level": self.nutrient_level,
             "pest_pressure": self.pest_pressure,
             "timestamp": self.timestamp,
+            "schema_version": self.SCHEMA_VERSION,
         }
 
     @classmethod
@@ -85,6 +88,33 @@ class FarmState:
             pest_pressure=data["pest_pressure"],
             timestamp=data.get("timestamp", time.time()),
         )
+
+    def update(self, **kwargs: Any) -> None:
+        """Update individual fields in-place with validation.
+
+        Args:
+            **kwargs: Field names and their new values.
+
+        Raises:
+            ValueError: If an unknown field name is provided or a value is out of range.
+        """
+        for field_name, value in kwargs.items():
+            if field_name not in _RANGES:
+                raise ValueError(f"Unknown field: {field_name!r}. Valid fields: {sorted(_RANGES)}")
+        # Validate all values before applying any
+        for field_name, value in kwargs.items():
+            lo, hi = _RANGES[field_name]
+            if not isinstance(value, (int, float)):
+                raise TypeError(f"{field_name} must be numeric, got {type(value).__name__}")
+            if not (lo <= value <= hi):
+                raise ValueError(f"{field_name} must be in [{lo}, {hi}], got {value}")
+        # Apply updates
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)
+
+    def patch(self, **kwargs: Any) -> None:
+        """Alias for update()."""
+        self.update(**kwargs)
 
     def to_json(self) -> str:
         """Serialize to JSON string."""

@@ -1,0 +1,45 @@
+{
+  "bottlenecks": [
+    "detect_collisions is O(n^2) pairwise — no spatial partitioning (grid, kd-tree, quadtree) for 100+ agents; scales quadratically with swarm size",
+    "compute_all_avoidance_velocities is O(n^2) — every agent checks every other agent; no neighbor culling or locality-sensitive pruning",
+    "check_health iterates all agents in a single pass — O(n) heartbeat sweep with no sharding or hierarchical aggregation for large swarms",
+    "distribute_tasks is greedy O(n*m) — no batch optimization or parallel assignment for large task/agent counts",
+    "elect_leader is single-leader centralized — no hierarchical leader election (sub-swarms/regions) for 100+ agents; single point of coordination failure",
+    "_agents and _tasks are plain dicts — no indexed lookups for capability-based queries; _find_replacement scans all agents O(n) per task",
+    "predict_collisions is O(n^2) pairwise — no trajectory pruning or spatial hashing for collision prediction at scale",
+    "detect_deadlock is O(n^2) and only checks pairs — no cycle detection in wait-for graphs for multi-agent deadlock",
+    "compute_velocity_obstacle uses safety_radius * 4 as cutoff but does not use prediction_horizon — predicted collisions may miss agents that will enter range within horizon"
+  ],
+  "missing_algorithms": [
+    "No auction-based task allocation — agents cannot bid on tasks based on cost, capability match, or current load; greedy/Hungarian only minimize cost without market dynamics",
+    "No contract net protocol (CNP) — no task announcement → bid → award negotiation loop; SwarmCoordinator.assign_task is one-shot with no contractor selection dialogue",
+    "No market-based coordination — no pricing, no supply/demand matching, no currency/credit mechanism for agents to trade tasks or resources",
+    "No RRT*/PRM path planning — collision avoidance is reactive (push-away velocities) with no global or local path replanning around obstacles or other agents",
+    "No Dynamic Window Approach (DWA) — velocity selection is proximity-based push-away only; no trajectory scoring over feasible velocity space",
+    "No token-ring or blacklist-based coordination for narrow passages — no mechanism to serialize agents through bottlenecks",
+    "No ORCA (Optimal Reciprocal Collision Avoidance) — current avoidance is ad-hoc push-away; ORCA provides reciprocal, provably collision-free velocity selection",
+    "No swarm flocking (Reynolds rules) — no separation/alignment/cohesion behaviors for group motion",
+    "No map-based pathfinding (A*, Dijkstra) — agents have positions but no environment map or route planning",
+    "No time-windowed task allocation — AllocationInstance has time_windows field but _greedy and _hungarian do not use it in cost computation or feasibility checks",
+    "No deadline-aware scheduling — AllocationInstance has deadlines field but allocation algorithms ignore deadlines; no EDF or priority-monotonic scheduling",
+    "No resource-constrained allocation — _check_resources is called only in _can_assign feasibility check, not in optimization objective; no multi-dimensional resource packing",
+    "No coalition formation — agents cannot form sub-teams for tasks requiring multiple capabilities simultaneously",
+    "No regret-based or online learning allocation — no mechanism to learn from past assignment outcomes to improve future allocations"
+  ],
+  "benchmark_gaps": [
+    "No performance benchmarks — no tests measuring wall-clock time or throughput at 50, 100, 500 agents",
+    "No stress tests — no tests for memory usage, assignment latency, or collision detection overhead as swarm grows",
+    "No scalability test for consensus — no test verifying PBFT quorum behavior with n=4,7,10 and f=1,2,3 nodes",
+    "No benchmark comparing greedy vs Hungarian — no test asserting Hungarian produces equal or lower total cost on random instances",
+    "No benchmark for collision avoidance quality — no test measuring collision rate (collisions per timestep) across swarm sizes",
+    "No fault-injection benchmarks — no tests measuring recovery time (detection → reassignment → completion) under various failure rates",
+    "No test for network partition tolerance — no test verifying consensus behavior when nodes are split into partitions",
+    "No test for Byzantine behavior detection — no test that a node sending conflicting votes is detected or excluded",
+    "No test for leader election convergence time — no test measuring rounds-to-election in bully algorithm",
+    "No test for task preemption correctness under contention — no test verifying priority inversion is avoided when high-priority tasks preempt",
+    "No test for deadlock resolution — detect_deadlock only detects; no test for recovery action",
+    "No integration test spanning all modules — no test that registers agents, assigns tasks, moves agents, detects collisions, and handles failures in one scenario",
+    "No test for collision avoidance with moving agents — all collision tests use static positions; no test with velocity-based prediction",
+    "No test for consensus with equivocating nodes — no test that a Byzantine node sending different values to different peers is handled"
+  ]
+}

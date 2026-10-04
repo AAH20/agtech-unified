@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
+from src.integration.event_bus import DomainEvent, EventBus, EventType
 from src.multi_agent.collision_avoidance import CollisionAvoidance, Position
 from src.multi_agent.fault_tolerance import LeaderElection, TaskReassignment
 
@@ -89,6 +90,7 @@ class SwarmCoordinator:
         )
         self._leader_election = LeaderElection()
         self._task_reassignment = TaskReassignment()
+        self._bus: Optional[EventBus] = None
 
     def register_agent(
         self,
@@ -316,6 +318,17 @@ class SwarmCoordinator:
                 task.assigned_agent = best_agent
                 active_agents[best_agent].assigned_tasks.append(task.task_id)
                 assignments[task.task_id] = best_agent
+                if self._bus:
+                    self._bus.publish(
+                        DomainEvent(
+                            event_type=EventType.TASK_ASSIGNED,
+                            source="multi_agent.swarm",
+                            payload={
+                                "task_id": task.task_id,
+                                "assigned_agent": best_agent,
+                            },
+                        )
+                    )
                 logger.info(
                     "Assigned task %s to agent %s (priority %d)",
                     task.task_id,
@@ -512,6 +525,17 @@ class SwarmCoordinator:
             agent = self._agents[task.assigned_agent]
             if task_id in agent.assigned_tasks:
                 agent.assigned_tasks.remove(task_id)
+        if self._bus:
+            self._bus.publish(
+                DomainEvent(
+                    event_type=EventType.TASK_COMPLETED,
+                    source="multi_agent.swarm",
+                    payload={
+                        "task_id": task_id,
+                        "assigned_agent": task.assigned_agent,
+                    },
+                )
+            )
         logger.info("Task %s completed", task_id)
 
     def fail_task(self, task_id: str, retry: bool = True) -> None:

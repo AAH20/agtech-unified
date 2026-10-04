@@ -1,0 +1,667 @@
+{
+  "report": "Infrastructure & CI/CD Gap Audit v2",
+  "generated": "2026-10-04",
+  "files_audited": [
+    ".github/workflows/ci.yml",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".dockerignore",
+    "k8s/deployment.yaml",
+    "k8s/service.yaml",
+    "k8s/hpa.yaml",
+    "k8s/ingress.yaml",
+    "k8s/configmap.yaml",
+    "pyproject.toml",
+    "Makefile",
+    "docs/deployment.md"
+  ],
+  "gaps": [
+    {
+      "id": "CI-001",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No multi-arch Docker builds",
+      "description": "CI does not build or push multi-arch (amd64/arm64) Docker images. Edge deployments on Raspberry Pi (ARM64) and Jetson cannot use CI-built images.",
+      "impact": "ARM64 edge devices cannot use CI-produced images; manual builds required",
+      "recommended_fix": "Add docker/setup-buildx-action and docker/build-push-action with platforms: linux/amd64,linux/arm64"
+    },
+    {
+      "id": "CI-002",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No GPU node support in CI",
+      "description": "CI runs only on ubuntu-latest CPU runners. GPU solver modules (gpu_tsp, gpu_vrp) cannot be tested in CI.",
+      "impact": "GPU code paths are untested in CI; regressions go undetected",
+      "recommended_fix": "Add a GPU runner job (e.g., ubuntu-latest with CUDA or self-hosted GPU runner) that runs GPU-specific tests"
+    },
+    {
+      "id": "CI-003",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No canary deployment strategy",
+      "description": "CI has no deployment jobs at all — no staging, production, or canary deployments. All deployment is manual via kubectl.",
+      "impact": "No automated rollout, no gradual traffic shifting, no automated rollback on failure",
+      "recommended_fix": "Add deploy-staging and deploy-production jobs with canary strategy (e.g., Argo Rollouts or Flagger)"
+    },
+    {
+      "id": "CI-004",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No integration/e2e test stage",
+      "description": "CI only runs unit tests (pytest tests/). Integration and e2e tests (test_integration_e2e.py) are not run in CI.",
+      "impact": "Integration regressions are not caught before merge",
+      "recommended_fix": "Add a separate integration test job that runs pytest -m integration after unit tests pass"
+    },
+    {
+      "id": "CI-005",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No Docker image build/push in CI",
+      "description": "CI does not build or push Docker images. Images must be built manually.",
+      "impact": "No immutable artifacts; deployments use locally built images",
+      "recommended_fix": "Add a docker-build job that builds and pushes images to a registry on tag/release"
+    },
+    {
+      "id": "CI-006",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No K8s deployment in CI",
+      "description": "CI has no Kubernetes deployment step. All K8s deployments are manual.",
+      "impact": "No GitOps; configuration drift between environments",
+      "recommended_fix": "Add a deploy job that applies k8s/ manifests or uses Helm/Kustomize"
+    },
+    {
+      "id": "CI-007",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No dependency vulnerability scanning",
+      "description": "CI runs bandit (SAST) but has no Python dependency vulnerability scanning (pip-audit, safety).",
+      "impact": "Vulnerable dependencies can be merged undetected",
+      "recommended_fix": "Add pip-audit or safety check to the security job"
+    },
+    {
+      "id": "CI-008",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No container image scanning",
+      "description": "No Trivy/grype scanning of Docker images in CI.",
+      "impact": "Vulnerable base images or packages go undetected",
+      "recommended_fix": "Add trivy image scan after docker build"
+    },
+    {
+      "id": "CI-009",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No secrets scanning",
+      "description": "No gitleaks or trufflehog scanning for secrets in CI.",
+      "impact": "Accidental secret commits are not caught",
+      "recommended_fix": "Add gitleaks-action to CI"
+    },
+    {
+      "id": "CI-010",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No performance benchmarking in CI",
+      "description": "No performance regression tests or benchmarks in CI.",
+      "impact": "Performance regressions go undetected",
+      "recommended_fix": "Add a benchmark job using pytest-benchmark or custom timing tests"
+    },
+    {
+      "id": "CI-011",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No OS matrix in CI",
+      "description": "CI only runs on ubuntu-latest. No Windows or macOS testing.",
+      "impact": "Platform-specific issues may go undetected",
+      "recommended_fix": "Add os: [ubuntu-latest, windows-latest] to test matrix"
+    },
+    {
+      "id": "CI-012",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No job dependencies (pipeline stages)",
+      "description": "Lint, test, and security jobs run independently with no needs: dependencies.",
+      "impact": "No guaranteed ordering; security scan runs even if tests fail",
+      "recommended_fix": "Add needs: [lint] to test job, needs: [test] to security job"
+    },
+    {
+      "id": "CI-013",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No timeout-minutes on jobs",
+      "description": "Jobs have no timeout-minutes set. A hung job can consume CI minutes indefinitely.",
+      "impact": "Wasted CI minutes on hung jobs",
+      "recommended_fix": "Add timeout-minutes: 10 to each job"
+    },
+    {
+      "id": "CI-014",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No smoke tests after deployment",
+      "description": "No post-deployment smoke tests to verify the deployment succeeded.",
+      "impact": "Broken deployments are not automatically detected",
+      "recommended_fix": "Add a smoke test step after deployment that curls health endpoints"
+    },
+    {
+      "id": "CI-015",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No database migration step in CI",
+      "description": "No database migration step in CI or deployment pipeline.",
+      "impact": "Schema changes must be applied manually",
+      "recommended_fix": "Add a migration step (e.g., alembic upgrade head) before deployment"
+    },
+    {
+      "id": "CI-016",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No Helm chart or Kustomize configuration",
+      "description": "K8s manifests are raw YAML with no Helm chart or Kustomize overlays for environment management.",
+      "impact": "Environment-specific configuration is manual and error-prone",
+      "recommended_fix": "Add a Helm chart or Kustomize overlays for dev/staging/prod"
+    },
+    {
+      "id": "CI-017",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "Python 3.13 excluded from test matrix",
+      "description": "Python 3.13 is in classifiers but not in CI test matrix (excluded due to onnx build failure).",
+      "impact": "Forward-compatibility with Python 3.13 is untested",
+      "recommended_fix": "Add 3.13 to matrix with allow-failures: true until onnx supports it"
+    },
+    {
+      "id": "CI-018",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No branch protection rules visible",
+      "description": "No evidence of branch protection rules requiring CI pass before merge.",
+      "impact": "Broken code can be merged to main",
+      "recommended_fix": "Configure branch protection rules in GitHub settings"
+    },
+    {
+      "id": "DKR-001",
+      "category": "Docker",
+      "severity": "high",
+      "module": "Dockerfile",
+      "title": "No multi-arch build support",
+      "description": "Dockerfile has no --platform flags and no ARG for TARGETARCH/TARGETPLATFORM. Cannot build for ARM64.",
+      "impact": "ARM64 edge devices (Raspberry Pi, Jetson) cannot use the image",
+      "recommended_fix": "Add ARG TARGETARCH, TARGETPLATFORM and use --platform=$BUILDPLATFORM in FROM"
+    },
+    {
+      "id": "DKR-002",
+      "category": "Docker",
+      "severity": "high",
+      "module": "Dockerfile",
+      "title": "No image scanning (Trivy/grype)",
+      "description": "No container image vulnerability scanning in CI or Dockerfile.",
+      "impact": "Vulnerable images can be deployed",
+      "recommended_fix": "Add trivy/grype scan in CI after docker build"
+    },
+    {
+      "id": "DKR-003",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No image signing (cosign)",
+      "description": "Docker images are not signed. No supply chain security.",
+      "impact": "Images cannot be verified for integrity",
+      "recommended_fix": "Add cosign sign in CI after image build"
+    },
+    {
+      "id": "DKR-004",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No SBOM generation",
+      "description": "No Software Bill of Materials is generated for the image.",
+      "impact": "No visibility into image contents for compliance",
+      "recommended_fix": "Add syft or trivy --format spdx to generate SBOM"
+    },
+    {
+      "id": "DKR-005",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No distroless base image option",
+      "description": "Uses python:3.11-slim which includes a full OS. Distroless would reduce attack surface.",
+      "impact": "Larger attack surface than necessary",
+      "recommended_fix": "Add a distroless variant (e.g., gcr.io/distroless/python3.11)"
+    },
+    {
+      "id": "DKR-006",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "tests/ directory copied into image",
+      "description": "COPY . . copies the entire project including tests/ into the runtime image.",
+      "impact": "Unnecessary files in production image; larger image size",
+      "recommended_fix": "Add tests/ to .dockerignore or use explicit COPY of only src/"
+    },
+    {
+      "id": "DKR-007",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No layer optimization (COPY . .)",
+      "description": "COPY . . copies everything in one layer, preventing effective layer caching.",
+      "impact": "Slower builds; any change invalidates the layer cache",
+      "recommended_fix": "Copy only src/ and requirements.txt separately before pip install"
+    },
+    {
+      "id": "DKR-008",
+      "category": "Docker",
+      "severity": "low",
+      "module": "Dockerfile",
+      "title": "No version tagging strategy",
+      "description": "Image is only tagged as :latest. No semantic versioning or git sha tags.",
+      "impact": "Cannot roll back to specific versions",
+      "recommended_fix": "Tag images with git sha and semver (e.g., agtech-unified:1.0.0, agtech-unified:sha-abc123)"
+    },
+    {
+      "id": "DKR-009",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No docker-compose.prod.yml",
+      "description": "Only one docker-compose.yml for all environments. No production override.",
+      "impact": "Cannot have environment-specific compose configuration",
+      "recommended_fix": "Add docker-compose.prod.yml with production settings"
+    },
+    {
+      "id": "DKR-010",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No GPU runtime in compose",
+      "description": "GPU solvers (gpu_tsp, gpu_vrp) need NVIDIA runtime but compose doesn't configure it.",
+      "impact": "GPU modules fail in Docker Compose",
+      "recommended_fix": "Add runtime: nvidia to app service"
+    },
+    {
+      "id": "DKR-011",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No resource limits in compose",
+      "description": "No mem_limit or cpus limits on services in docker-compose.yml.",
+      "impact": "Services can consume all host resources",
+      "recommended_fix": "Add deploy.resources.limits to each service"
+    },
+    {
+      "id": "DKR-012",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No healthcheck in compose",
+      "description": "No healthcheck defined in docker-compose.yml (only in Dockerfile).",
+      "impact": "Docker Compose cannot detect unhealthy containers",
+      "recommended_fix": "Add healthcheck to app service in compose"
+    },
+    {
+      "id": "DKR-013",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No restart policy in compose",
+      "description": "No restart policy defined in docker-compose.yml.",
+      "impact": "Containers do not restart on failure",
+      "recommended_fix": "Add restart: unless-stopped to services"
+    },
+    {
+      "id": "DKR-014",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No network isolation in compose",
+      "description": "All services use the default network. No network segmentation.",
+      "impact": "No isolation between services",
+      "recommended_fix": "Define separate networks for app, db, and messaging"
+    },
+    {
+      "id": "DKR-015",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No logging configuration in compose",
+      "description": "No logging driver or log rotation configured in docker-compose.yml.",
+      "impact": "Log files can grow unbounded",
+      "recommended_fix": "Add logging: driver: json-file with max-size and max-file"
+    },
+    {
+      "id": "DKR-016",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "Hardcoded POSTGRES_PASSWORD in compose",
+      "description": "POSTGRES_PASSWORD=agtech is hardcoded in docker-compose.yml.",
+      "impact": "Security risk if repo is public",
+      "recommended_fix": "Use ${POSTGRES_PASSWORD:?} from .env"
+    },
+    {
+      "id": "K8S-001",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "deployment.yaml",
+      "title": "No rolling update strategy",
+      "description": "Deployment has no strategy.rollingUpdate (maxSurge, maxUnavailable) configured.",
+      "impact": "Default rolling update may cause downtime or resource spikes",
+      "recommended_fix": "Add strategy: rollingUpdate: maxSurge: 1, maxUnavailable: 0"
+    },
+    {
+      "id": "K8S-002",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "deployment.yaml",
+      "title": "No PodDisruptionBudget",
+      "description": "No PodDisruptionBudget defined. Voluntary disruptions can take down all pods.",
+      "impact": "No minimum availability guarantee during node maintenance",
+      "recommended_fix": "Add PodDisruptionBudget with minAvailable: 1"
+    },
+    {
+      "id": "K8S-003",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "deployment.yaml",
+      "title": "No NetworkPolicy",
+      "description": "No NetworkPolicy defined. All pods can communicate freely.",
+      "impact": "No network segmentation; lateral movement possible if compromised",
+      "recommended_fix": "Add NetworkPolicy to restrict ingress/egress"
+    },
+    {
+      "id": "K8S-004",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "deployment.yaml",
+      "title": "No securityContext",
+      "description": "No securityContext (runAsNonRoot, readOnlyRootFilesystem, allowPrivilegeEscalation: false) on pod or container.",
+      "impact": "Container runs with excessive privileges",
+      "recommended_fix": "Add securityContext with runAsNonRoot: true, readOnlyRootFilesystem: true"
+    },
+    {
+      "id": "K8S-005",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No ServiceAccount",
+      "description": "No ServiceAccount defined. Pods use the default service account.",
+      "impact": "Excessive API permissions",
+      "recommended_fix": "Create a dedicated ServiceAccount with minimal RBAC"
+    },
+    {
+      "id": "K8S-006",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No topologySpreadConstraints",
+      "description": "No topologySpreadConstraints. Pods may all schedule on the same node/AZ.",
+      "impact": "No high availability across zones",
+      "recommended_fix": "Add topologySpreadConstraints with maxSkew: 1, topologyKey: topology.kubernetes.io/zone"
+    },
+    {
+      "id": "K8S-007",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No affinity/anti-affinity rules",
+      "description": "No pod affinity or anti-affinity rules defined.",
+      "impact": "No control over pod placement",
+      "recommended_fix": "Add podAntiAffinity to spread pods across nodes"
+    },
+    {
+      "id": "K8S-008",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No GPU node support",
+      "description": "No nodeSelector, tolerations, or GPU resource limits for GPU solver pods.",
+      "impact": "GPU modules cannot be scheduled on GPU nodes",
+      "recommended_fix": "Add nodeSelector: gpu: 'true' and resources.limits: nvidia.com/gpu: 1"
+    },
+    {
+      "id": "K8S-009",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No canary deployment support",
+      "description": "No canary deployment configuration (no Istio, Flagger, or Argo Rollouts).",
+      "impact": "No gradual traffic shifting for safe rollouts",
+      "recommended_fix": "Add Flagger or Argo Rollouts canary configuration"
+    },
+    {
+      "id": "K8S-010",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No init containers for migrations",
+      "description": "No init container to run database migrations before app starts.",
+      "impact": "App may start before schema is ready",
+      "recommended_fix": "Add initContainer that runs alembic upgrade head"
+    },
+    {
+      "id": "K8S-011",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No persistent volumes",
+      "description": "No PersistentVolumeClaim for data storage.",
+      "impact": "Data is lost on pod restart",
+      "recommended_fix": "Add PVC for application data"
+    },
+    {
+      "id": "K8S-012",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No graceful shutdown configuration",
+      "description": "No terminationGracePeriodSeconds or preStop hook.",
+      "impact": "In-flight requests may be dropped on shutdown",
+      "recommended_fix": "Add terminationGracePeriodSeconds: 30 and preStop hook"
+    },
+    {
+      "id": "K8S-013",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "deployment.yaml",
+      "title": "No startup probe",
+      "description": "No startup probe defined. Slow-starting containers may be killed by liveness probe.",
+      "impact": "Containers that take time to start may be killed prematurely",
+      "recommended_fix": "Add startupProbe with failureThreshold: 30, periodSeconds: 10"
+    },
+    {
+      "id": "K8S-014",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "hpa.yaml",
+      "title": "No HPA behavior configuration",
+      "description": "HPA has no behavior configuration for scale-up/scale-down stabilization.",
+      "impact": "Potential flapping or slow scale-down",
+      "recommended_fix": "Add behavior: scaleDown: stabilizationWindowSeconds: 300"
+    },
+    {
+      "id": "K8S-015",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "hpa.yaml",
+      "title": "No custom metrics for HPA",
+      "description": "HPA only uses CPU and memory. No custom metrics (e.g., request queue depth).",
+      "impact": "Cannot scale on application-specific metrics",
+      "recommended_fix": "Add custom metrics via Prometheus Adapter"
+    },
+    {
+      "id": "K8S-016",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "hpa.yaml",
+      "title": "No VPA (Vertical Pod Autoscaler)",
+      "description": "No VPA to recommend or set resource requests.",
+      "impact": "Resource requests may be misconfigured over time",
+      "recommended_fix": "Add VPA in recommendation mode"
+    },
+    {
+      "id": "K8S-017",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No resource quotas",
+      "description": "No ResourceQuota defined for the namespace.",
+      "impact": "No limit on total resource consumption",
+      "recommended_fix": "Add ResourceQuota for the namespace"
+    },
+    {
+      "id": "K8S-018",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No limit ranges",
+      "description": "No LimitRange defined for the namespace.",
+      "impact": "No default resource limits for pods without explicit limits",
+      "recommended_fix": "Add LimitRange with default requests/limits"
+    },
+    {
+      "id": "K8S-019",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No PodSecurityPolicy/PodSecurityAdmission",
+      "description": "No PodSecurityPolicy or PodSecurityAdmission configuration.",
+      "impact": "No enforcement of security standards",
+      "recommended_fix": "Add PodSecurityAdmission with restricted profile"
+    },
+    {
+      "id": "K8S-020",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No monitoring/alerting rules",
+      "description": "No PrometheusRule or alerting configuration in k8s/.",
+      "impact": "No automated alerting on issues",
+      "recommended_fix": "Add PrometheusRule with alerts for high error rate, latency, etc."
+    },
+    {
+      "id": "K8S-021",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No Kustomize/Helm configuration",
+      "description": "Raw YAML manifests with no Kustomize or Helm configuration.",
+      "impact": "No environment-specific overlays",
+      "recommended_fix": "Add Kustomize overlays or Helm chart"
+    },
+    {
+      "id": "K8S-022",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No environment-specific overlays",
+      "description": "No dev/staging/prod overlays for K8s manifests.",
+      "impact": "Environment configuration is manual",
+      "recommended_fix": "Add Kustomize overlays for each environment"
+    },
+    {
+      "id": "K8S-023",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No backup strategy",
+      "description": "No backup configuration for persistent data.",
+      "impact": "Data loss risk",
+      "recommended_fix": "Add Velero or similar backup solution"
+    },
+    {
+      "id": "K8S-024",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No secrets encryption at rest",
+      "description": "No etcd encryption or external secrets operator.",
+      "impact": "Secrets stored in plaintext in etcd",
+      "recommended_fix": "Enable etcd encryption or use External Secrets Operator"
+    },
+    {
+      "id": "K8S-025",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No cert-manager Certificate resource",
+      "description": "Ingress references a ClusterIssuer but no Certificate resource is defined.",
+      "impact": "TLS certificates may not be provisioned automatically",
+      "recommended_fix": "Add Certificate resource for agtech-unified-tls"
+    },
+    {
+      "id": "K8S-026",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No rate limiting at ingress",
+      "description": "No rate limiting annotations on the Ingress.",
+      "impact": "API is vulnerable to abuse",
+      "recommended_fix": "Add nginx.ingress.kubernetes.io/limit-rps annotation"
+    },
+    {
+      "id": "K8S-027",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No WAF configuration",
+      "description": "No Web Application Firewall configuration.",
+      "impact": "No protection against common web attacks",
+      "recommended_fix": "Add ModSecurity or cloud WAF"
+    },
+    {
+      "id": "K8S-028",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No audit logging",
+      "description": "No Kubernetes audit logging configuration.",
+      "impact": "No audit trail of API server actions",
+      "recommended_fix": "Enable audit logging with appropriate policy"
+    },
+    {
+      "id": "K8S-029",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No service mesh integration",
+      "description": "No Istio/Linkerd service mesh configuration.",
+      "impact": "No mTLS, traffic management, or observability from mesh",
+      "recommended_fix": "Evaluate Istio or Linkerd for mTLS and traffic management"
+    },
+    {
+      "id": "K8S-030",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "deployment.yaml",
+      "title": "No distributed tracing configuration",
+      "description": "No OpenTelemetry or Jaeger configuration in K8s manifests.",
+      "impact": "No distributed tracing in production",
+      "recommended_fix": "Add OpenTelemetry Collector sidecar or daemonset"
+    }
+  ],
+  "summary": {
+    "total": 56,
+    "critical": 0,
+    "high": 8,
+    "medium": 18,
+    "low": 30
+  }
+}

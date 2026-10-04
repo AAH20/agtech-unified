@@ -154,13 +154,403 @@
       "description": "SimulationState is created manually, never from IoT sensor data.",
       "impact": "Digital twin is a standalone simulation, not a real-time twin.",
       "recommended_fix": "Add DigitalTwin.ingest_sensor_data(FarmState) that updates SimulationState"
+    },
+    {
+      "id": "EB-001",
+      "module": "event_bus",
+      "category": "throughput",
+      "severity": "high",
+      "title": "Synchronous-only handler invocation blocks publishers",
+      "description": "All handlers are invoked synchronously in the publish() call. A slow handler blocks the publisher and all subsequent handlers. No async/await support, no thread pool, no batching mechanism.",
+      "impact": "Under load, publishers stall; head-of-line blocking prevents scalable event processing.",
+      "location": "event_bus.py:290-332"
+    },
+    {
+      "id": "EB-002",
+      "module": "event_bus",
+      "category": "throughput",
+      "severity": "medium",
+      "title": "No backpressure or flow control",
+      "description": "publish() accepts events unconditionally. No queue depth limits, no rate limiting, no backpressure signaling to publishers.",
+      "impact": "Memory exhaustion under burst load; no graceful degradation path.",
+      "location": "event_bus.py:290"
+    },
+    {
+      "id": "EB-003",
+      "module": "event_bus",
+      "category": "persistence",
+      "severity": "high",
+      "title": "FileEventStore lacks fsync and crash consistency",
+      "description": "append() writes to file without fsync(). A crash can lose the last event or corrupt the JSONL file. No write-ahead log, no checksums.",
+      "impact": "Data loss on crash; corrupted event store requires manual recovery.",
+      "location": "event_bus.py:182-197"
+    },
+    {
+      "id": "EB-004",
+      "module": "event_bus",
+      "category": "persistence",
+      "severity": "medium",
+      "title": "No event store rotation or compaction",
+      "description": "FileEventStore grows unbounded. No size-based rotation, no time-based compaction, no archival.",
+      "impact": "Disk space exhaustion; slow replay as file grows.",
+      "location": "event_bus.py:165-237"
+    },
+    {
+      "id": "EB-005",
+      "module": "event_bus",
+      "category": "persistence",
+      "severity": "medium",
+      "title": "No event TTL or expiration",
+      "description": "Events persist forever. No TTL mechanism, no automatic cleanup of stale events.",
+      "impact": "Unbounded storage growth; compliance issues with sensitive data.",
+      "location": "event_bus.py:134-163"
+    },
+    {
+      "id": "EB-006",
+      "module": "event_bus",
+      "category": "delivery_guarantees",
+      "severity": "high",
+      "title": "Exactly-once deduplication is in-memory only",
+      "description": "_processed_event_ids is a local set. On restart, all dedup state is lost. Duplicate events will be reprocessed after recovery.",
+      "impact": "Exactly-once guarantee violated on restart; duplicate side effects.",
+      "location": "event_bus.py:271, 309-316"
+    },
+    {
+      "id": "EB-007",
+      "module": "event_bus",
+      "category": "delivery_guarantees",
+      "severity": "medium",
+      "title": "No handler timeout mechanism",
+      "description": "A handler that hangs indefinitely blocks the entire publish() call. No timeout, no circuit breaker.",
+      "impact": "Single hung handler can wedge the event bus.",
+      "location": "event_bus.py:334-351"
+    },
+    {
+      "id": "EB-008",
+      "module": "event_bus",
+      "category": "delivery_guarantees",
+      "severity": "medium",
+      "title": "Dead letter queue has no retry or replay mechanism",
+      "description": "Events in DLQ are terminal. No scheduled retry, no manual replay API, no DLQ depth alerting.",
+      "impact": "Failed events are silently lost; no operational recovery path.",
+      "location": "event_bus.py:378, 394-400"
+    },
+    {
+      "id": "EB-009",
+      "module": "event_bus",
+      "category": "delivery_guarantees",
+      "severity": "low",
+      "title": "No event ordering guarantees across types",
+      "description": "Events are stored in publish order per type, but no global sequence number or causal ordering across event types.",
+      "impact": "Consumers cannot reliably reconstruct cross-module causality.",
+      "location": "event_bus.py:240-406"
+    },
+    {
+      "id": "EB-010",
+      "module": "event_bus",
+      "category": "throughput",
+      "severity": "medium",
+      "title": "No wildcard or pattern-based subscriptions",
+      "description": "Subscribers must know exact event type strings. No wildcard (e.g., 'sensor.*') or regex-based subscription.",
+      "impact": "Tight coupling between publishers and subscribers; harder to add new event types.",
+      "location": "event_bus.py:275-282"
+    },
+    {
+      "id": "EB-011",
+      "module": "event_bus",
+      "category": "throughput",
+      "severity": "low",
+      "title": "No event filtering by source or payload",
+      "description": "Subscribers receive all events of a type regardless of source or payload content. No server-side filtering.",
+      "impact": "Wasted handler invocations; subscribers must filter client-side.",
+      "location": "event_bus.py:275-282"
+    },
+    {
+      "id": "EB-012",
+      "module": "event_bus",
+      "category": "persistence",
+      "severity": "low",
+      "title": "No metrics or observability hooks",
+      "description": "No counters for publish/subscribe/delivery rates, no latency histograms, no export to monitoring systems.",
+      "impact": "No visibility into bus health or performance bottlenecks.",
+      "location": "event_bus.py:240-406"
+    },
+    {
+      "id": "EB-013",
+      "module": "event_bus",
+      "category": "delivery_guarantees",
+      "severity": "low",
+      "title": "No graceful shutdown or drain",
+      "description": "No close() or shutdown() method to stop accepting new events and drain in-flight handlers.",
+      "impact": "Events lost during application shutdown.",
+      "location": "event_bus.py:240-406"
+    },
+    {
+      "id": "FS-001",
+      "module": "farm_state",
+      "category": "serialization",
+      "severity": "medium",
+      "title": "No schema versioning in serialization",
+      "description": "to_dict()/from_dict() have no version field. Schema evolution is not supported; old serialized data cannot be migrated.",
+      "impact": "Breaking changes to FarmState fields break deserialization of historical data.",
+      "location": "farm_state.py:66-96"
+    },
+    {
+      "id": "FS-002",
+      "module": "farm_state",
+      "category": "serialization",
+      "severity": "low",
+      "title": "tenant_id not serialized in to_dict()",
+      "description": "tenant_id is a field on FarmState but is excluded from to_dict(). Multi-tenant deployments lose tenant context on serialization.",
+      "impact": "Tenant isolation broken when state is persisted or transmitted.",
+      "location": "farm_state.py:66-75"
+    },
+    {
+      "id": "FS-003",
+      "module": "farm_state",
+      "category": "validation",
+      "severity": "medium",
+      "title": "No cross-field validation rules",
+      "description": "Validation is per-field range checks only. No relational rules (e.g., high temperature + low moisture = stress condition).",
+      "impact": "Invalid but in-range field combinations accepted; missed anomaly detection.",
+      "location": "farm_state.py:50-56"
+    },
+    {
+      "id": "FS-004",
+      "module": "farm_state",
+      "category": "validation",
+      "severity": "medium",
+      "title": "No partial update support",
+      "description": "FarmState requires all fields at construction. No patch/update mechanism for incremental sensor updates.",
+      "impact": "Must reconstruct full state for single-field updates; inefficient for high-frequency sensor data.",
+      "location": "farm_state.py:30-56"
+    },
+    {
+      "id": "FS-005",
+      "module": "farm_state",
+      "category": "validation",
+      "severity": "low",
+      "title": "No field-level metadata (source, confidence, timestamp)",
+      "description": "Fields carry no provenance. Cannot distinguish sensor-derived vs. manual-entry values, no confidence intervals.",
+      "impact": "Cannot weight or filter data by quality; audit trail incomplete.",
+      "location": "farm_state.py:30-56"
+    },
+    {
+      "id": "FS-006",
+      "module": "farm_state",
+      "category": "state_transitions",
+      "severity": "medium",
+      "title": "No transition history or audit log",
+      "description": "StateTransitionValidator checks rules but does not record who/what triggered the transition. No audit trail.",
+      "impact": "Cannot reconstruct why state changed; compliance gaps.",
+      "location": "farm_state.py:194-267"
+    },
+    {
+      "id": "FS-007",
+      "module": "farm_state",
+      "category": "state_transitions",
+      "severity": "medium",
+      "title": "No formal state machine pattern",
+      "description": "Transitions are validated by ad-hoc rules, not a defined state machine with explicit states and allowed transitions.",
+      "impact": "Hard to reason about valid state graphs; rules may conflict or have gaps.",
+      "location": "farm_state.py:194-267"
+    },
+    {
+      "id": "FS-008",
+      "module": "farm_state",
+      "category": "state_transitions",
+      "severity": "low",
+      "title": "No concurrency control for state updates",
+      "description": "No locking, optimistic concurrency, or compare-and-swap. Concurrent updates can lost-update.",
+      "impact": "Race conditions in multi-threaded or multi-process deployments.",
+      "location": "farm_state.py:30-56"
+    },
+    {
+      "id": "FS-009",
+      "module": "farm_state",
+      "category": "serialization",
+      "severity": "low",
+      "title": "No bulk import/export",
+      "description": "No batch serialization for history. Each state must be serialized individually.",
+      "impact": "Inefficient for large-scale data migration or backup.",
+      "location": "farm_state.py:135-191"
+    },
+    {
+      "id": "FS-010",
+      "module": "farm_state",
+      "category": "state_transitions",
+      "severity": "low",
+      "title": "FarmStateDiff does not track change timestamp",
+      "description": "Diff captures field changes but not when the change occurred. Cannot correlate with events.",
+      "impact": "Cannot build accurate timeline of state changes.",
+      "location": "farm_state.py:99-133"
+    },
+    {
+      "id": "FS-011",
+      "module": "farm_state",
+      "category": "validation",
+      "severity": "low",
+      "title": "No anomaly detection on state values",
+      "description": "Range validation catches impossible values but not statistically anomalous ones (e.g., sudden spike).",
+      "impact": "Sensor faults or extreme events go undetected.",
+      "location": "farm_state.py:50-56"
+    },
+    {
+      "id": "FS-012",
+      "module": "farm_state",
+      "category": "state_transitions",
+      "severity": "medium",
+      "title": "No integration with event bus for state change notifications",
+      "description": "FarmState is decoupled from EventBus. State changes do not automatically publish events.",
+      "impact": "Other modules cannot react to state changes without polling.",
+      "location": "farm_state.py:1-267"
+    },
+    {
+      "id": "UO-001",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "high",
+      "title": "No integration with event bus for optimization lifecycle events",
+      "description": "UnifiedOptimizer does not publish events on solve start, completion, or failure. No observability into optimization runs.",
+      "impact": "Cannot monitor or audit optimization; no event-driven chaining.",
+      "location": "unified_optimizer.py:65-156"
+    },
+    {
+      "id": "UO-002",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "medium",
+      "title": "No integration with farm state for problem context",
+      "description": "OptimizationProblem does not reference FarmState. Cannot automatically populate routing problems from current farm conditions.",
+      "impact": "Manual problem construction required; no context-aware optimization.",
+      "location": "unified_optimizer.py:28-46"
+    },
+    {
+      "id": "UO-003",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "medium",
+      "title": "No problem validation before solving",
+      "description": "solve() does not validate that required fields are present for the chosen solver_type. Errors surface deep in solver internals.",
+      "impact": "Poor error messages; hard to debug misconfigured problems.",
+      "location": "unified_optimizer.py:77-88"
+    },
+    {
+      "id": "UO-004",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "medium",
+      "title": "No solver auto-selection heuristics",
+      "description": "Caller must specify solver_type explicitly. No logic to choose optimal solver based on problem size, constraints, or hardware.",
+      "impact": "Suboptimal solver selection; requires caller expertise.",
+      "location": "unified_optimizer.py:77-88"
+    },
+    {
+      "id": "UO-005",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No async support for long-running optimizations",
+      "description": "solve() is synchronous. Large problems block the caller with no progress callbacks or cancellation.",
+      "impact": "Cannot run optimizations in background; no progress visibility.",
+      "location": "unified_optimizer.py:77-92"
+    },
+    {
+      "id": "UO-006",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No result caching",
+      "description": "Identical problems are re-solved from scratch. No memoization or cache layer.",
+      "impact": "Wasted computation for repeated or similar problems.",
+      "location": "unified_optimizer.py:77-92"
+    },
+    {
+      "id": "UO-007",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No timeout handling",
+      "description": "No timeout parameter on solve(). A pathological problem can run indefinitely.",
+      "impact": "Resource exhaustion; no SLA enforcement.",
+      "location": "unified_optimizer.py:77-92"
+    },
+    {
+      "id": "UO-008",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No fallback solver on failure",
+      "description": "If the primary solver fails, there is no automatic fallback to a simpler or more robust algorithm.",
+      "impact": "Single point of failure; no graceful degradation.",
+      "location": "unified_optimizer.py:77-88"
+    },
+    {
+      "id": "UO-009",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No support for time windows (VRPTW)",
+      "description": "VRP solver does not support time window constraints. Real-world routing often requires delivery time windows.",
+      "impact": "Cannot model time-sensitive deliveries; limits applicability.",
+      "location": "unified_optimizer.py:109-125"
+    },
+    {
+      "id": "UO-010",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No multi-objective optimization support",
+      "description": "Only single-objective cost minimization. No support for balancing cost, time, fuel, or fairness.",
+      "impact": "Cannot model real-world trade-offs.",
+      "location": "unified_optimizer.py:28-63"
+    },
+    {
+      "id": "UO-011",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No solver health checking or capability discovery",
+      "description": "No way to query which solvers are available, their capabilities, or their health status.",
+      "impact": "Cannot build adaptive systems that select solvers based on availability.",
+      "location": "unified_optimizer.py:19-26"
+    },
+    {
+      "id": "UO-012",
+      "module": "unified_optimizer",
+      "category": "integration_completeness",
+      "severity": "low",
+      "title": "No result persistence",
+      "description": "OptimizationResult is returned in-memory only. No integration with event store or database for audit.",
+      "impact": "Cannot replay or analyze past optimizations.",
+      "location": "unified_optimizer.py:48-63"
     }
   ],
   "summary": {
-    "total": 15,
+    "total": 51,
     "critical": 4,
-    "high": 5,
-    "medium": 6
+    "high": 9,
+    "medium": 20,
+    "low": 18,
+    "by_module": {
+      "event_bus": 13,
+      "farm_state": 12,
+      "unified_optimizer": 11,
+      "cross_module": 15
+    },
+    "by_category": {
+      "throughput": 4,
+      "persistence": 6,
+      "delivery_guarantees": 5,
+      "serialization": 4,
+      "validation": 4,
+      "state_transitions": 5,
+      "integration_completeness": 11,
+      "missing_inter_module_communication": 7,
+      "missing_event_driven_patterns": 2,
+      "missing_data_flow_validation": 3,
+      "missing_api_contracts": 2
+    }
   },
-  "key_finding": "Only 7 cross-module imports exist across 43 source files. The system is a collection of independent tools, not a unified platform. The event_bus, farm_state, and unified_optimizer are defined but never used by other modules. Orchestrator modules are needed to wire everything together."
+  "key_finding": "Only 7 cross-module imports exist across 43 source files. The system is a collection of independent tools, not a unified platform. The event_bus, farm_state, and unified_optimizer are defined but never used by other modules. Orchestrator modules are needed to wire everything together. Event bus has no async support, no crash-safe persistence, and no backpressure. FarmState lacks schema versioning and event integration. UnifiedOptimizer has no event bus integration, no validation, and no async/timeout support."
 }
