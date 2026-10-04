@@ -292,7 +292,7 @@ class TestLocalSearchValidation:
 
     def test_invalid_index_raises(self):
         opt = TwoOpt()
-        with pytest.raises(ValueError, match="invalid|range"):
+        with pytest.raises(ValueError, match="exceeds"):
             opt.improve([0, 1, 5], [[0, 1, 2], [1, 0, 1], [2, 1, 0]])
 
     def test_empty_tour_returns_empty(self):

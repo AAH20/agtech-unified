@@ -30,7 +30,7 @@ def test_problem_passed_to_both():
 
     def gpu_fail(p):
         seen.append(p)
-        raise RuntimeError("fail")
+        raise RuntimeError("CUDA out of memory")
 
     def cpu_ok(p):
         seen.append(p)
@@ -45,12 +45,12 @@ def test_both_fail_raises():
     fb = GPUFallback()
 
     def gpu_fail(p):
-        raise RuntimeError("GPU error")
+        raise RuntimeError("CUDA error")
 
     def cpu_fail(p):
         raise ValueError("CPU error")
 
-    with pytest.raises(ValueError, match="CPU error"):
+    with pytest.raises(RuntimeError, match="Both GPU and CPU solvers failed"):
         fb.solve("prob", gpu_fail, cpu_fail)
 
 
@@ -59,7 +59,7 @@ def test_cpu_result_returned_on_fallback():
     fb = GPUFallback()
 
     def gpu_fail(p):
-        raise Exception("CUDA not available")
+        raise RuntimeError("CUDA not available")
 
     def cpu_ok(p):
         return 42

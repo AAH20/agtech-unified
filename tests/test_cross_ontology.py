@@ -68,7 +68,11 @@ class TestCrossOntologyMapping:
         assert len(results) > 0
         assert results[0].concept_id == "wheat"
 
-    def test_rdf_export_with_mappings(self):
+    @pytest.mark.skipif(
+        pytest.importorskip("rdflib", reason="rdflib not installed") is None,
+        reason="rdflib not installed",
+    )
+    def test_rdf_export_with_mappings():
         """RDF export includes SKOS mapping properties."""
         pytest.importorskip("rdflib")
         ont = AGROVOCOntology()
