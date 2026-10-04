@@ -22,9 +22,9 @@ def test_all_init_files_have_docstrings():
         content = init_path.read_text().strip()
         assert content, f"{rel} is empty"
         # Must start with a docstring (triple-quoted)
-        assert content.startswith('"""') or content.startswith("'''"), (
-            f"{rel} has no module docstring"
-        )
+        assert content.startswith('"""') or content.startswith(
+            "'''"
+        ), f"{rel} has no module docstring"
         # Extract docstring
         if content.startswith('"""'):
             end = content.index('"""', 3)
