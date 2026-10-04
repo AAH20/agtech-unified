@@ -8,8 +8,15 @@ from src.optimization.crop_vision import (
 )
 from src.optimization.edge_ai import BenchmarkStats, EdgeAIInference, InferenceResult, ModelInfo
 from src.optimization.gpu_fallback import GPUFallback
-from src.optimization.gpu_tsp import GPUTSPResult, GPUTSPSolver
-from src.optimization.gpu_vrp import GPUVRPResult, GPUVRPSolver
+
+try:
+    from src.optimization.gpu_tsp import GPUTSPResult, GPUTSPSolver
+    from src.optimization.gpu_vrp import GPUVRPResult, GPUVRPSolver
+except ImportError:
+    GPUTSPResult = None
+    GPUTSPSolver = None
+    GPUVRPResult = None
+    GPUVRPSolver = None
 from src.optimization.local_search import TwoOpt
 from src.optimization.tsp import TSPInstance, TSPResult, TSPSolver
 from src.optimization.vrp import VRPInstance, VRPResult, VRPSolver
