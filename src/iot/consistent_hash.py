@@ -50,7 +50,7 @@ class ConsistentHashRing:
     @staticmethod
     def _hash(key: str) -> int:
         """MD5-based hash (deterministic across processes)."""
-        return int(hashlib.md5(key.encode()).hexdigest(), 16)
+        return int(hashlib.md5(key.encode(), usedforsecurity=False).hexdigest(), 16)
 
     def _find_node(self, key: str) -> str:
         """Find the node responsible for a key (clockwise on the ring)."""

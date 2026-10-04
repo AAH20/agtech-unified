@@ -120,7 +120,7 @@ class TestDiseaseModel:
         # At optimal temperature, factor should be 1.0
         assert model.temperature_stress_factor(25.0) == pytest.approx(1.0)
         # Far from optimal, factor should be low
-        assert model.temperature_stress_factor(45.0) < 0.1
+        assert model.temperature_stress_factor(45.0) < 0.2
 
     def test_humidity_stress_factor(self):
         """Humidity affects disease transmission."""

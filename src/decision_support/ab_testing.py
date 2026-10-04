@@ -89,7 +89,7 @@ class ABTestManager:
             raise ValueError(f"Experiment '{experiment_name}' is expired or not yet started")
         # Deterministic assignment via hash
         key = f"{experiment_name}:{user_id}"
-        hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16)
+        hash_val = int(hashlib.md5(key.encode(), usedforsecurity=False).hexdigest(), 16)
         # Map hash to variant based on weights
         normalized = (hash_val % 10000) / 10000.0
         cumulative = 0.0

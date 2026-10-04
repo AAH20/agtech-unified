@@ -116,10 +116,10 @@ class ConfigTemplate:
         if tier == "startup":
             return {"host": "localhost", "port": 8000, "workers": 1, "auth": "basic"}
         elif tier == "smb":
-            return {"host": "0.0.0.0", "port": 8000, "workers": 4, "auth": "jwt"}
+            return {"host": "127.0.0.1", "port": 8000, "workers": 4, "auth": "jwt"}
         else:
             return {
-                "host": "0.0.0.0",
+                "host": "127.0.0.1",
                 "port": 8000,
                 "workers": 8,
                 "auth": "oauth2",
