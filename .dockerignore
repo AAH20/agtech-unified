@@ -9,4 +9,12 @@ build/
 htmlcov/
 *.onnx
 .DS_Store
-gaps/
+.git/
+.github/
+.gaps/
+*.md
+!README.md
+!LICENSE
+docker-compose.yml
+Dockerfile
+.dockerignore

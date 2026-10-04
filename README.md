@@ -4,7 +4,7 @@
 
 A comprehensive, modular AgTech system integrating IoT sensors, drone fleets, ground robots, edge AI, digital twins, multi-agent swarm coordination, and genomic engineering — all unified under a single macro architecture.
 
-Built with strict TDD (Test-Driven Development). 355 tests passing across 18 modules.
+Built with strict TDD (Test-Driven Development). 632 tests passing across 33 modules.
 
 ---
 
@@ -20,6 +20,8 @@ Built with strict TDD (Test-Driven Development). 355 tests passing across 18 mod
 - [GPU Acceleration](#gpu-acceleration)
 - [Security](#security)
 - [Interoperability](#interoperability)
+- [Onboarding & Sizing](#onboarding--sizing)
+- [Infrastructure](#infrastructure)
 
 ---
 
@@ -262,6 +264,8 @@ flowchart LR
 | `context_broker.py` | NGSI-LD entity CRUD | FIWARE context management |
 | `smart_models.py` | NGSI-LD smart data models | Agricultural data modeling |
 | `data_pipeline.py` | MQTT + Kafka + TimescaleDB | Real-time data streaming |
+| `device_management.py` | Registry + health monitoring | IoT device lifecycle |
+| `data_validation.py` | Schema + range + anomaly checks | Sensor data quality |
 
 ### Digital Twin (`src/digital_twin/`)
 
@@ -288,6 +292,33 @@ flowchart LR
 |--------|-----------|----------|
 | `crispr.py` | PAM site detection + efficiency scoring | CRISPR guide RNA design |
 | `protein.py` | MW, pI, hydrophobicity, stability | Protein sequence analysis |
+
+### Integration (`src/integration/`)
+
+| Module | Algorithm | Use Case |
+|--------|-----------|----------|
+| `event_bus.py` | Pub/sub domain events | Cross-module communication |
+| `unified_optimizer.py` | Unified API for TSP/VRP/GPU | Single optimization interface |
+| `farm_state.py` | Validated farm state model | Shared data model |
+
+### Onboarding (`src/onboarding/`)
+
+| Module | Algorithm | Use Case |
+|--------|-----------|----------|
+| `sizing.py` | OrganizationProfiler | Tier recommendation (startup/SMB/enterprise) |
+| `modules.py` | ModuleRegistry | Module subset per tier |
+
+### Infrastructure
+
+| File | Purpose |
+|------|---------|
+| `pyproject.toml` | Project metadata, pinned deps |
+| `Dockerfile` | Python 3.11-slim container |
+| `docker-compose.yml` | App + Redis + TimescaleDB |
+| `.github/workflows/ci.yml` | ruff + pytest + bandit |
+| `Makefile` | install/test/lint/docker targets |
+| `examples/quickstart.py` | Runnable end-to-end example |
+| `docs/deployment.md` | Deployment guide |
 
 ---
 
@@ -410,7 +441,7 @@ python -m pytest tests/ --cov=src --cov-report=html
 
 ## Testing
 
-**355 tests passing** across 18 modules.
+**632 tests passing** across 33 modules.
 
 | Test File | Tests | Module |
 |-----------|-------|--------|
@@ -426,6 +457,8 @@ python -m pytest tests/ --cov=src --cov-report=html
 | `test_context_broker.py` | 10 | NGSI-LD broker |
 | `test_smart_models.py` | 10 | Smart data models |
 | `test_data_pipeline.py` | 21 | MQTT/Kafka/TimescaleDB |
+| `test_device_management.py` | 10 | Device lifecycle |
+| `test_data_validation.py` | 10 | Data validation |
 | `test_streaming.py` | 12 | Streaming patterns |
 | `test_digital_twin.py` | 10 | Digital twin |
 | `test_knowledge_graph.py` | 24 | Knowledge graph |
@@ -442,6 +475,28 @@ python -m pytest tests/ --cov=src --cov-report=html
 | `test_integration_e2e.py` | 10 | End-to-end |
 | `test_performance.py` | 10 | Benchmarks |
 | `test_reliability.py` | 10 | Fault injection |
+| `test_onboarding.py` | 5 | Tier recommendation |
+| `test_infrastructure.py` | 29 | File validation |
+| `test_event_bus.py` | 12 | Event pub/sub |
+| `test_unified_optimizer.py` | 11 | Unified API |
+| `test_farm_state.py` | 11 | State validation |
+| `test_local_search.py` | 5 | 2-opt improvement |
+| `test_gpu_fallback.py` | 5 | GPU→CPU fallback |
+| `test_obstacles.py` | 5 | Obstacle avoidance |
+| `test_fault_tolerance.py` | 10 | Task reassignment |
+| `test_collision_avoidance.py` | 11 | Swarm collision |
+| `test_device_management.py` | 10 | Device registry |
+| `test_data_validation.py` | 10 | Schema validation |
+| `test_ml_models.py` | 14 | Linear regression |
+| `test_notifications.py` | 13 | Email/SMS/Webhook |
+| `test_audit.py` | 13 | Audit logging |
+| `test_water_balance.py` | 12 | Irrigation model |
+| `test_nutrient_cycling.py` | 12 | Nutrient dynamics |
+| `test_graph_algorithms.py` | 14 | PageRank/community |
+| `test_property_based.py` | 13 | Hypothesis invariants |
+| `test_concurrency.py` | 10 | Thread safety |
+| `test_regression.py` | 45 | Edge cases |
+| `test_examples.py` | 5 | Example scripts |
 
 ---
 
@@ -507,4 +562,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-**Generated**: 2026-10-04 | **Research**: 10 clusters, 100 agents | **Tests**: 355 passing | **Modules**: 18
+**Generated**: 2026-10-04 | **Research**: 10 clusters, 100 agents | **Wave 1**: 50 agents (gap analysis) | **Wave 2**: 50 agents (implementation) | **Tests**: 632 passing | **Modules**: 33
