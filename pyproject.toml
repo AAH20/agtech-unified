@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -30,7 +31,6 @@ dependencies = [
     "pydantic==2.10.4",
     "PyJWT==2.10.1",
     "numpy==2.2.1",
-    "torch==2.5.1",
     "requests==2.32.3",
     "uvicorn==0.34.0",
 ]
@@ -38,6 +38,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest==8.3.4",
+    "pytest-timeout>=2.3.1",
     "rdflib>=7.0,<8",
     "tomli>=2.0; python_version < '3.11'",
     "httpx==0.28.1",
@@ -50,6 +51,9 @@ dev = [
     "pytest==8.3.4",
     "httpx==0.28.1",
     "onnx==1.17.0",
+]
+gpu = [
+    "torch==2.5.1",
 ]
 
 [project.urls]
@@ -66,6 +70,17 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "unit: Unit tests for individual modules",
+    "integration: Integration tests spanning multiple modules",
+    "property: Property-based tests using hypothesis",
+    "regression: Regression tests for known bugs and edge cases",
+    "concurrency: Concurrency and thread-safety tests",
+    "performance: Performance and benchmark tests",
+    "reliability: Fault injection and recovery tests",
+    "slow: Tests that take longer than 1 second",
+]
+timeout = 300
 
 [tool.ruff]
 line-length = 100

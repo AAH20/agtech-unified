@@ -1,0 +1,457 @@
+[
+  {
+    "module": "tsp.py",
+    "gap_type": "missing_algorithm",
+    "description": "No local search improvement (2-opt, 3-opt, Lin-Kernighan) available. Christofides and nearest-neighbor produce initial tours but no refinement step exists.",
+    "severity": "high",
+    "recommended_fix": "Add a TwoOpt or LinKernighan improvement step callable after initial tour construction. Integrate with local_search.py."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "missing_algorithm",
+    "description": "Nearest-neighbor always starts from city 0. No multi-start option to explore different initial tours and pick the best.",
+    "severity": "medium",
+    "recommended_fix": "Add multi_start_nearest_neighbor that tries all starting cities and returns the best tour."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "edge_case",
+    "description": "No validation that distance matrix values are non-negative. Negative distances silently produce incorrect results.",
+    "severity": "high",
+    "recommended_fix": "Add check in TSPInstance.__post_init__: if any(d < 0 for row in distance_matrix for d in row): raise ValueError."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "edge_case",
+    "description": "No validation for NaN or Inf in distance matrix. These propagate silently through all algorithms.",
+    "severity": "high",
+    "recommended_fix": "Add NaN/Inf check in TSPInstance.__post_init__ using math.isfinite."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "edge_case",
+    "description": "No validation that distance matrix is symmetric. Asymmetric TSP (ATSP) requires different algorithms but is silently treated as symmetric.",
+    "severity": "medium",
+    "recommended_fix": "Add symmetry check warning or raise error if asymmetry exceeds tolerance."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "performance",
+    "description": "Triangle inequality check in __post_init__ is O(n³). For n=1000 this is 1e9 operations, making instance creation prohibitively slow.",
+    "severity": "high",
+    "recommended_fix": "Make triangle inequality check optional via a validate_metric=True parameter, or remove it entirely and document the requirement."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "performance",
+    "description": "_prim_mst uses O(n²) linear scan for min-key selection. For large n this is significantly slower than heap-based O((V+E)log V).",
+    "severity": "medium",
+    "recommended_fix": "Replace linear scan with heapq-based priority queue for O((V+E)log V) complexity."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with local_search.py. TwoOpt improvement exists but is never called by TSPSolver.",
+    "severity": "high",
+    "recommended_fix": "Add optional improvement step in TSPSolver.solve() that calls TwoOpt().improve() on the initial tour."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "edge_case",
+    "description": "_eulerian_tour always starts from vertex 0. If vertex 0 has no edges (isolated), the tour is incomplete or incorrect.",
+    "severity": "medium",
+    "recommended_fix": "Start from the first vertex that has edges, or validate that all vertices have degree > 0."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "error_handling",
+    "description": "_min_weight_matching is greedy, not optimal. The approximation_ratio=1.5 claim is incorrect because Christofides requires optimal matching for the guarantee.",
+    "severity": "high",
+    "recommended_fix": "Either implement Edmonds' blossom algorithm for optimal matching, or change approximation_ratio to None and document that the guarantee does not hold."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "missing_algorithm",
+    "description": "No route improvement heuristic (2-opt, Or-opt, cross-exchange) for VRP routes after Clarke-Wright construction.",
+    "severity": "high",
+    "recommended_fix": "Add VRP-specific 2-opt* and cross-exchange improvement steps."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "edge_case",
+    "description": "VRPInstance.__post_init__ does not validate that len(demands) == len(customers). Mismatched lengths cause IndexError later.",
+    "severity": "high",
+    "recommended_fix": "Add: if len(self.demands) != len(self.customers): raise ValueError."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "edge_case",
+    "description": "No validation that demands are non-negative. Negative demands silently produce incorrect capacity checks.",
+    "severity": "high",
+    "recommended_fix": "Add: if any(d < 0 for d in self.demands): raise ValueError."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "edge_case",
+    "description": "No validation for NaN or Inf in distance matrix. These propagate through savings calculations.",
+    "severity": "high",
+    "recommended_fix": "Add NaN/Inf check in VRPInstance.__post_init__."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "error_handling",
+    "description": "No handling for customers with zero demand. They are valid but may cause division-by-zero in some improvement heuristics.",
+    "severity": "low",
+    "recommended_fix": "Document zero-demand handling or filter them out with a warning."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "performance",
+    "description": "Route merging updates route_of for all customers in the merged route — O(n) per merge, O(n²) total. Could use union-find for near-O(1) amortized.",
+    "severity": "medium",
+    "recommended_fix": "Use union-find (disjoint set) data structure for route tracking."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with gpu_vrp.py or local_search.py. GPU savings computation exists but is never used by the main solver.",
+    "severity": "medium",
+    "recommended_fix": "Add optional GPU acceleration path in VRPSolver that delegates to GPUVRPSolver."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "edge_case",
+    "description": "No validation that distance matrix diagonal is zero. Non-zero self-distances produce incorrect savings values.",
+    "severity": "medium",
+    "recommended_fix": "Add: if any(dist[i][i] != 0 for i in range(n)): raise ValueError."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "missing_algorithm",
+    "description": "No Christofides algorithm on GPU. Only nearest-neighbor and 2-opt are available, missing the 1.5-approximation guarantee.",
+    "severity": "medium",
+    "recommended_fix": "Implement GPU-accelerated Christofides using tensor operations for MST and matching."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "edge_case",
+    "description": "No validation for NaN or Inf in distance matrix. These cause torch operations to produce NaN results silently.",
+    "severity": "high",
+    "recommended_fix": "Add torch.isfinite() check after tensor creation."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "edge_case",
+    "description": "_gpu_two_opt has no max_iterations limit. On degenerate inputs (e.g., all distances equal) it could loop indefinitely.",
+    "severity": "high",
+    "recommended_fix": "Add max_iterations parameter (default 1000) to _gpu_two_opt."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "edge_case",
+    "description": "solve_batch does not handle empty instances in the batch. An empty cities list in one instance causes tensor creation to fail.",
+    "severity": "medium",
+    "recommended_fix": "Filter or handle empty instances before batch tensor creation."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "error_handling",
+    "description": "No validation that distance matrix is square or matches len(cities). Mismatched dimensions cause cryptic torch errors.",
+    "severity": "high",
+    "recommended_fix": "Add explicit dimension check before tensor creation."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "performance",
+    "description": "solve_batch is not truly batched — it loops calling self.solve() sequentially. No GPU parallelism is exploited.",
+    "severity": "high",
+    "recommended_fix": "Implement true batched inference using padded tensors and broadcasting, similar to compute_distance_matrix_batch."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "performance",
+    "description": "_gpu_two_opt generates all O(n²) pairs each iteration. For large n this causes GPU memory pressure and slow execution.",
+    "severity": "medium",
+    "recommended_fix": "Use candidate lists or restrict to nearby cities. Consider first-improvement strategy to reduce iterations."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with tsp.py or local_search.py. No shared interface or common base class.",
+    "severity": "medium",
+    "recommended_fix": "Define a common TSPSolverBase interface and have both CPU and GPU solvers implement it."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "edge_case",
+    "description": "compute_distance_matrix_batch does not handle empty coordinate lists. max() on empty sequence raises ValueError.",
+    "severity": "medium",
+    "recommended_fix": "Add: if not coordinates_batch: return torch.empty(0, 0, 0)."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "missing_algorithm",
+    "description": "No route improvement heuristic (2-opt*, cross-exchange) for GPU VRP routes.",
+    "severity": "medium",
+    "recommended_fix": "Add GPU-parallel 2-opt* improvement for VRP routes."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "edge_case",
+    "description": "No validation that demands are non-negative. Negative demands produce incorrect capacity checks.",
+    "severity": "high",
+    "recommended_fix": "Add: if any(d < 0 for d in demands): raise ValueError."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "edge_case",
+    "description": "_compute_savings_tensor returns shape (0,0) for n=0 but callers may expect (1,1) or graceful handling. Inconsistent with n=1 case.",
+    "severity": "low",
+    "recommended_fix": "Handle n=0 and n=1 cases explicitly with consistent return shapes."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "error_handling",
+    "description": "No validation of input dimensions. Mismatched distance_matrix/demands/capacity cause cryptic errors.",
+    "severity": "high",
+    "recommended_fix": "Add explicit dimension and type checks at the start of _gpu_savings."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "performance",
+    "description": "compute_savings_batch loops over instances sequentially. No true GPU batching is performed.",
+    "severity": "medium",
+    "recommended_fix": "Pad and stack distance matrices into a single batched tensor operation."
+  },
+  {
+    "module": "gpu_vrp.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with vrp.py. GPU savings computation exists but is never used by the main VRPSolver.",
+    "severity": "medium",
+    "recommended_fix": "Add optional GPU path in VRPSolver that delegates to GPUVRPSolver."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "missing_algorithm",
+    "description": "Only 2-opt is implemented. No 3-opt, Or-opt, or Lin-Kernighan heuristics for stronger local search.",
+    "severity": "medium",
+    "recommended_fix": "Add Or-opt and 3-opt moves. Consider implementing Lin-Kernighan for state-of-the-art results."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "edge_case",
+    "description": "No validation that tour indices are valid (within range, no duplicates). Invalid tours cause IndexError or infinite loops.",
+    "severity": "high",
+    "recommended_fix": "Add: if len(set(tour)) != len(tour): raise ValueError. Check all indices < len(distance_matrix)."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "error_handling",
+    "description": "No validation of inputs. Empty tour, single-city tour, or mismatched distance matrix cause undefined behavior.",
+    "severity": "high",
+    "recommended_fix": "Add input validation at the start of improve()."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "performance",
+    "description": "No candidate list or don't-look bits optimization. All O(n²) pairs are evaluated every iteration even when most cannot improve.",
+    "severity": "medium",
+    "recommended_fix": "Add don't-look bits: skip cities whose neighbors haven't changed since last iteration."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with any solver (tsp.py, vrp.py, gpu_tsp.py, gpu_vrp.py). Exists in isolation.",
+    "severity": "high",
+    "recommended_fix": "Integrate TwoOpt as an optional improvement step in all TSP/VRP solvers."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "performance",
+    "description": "No first-improvement vs best-improvement strategy option. Best-improvement is O(n²) per iteration; first-improvement can be faster.",
+    "severity": "low",
+    "recommended_fix": "Add strategy parameter: 'first' or 'best' improvement."
+  },
+  {
+    "module": "gpu_fallback.py",
+    "gap_type": "edge_case",
+    "description": "No validation that gpu_solver and cpu_solver are callable. Non-callable inputs cause TypeError with unclear message.",
+    "severity": "medium",
+    "recommended_fix": "Add: if not callable(gpu_solver) or not callable(cpu_solver): raise TypeError."
+  },
+  {
+    "module": "gpu_fallback.py",
+    "gap_type": "error_handling",
+    "description": "Catches all exceptions (bare except Exception). This masks programming errors, bugs, and non-GPU failures as GPU failures.",
+    "severity": "high",
+    "recommended_fix": "Catch only torch.cuda.OutOfMemoryError and RuntimeError with CUDA in message. Re-raise others."
+  },
+  {
+    "module": "gpu_fallback.py",
+    "gap_type": "error_handling",
+    "description": "No handling for the case where both GPU and CPU solvers fail. The CPU exception propagates without context about the GPU failure.",
+    "severity": "medium",
+    "recommended_fix": "Wrap CPU solver in try/except and raise RuntimeError with both error messages chained."
+  },
+  {
+    "module": "gpu_fallback.py",
+    "gap_type": "cross_module",
+    "description": "Not integrated with any solver. Exists as a standalone utility never used by tsp.py, vrp.py, gpu_tsp.py, or gpu_vrp.py.",
+    "severity": "medium",
+    "recommended_fix": "Integrate GPUFallback into GPUTSPSolver and GPUVRPSolver as the default execution path."
+  },
+  {
+    "module": "gpu_fallback.py",
+    "gap_type": "error_handling",
+    "description": "No logging of the original traceback. Only the exception message is logged, making debugging difficult.",
+    "severity": "low",
+    "recommended_fix": "Use logger.warning with exc_info=True to log the full traceback."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "missing_algorithm",
+    "description": "No model quantization support. Edge devices benefit from INT8/FP16 quantization for faster inference and lower memory.",
+    "severity": "medium",
+    "recommended_fix": "Add quantization_level parameter and use onnxruntime quantization tools."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "edge_case",
+    "description": "preprocess does not handle 4-channel (RGBA) images. Only 2D grayscale and 3-channel HWC are supported.",
+    "severity": "medium",
+    "recommended_fix": "Add: if arr.shape[2] == 4: arr = arr[:, :, :3]  # drop alpha channel."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "edge_case",
+    "description": "infer does not validate tensor dtype. Non-float32 tensors may cause ONNX runtime errors or incorrect results.",
+    "severity": "medium",
+    "recommended_fix": "Add: if tensor.dtype != np.float32: raise ValueError."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "edge_case",
+    "description": "infer_batch does not handle tensors with different shapes. np.stack will fail with unclear error if shapes differ.",
+    "severity": "medium",
+    "recommended_fix": "Validate all tensors have the same shape before stacking."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "error_handling",
+    "description": "No timeout for inference. A hung ONNX session blocks indefinitely.",
+    "severity": "low",
+    "recommended_fix": "Add optional timeout parameter using concurrent.futures or signal-based timeout."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "performance",
+    "description": "preprocess processes images one by one in a Python loop. For large batches this is slow.",
+    "severity": "medium",
+    "recommended_fix": "Vectorize preprocessing using numpy batch operations where possible."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "performance",
+    "description": "No dynamic batching. Fixed batch_size may be suboptimal for varying image sizes or memory constraints.",
+    "severity": "low",
+    "recommended_fix": "Add adaptive batch sizing based on available memory."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "edge_case",
+    "description": "_resize_nearest does not handle upscaling correctly. When target > source, the index mapping produces aliasing artifacts.",
+    "severity": "low",
+    "recommended_fix": "Document that downscaling is the intended use case, or implement proper interpolation for upscaling."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "error_handling",
+    "description": "benchmark does not handle model failure during warmup. If warmup fails, the error propagates without cleanup.",
+    "severity": "low",
+    "recommended_fix": "Wrap warmup in try/except and re-raise with context."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "missing_algorithm",
+    "description": "No ensemble voting or multi-scale inference. Single-pass inference may miss diseases visible only at certain scales.",
+    "severity": "medium",
+    "recommended_fix": "Add multi-scale inference with majority voting across scales."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "edge_case",
+    "description": "predict_yield validation 'out.size not in (1, self.batch_size, len(images))' is wrong for partial batches. If batch_size=4 and len(images)=6, last chunk has size 2 which fails validation.",
+    "severity": "high",
+    "recommended_fix": "Track expected outputs per chunk and validate against actual chunk size, not self.batch_size."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "edge_case",
+    "description": "analyze_field only uses first image's disease and weed result ([0] index). Does not aggregate across all images in the field.",
+    "severity": "high",
+    "recommended_fix": "Aggregate disease/weed results across all images (e.g., majority vote or mean severity)."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "error_handling",
+    "description": "No validation that images are valid numpy arrays. Non-array inputs cause cryptic errors in preprocess.",
+    "severity": "medium",
+    "recommended_fix": "Add: if not all(isinstance(img, np.ndarray) for img in images): raise TypeError."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "performance",
+    "description": "No parallel inference across the three models. Disease, weed, and yield models could run concurrently on separate threads.",
+    "severity": "medium",
+    "recommended_fix": "Use concurrent.futures.ThreadPoolExecutor to run the three stages in parallel."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "cross_module",
+    "description": "_health_score does not handle 'unavailable' case properly. When disease or weed is unavailable, severity/coverage are 0.0, which may overestimate health.",
+    "severity": "medium",
+    "recommended_fix": "Return None or a sentinel value when any stage is unavailable, and handle it in the report."
+  },
+  {
+    "module": "crop_vision.py",
+    "gap_type": "edge_case",
+    "description": "No handling for empty images list in individual stage methods (detect_disease, classify_weeds, predict_yield). Only analyze_field checks.",
+    "severity": "medium",
+    "recommended_fix": "Add empty check at the start of each stage method."
+  },
+  {
+    "module": "tsp.py",
+    "gap_type": "cross_module",
+    "description": "No integration with gpu_tsp.py. CPU and GPU TSP solvers are completely separate with no shared interface or automatic device selection.",
+    "severity": "medium",
+    "recommended_fix": "Create a unified TSP solver factory that automatically selects CPU or GPU based on availability and problem size."
+  },
+  {
+    "module": "vrp.py",
+    "gap_type": "cross_module",
+    "description": "No integration with gpu_vrp.py. CPU and GPU VRP solvers are completely separate with no shared interface.",
+    "severity": "medium",
+    "recommended_fix": "Create a unified VRP solver factory that automatically selects CPU or GPU based on availability and problem size."
+  },
+  {
+    "module": "edge_ai.py",
+    "gap_type": "missing_algorithm",
+    "description": "No model caching or reuse. Each EdgeAIInference instance loads its own session, wasting memory when multiple pipelines use the same model.",
+    "severity": "low",
+    "recommended_fix": "Add a model cache keyed by (model_path, providers, optimization_level) that shares sessions."
+  },
+  {
+    "module": "gpu_tsp.py",
+    "gap_type": "error_handling",
+    "description": "No handling for CUDA OOM. When GPU memory is exhausted, the error propagates without fallback to CPU.",
+    "severity": "medium",
+    "recommended_fix": "Catch torch.cuda.OutOfMemoryError and fall back to CPU tensor operations."
+  },
+  {
+    "module": "local_search.py",
+    "gap_type": "edge_case",
+    "description": "No handling for tours with duplicate cities. Duplicates cause incorrect cost calculations and infinite loops.",
+    "severity": "medium",
+    "recommended_fix": "Add: if len(set(tour)) != len(tour): raise ValueError('Tour contains duplicate cities')."
+  }
+]

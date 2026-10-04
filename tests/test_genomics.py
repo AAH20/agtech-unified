@@ -9,7 +9,7 @@ from src.genomics.protein import ProteinAnalyzer
 
 
 def test_grna_empty_sequence():
-    """Empty DNA sequence raises ValueError."""
+    """BUG-011: Empty DNA sequence raises ValueError."""
     designer = CRISPRDesigner()
     with pytest.raises(ValueError, match="Sequence cannot be empty"):
         designer.design_guide("")
@@ -76,7 +76,7 @@ def test_grna_efficiency_score():
 
 
 def test_protein_empty_sequence():
-    """Empty protein sequence raises ValueError."""
+    """BUG-012: Empty protein sequence raises ValueError."""
     analyzer = ProteinAnalyzer()
     with pytest.raises(ValueError, match="Sequence cannot be empty"):
         analyzer.analyze("")
@@ -125,7 +125,7 @@ def test_protein_stability_score():
 
 
 def test_protein_invalid_amino_acid():
-    """Invalid amino acid raises ValueError."""
+    """BUG-012: Invalid amino acid raises ValueError."""
     analyzer = ProteinAnalyzer()
     with pytest.raises(ValueError, match="Invalid amino acid"):
         analyzer.analyze("ACDEFGHIKLMNPQRSTVWYZ")

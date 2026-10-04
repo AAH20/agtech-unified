@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -16,6 +17,24 @@ class AgentInfo:
     agent_id: str
     capabilities: List[str] = field(default_factory=list)
     is_active: bool = True
+    health_score: float = 1.0
+    error_count: int = 0
+    success_count: int = 0
+    last_heartbeat: float = field(default_factory=time.time)
+
+    def record_error(self) -> None:
+        """Record an error and degrade health score."""
+        self.error_count += 1
+        self.health_score = max(0.0, self.health_score - 0.1)
+
+    def record_success(self) -> None:
+        """Record a success and improve health score."""
+        self.success_count += 1
+        self.health_score = min(1.0, self.health_score + 0.05)
+
+    def is_degraded(self) -> bool:
+        """Check if agent health is degraded (below 0.5)."""
+        return self.health_score < 0.5
 
 
 @dataclass
@@ -119,24 +138,48 @@ class TaskReassignment:
 
 
 class LeaderElection:
-    """Simple leader election for multi-agent coordination.
+    """Leader election for multi-agent coordination.
 
-    Elects a leader from registered candidates. When the leader fails,
-    a new leader is elected from the remaining candidates.
+    Supports multiple election algorithms:
+    - "simple": First candidate (deterministic, default)
+    - "bully": Highest priority candidate wins
+
+    When the leader fails, a new leader is elected from the remaining candidates.
+    Heartbeat monitoring detects leader failure and triggers re-election.
     """
 
-    def __init__(self) -> None:
-        self._candidates: List[str] = []
-        self._leader: Optional[str] = None
+    def __init__(
+        self,
+        algorithm: str = "simple",
+        heartbeat_timeout: float = 30.0,
+        auto_reelect: bool = False,
+    ) -> None:
+        """Initialize leader election.
 
-    def register_candidate(self, agent_id: str) -> None:
+        Args:
+            algorithm: Election algorithm ("simple" or "bully").
+            heartbeat_timeout: Seconds without heartbeat before leader is
+                considered failed.
+            auto_reelect: If True, automatically re-elect when leader fails.
+        """
+        self._candidates: List[str] = []
+        self._priorities: Dict[str, int] = {}
+        self._leader: Optional[str] = None
+        self._algorithm = algorithm
+        self._heartbeat_timeout = heartbeat_timeout
+        self._auto_reelect = auto_reelect
+        self._last_leader_heartbeat: float = time.time()
+
+    def register_candidate(self, agent_id: str, priority: int = 0) -> None:
         """Register a candidate for leader election.
 
         Args:
             agent_id: The agent to add as a candidate.
+            priority: Priority for bully algorithm (higher = more likely to win).
         """
         if agent_id not in self._candidates:
             self._candidates.append(agent_id)
+            self._priorities[agent_id] = priority
 
     def remove_candidate(self, agent_id: str) -> None:
         """Remove a candidate (e.g., when the leader fails).
@@ -146,6 +189,7 @@ class LeaderElection:
         """
         if agent_id in self._candidates:
             self._candidates.remove(agent_id)
+            self._priorities.pop(agent_id, None)
         if self._leader == agent_id:
             self._leader = None
 
@@ -161,9 +205,58 @@ class LeaderElection:
         if not self._candidates:
             raise ValueError("No candidates for leader election")
 
-        # Simple election: pick the first candidate (deterministic)
-        self._leader = self._candidates[0]
+        if self._algorithm == "bully":
+            # Bully: highest priority wins
+            self._leader = max(
+                self._candidates,
+                key=lambda aid: self._priorities.get(aid, 0),
+            )
+        else:
+            # Simple: first candidate (deterministic)
+            self._leader = self._candidates[0]
+
+        self._last_leader_heartbeat = time.time()
         return self._leader
+
+    def heartbeat(self, agent_id: str) -> None:
+        """Record a heartbeat from the leader.
+
+        Args:
+            agent_id: The agent sending the heartbeat.
+
+        Raises:
+            ValueError: If the agent is not the current leader.
+        """
+        if agent_id != self._leader:
+            raise ValueError(f"Agent '{agent_id}' is not the leader")
+        self._last_leader_heartbeat = time.time()
+
+    def is_leader_alive(self) -> bool:
+        """Check if the leader is still alive based on heartbeat.
+
+        Returns:
+            True if the leader has sent a heartbeat within the timeout.
+        """
+        if self._leader is None:
+            return False
+        return (time.time() - self._last_leader_heartbeat) < self._heartbeat_timeout
+
+    def check_leader_health(self) -> Optional[str]:
+        """Check leader health and re-elect if necessary.
+
+        Returns:
+            The new leader ID if re-election occurred, None otherwise.
+        """
+        if self._leader is not None and not self.is_leader_alive():
+            logger.warning("Leader %s failed (heartbeat timeout)", self._leader)
+            old_leader = self._leader
+            self._leader = None
+            self.remove_candidate(old_leader)
+            if self._auto_reelect and self._candidates:
+                new_leader = self.elect_leader()
+                logger.info("Re-elected leader: %s", new_leader)
+                return new_leader
+        return None
 
     @property
     def leader(self) -> Optional[str]:

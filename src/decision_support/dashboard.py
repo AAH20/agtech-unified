@@ -1,4 +1,4 @@
-"""Real-time farm monitoring dashboard with WebSocket support."""
+"""Real-time farm monitoring dashboard with WebSocket support and multi-tenant isolation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from src.decision_support.recommender import FarmState
 
@@ -36,13 +36,19 @@ class DashboardConfig:
     max_history: int = 1000
     enable_alerts: bool = True
     farm_name: str = "Default Farm"
+    tenant_id: Optional[str] = None
 
 
 class FarmDashboard:
-    """Real-time farm monitoring dashboard with WebSocket support."""
+    """Real-time farm monitoring dashboard with WebSocket support and multi-tenant isolation."""
 
-    def __init__(self, config: Optional[DashboardConfig] = None):
+    def __init__(
+        self,
+        config: Optional[DashboardConfig] = None,
+        auth: Any = None,
+    ):
         self.config = config or DashboardConfig()
+        self.auth = auth
         self._state = FarmState(
             soil_moisture=0.5,
             temperature=25.0,
@@ -70,6 +76,11 @@ class FarmDashboard:
         """Whether the dashboard streaming is active."""
         return self._running
 
+    @property
+    def tenant_id(self) -> Optional[str]:
+        """Tenant ID for this dashboard instance."""
+        return self.config.tenant_id
+
     def update_state(self, **kwargs) -> None:
         """Update farm state with new values."""
         current = self._state
@@ -96,6 +107,7 @@ class FarmDashboard:
             "nutrient_level": self._state.nutrient_level,
             "pest_pressure": self._state.pest_pressure,
             "timestamp": time.time(),
+            "tenant_id": self.config.tenant_id,
         }
 
     def get_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -130,12 +142,49 @@ class FarmDashboard:
             yield self.get_state_dict()
             await asyncio.sleep(self.config.update_interval)
 
+    def _authenticate_ws(self, websocket: WebSocket) -> Dict[str, Any]:
+        """Authenticate a WebSocket connection."""
+        if self.auth is None:
+            return {"sub": "anonymous", "roles": ["admin"], "tenant_id": None}
+        # Try to get token from query params or headers
+        token = websocket.query_params.get("token")
+        if not token:
+            # Try subprotocol
+            for protocol in websocket.headers.get("sec-websocket-protocol", "").split(","):
+                protocol = protocol.strip()
+                if protocol.startswith("token."):
+                    token = protocol[6:]
+                    break
+        if not token:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        try:
+            return self.auth.authenticate(token, required_role="viewer")
+        except Exception as exc:
+            raise HTTPException(status_code=401, detail=str(exc))
+
+    def _check_tenant_access(self, payload: Dict[str, Any]) -> None:
+        """Verify the token's tenant matches this dashboard's tenant."""
+        if self.config.tenant_id is None:
+            return
+        token_tenant = payload.get("tenant_id")
+        if token_tenant is not None and token_tenant != self.config.tenant_id:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied for tenant {self.config.tenant_id}",
+            )
+
     def create_app(self) -> FastAPI:
         """Create a FastAPI application with WebSocket endpoint."""
         app = FastAPI(title="Farm Dashboard", version="1.0.0")
 
         @app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
+            try:
+                payload = self._authenticate_ws(websocket)
+                self._check_tenant_access(payload)
+            except HTTPException as exc:
+                await websocket.close(code=4000 + exc.status_code, reason=exc.detail)
+                return
             await websocket.accept()
             self.add_client(websocket)
             try:
@@ -165,11 +214,31 @@ class FarmDashboard:
                 self.remove_client(websocket)
 
         @app.get("/state")
-        async def get_state():
+        async def get_state(request: Request):
+            if self.auth:
+                auth_header = request.headers.get("Authorization", "")
+                if auth_header.startswith("Bearer "):
+                    try:
+                        payload = self.auth.authenticate(auth_header[7:], required_role="viewer")
+                        self._check_tenant_access(payload)
+                    except Exception as exc:
+                        raise HTTPException(status_code=401, detail=str(exc))
+                else:
+                    raise HTTPException(status_code=401, detail="Authentication required")
             return self.get_state_dict()
 
         @app.get("/history")
-        async def get_history(limit: int = 100):
+        async def get_history(request: Request, limit: int = 100):
+            if self.auth:
+                auth_header = request.headers.get("Authorization", "")
+                if auth_header.startswith("Bearer "):
+                    try:
+                        payload = self.auth.authenticate(auth_header[7:], required_role="viewer")
+                        self._check_tenant_access(payload)
+                    except Exception as exc:
+                        raise HTTPException(status_code=401, detail=str(exc))
+                else:
+                    raise HTTPException(status_code=401, detail="Authentication required")
             return self.get_history(limit=limit)
 
         return app

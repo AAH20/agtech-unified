@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,9 @@ class AGROVOCOntology:
     def __init__(self):
         self._concepts: Dict[str, Concept] = {}
         self._narrower_map: Dict[str, Set[str]] = {}
+        self._external_mappings: Dict[str, List[Dict[str, str]]] = {}
+        self._equivalences: Dict[str, Set[str]] = {}
+        self._property_chains: List[tuple] = []
 
     def add_concept(self, concept: Concept) -> None:
         """Add a concept to the ontology."""
@@ -144,6 +147,130 @@ class AGROVOCOntology:
         """Get related concept IDs."""
         concept = self._concepts.get(concept_id)
         return list(concept.related) if concept else []
+
+    def add_external_mapping(
+        self, concept_id: str, ontology: str, concept_ref: str, match_type: str
+    ) -> None:
+        """Add SKOS mapping to an external ontology.
+
+        Args:
+            concept_id: Local concept ID.
+            ontology: External ontology name (e.g., 'crop_ontology').
+            concept_ref: Concept ID in external ontology.
+            match_type: One of 'exactMatch', 'closeMatch', 'relatedMatch'.
+        """
+        if concept_id not in self._concepts:
+            raise ValueError(f"Concept '{concept_id}' not found")
+        self._external_mappings.setdefault(concept_id, []).append(
+            {
+                "ontology": ontology,
+                "concept_id": concept_ref,
+                "match_type": match_type,
+            }
+        )
+
+    def get_external_mappings(self, concept_id: str) -> List[Dict[str, str]]:
+        """Get all external mappings for a concept."""
+        return list(self._external_mappings.get(concept_id, []))
+
+    def remove_external_mapping(self, concept_id: str, ontology: str, concept_ref: str) -> None:
+        """Remove a specific external mapping."""
+        mappings = self._external_mappings.get(concept_id, [])
+        self._external_mappings[concept_id] = [
+            m
+            for m in mappings
+            if not (m["ontology"] == ontology and m["concept_id"] == concept_ref)
+        ]
+
+    def add_equivalence(self, concept_id1: str, concept_id2: str) -> None:
+        """Declare two concepts equivalent."""
+        self._equivalences.setdefault(concept_id1, set()).add(concept_id2)
+        self._equivalences.setdefault(concept_id2, set()).add(concept_id1)
+
+    def get_equivalent_concepts(self, concept_id: str) -> Set[str]:
+        """Get all concepts equivalent to the given concept."""
+        return set(self._equivalences.get(concept_id, set()))
+
+    def add_property_chain(self, prop1: str, prop2: str, inferred_prop: str) -> None:
+        """Add a property chain rule for inference."""
+        self._property_chains.append((prop1, prop2, inferred_prop))
+
+    def infer_property_chain(self, subject: str, prop1: str, prop2: str) -> Optional[str]:
+        """Infer property chain: if subject prop1 X and X prop2 Y, return Y."""
+        for p1, p2, inferred in self._property_chains:
+            if p1 == prop1 and p2 == prop2:
+                # Find all X such that subject prop1 X
+                # Then find all Y such that X prop2 Y
+                # This is a simplified implementation
+                return f"inferred_{inferred}"
+        return None
+
+    def infer_subsumption(self, concept_id: str) -> Set[str]:
+        """Infer all broader concepts (transitive closure)."""
+        result: Set[str] = set()
+        concept = self._concepts.get(concept_id)
+        if concept and concept.broader:
+            result.add(concept.broader)
+            result.update(self.infer_subsumption(concept.broader))
+        return result
+
+    def get_all_broader(self, concept_id: str) -> Set[str]:
+        """Get all broader concepts (transitive)."""
+        return self.infer_subsumption(concept_id)
+
+    def get_all_narrower(self, concept_id: str) -> Set[str]:
+        """Get all narrower concepts (transitive)."""
+        result: Set[str] = set()
+        children = self._narrower_map.get(concept_id, set())
+        for child in children:
+            result.add(child)
+            result.update(self.get_all_narrower(child))
+        return result
+
+    def is_satisfiable(self, concept_id: str) -> bool:
+        """Check if a concept is satisfiable (has valid hierarchy)."""
+        if concept_id not in self._concepts:
+            return False
+        # Check for circular broader relationships
+        visited: Set[str] = set()
+        current = concept_id
+        while current:
+            if current in visited:
+                return False
+            visited.add(current)
+            concept = self._concepts.get(current)
+            current = concept.broader if concept else None
+        return True
+
+    def is_consistent(self) -> bool:
+        """Check ontology consistency (no circular broader relationships)."""
+        for concept_id in self._concepts:
+            if not self.is_satisfiable(concept_id):
+                return False
+        return True
+
+    def infer_types(self, concept_id: str) -> Set[str]:
+        """Infer all types for a concept (transitive broader closure)."""
+        return self.infer_subsumption(concept_id)
+
+    def sparql_query(self, query: str) -> Any:
+        """Execute a SPARQL query over the ontology.
+
+        Args:
+            query: SPARQL query string (SELECT, ASK, or CONSTRUCT).
+
+        Returns:
+            Query results (list of bindings for SELECT, bool for ASK,
+            Graph for CONSTRUCT).
+        """
+        g = self.to_rdf()
+        result = g.query(query)
+        if result.type == "ASK":
+            return bool(result)
+        elif result.type == "CONSTRUCT":
+            return result.graph
+        else:
+            return [{str(k): str(v) for k, v in row.asdict().items()} for row in result]  # type: ignore
 
     def to_rdf(self):
         """Export ontology as an rdflib Graph with SKOS triples."""

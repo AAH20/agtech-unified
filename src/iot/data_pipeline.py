@@ -14,7 +14,7 @@ import threading
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -625,3 +625,281 @@ class TimescaleDBStorage:
             True if created successfully
         """
         return True
+
+
+# ===========================================================================
+# Data Validator for Pipeline (IOT-008)
+# ===========================================================================
+
+
+class DataValidator:
+    """Sensor data validation in the pipeline.
+
+    Validates sensor readings against configurable rules:
+    - Required fields presence
+    - Value range checks
+    - Unit validation
+    """
+
+    def __init__(self) -> None:
+        self._rules: Dict[str, Dict[str, Any]] = {}
+        self._required_fields: Set[str] = {"sensor_id", "value", "unit"}
+
+    def add_rule(
+        self,
+        field: str,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+    ) -> None:
+        """Add a validation rule for a field."""
+        self._rules[field] = {"min": min_value, "max": max_value}
+
+    def validate(self, reading: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a sensor reading.
+
+        Returns {"valid": bool, "errors": List[str]}.
+        """
+        errors: List[str] = []
+
+        # Check required fields
+        for req_field in self._required_fields:
+            if req_field not in reading or reading[req_field] is None:
+                errors.append(f"Missing required field: {req_field}")
+
+        # Check value range
+        if "value" in reading and isinstance(reading["value"], (int, float)):
+            value = reading["value"]
+            unit = reading.get("unit", "").lower()
+            # Default range check for common sensor values
+            if "temperature" in unit or unit in ("celsius", "fahrenheit", "kelvin", "c", "f", "k"):
+                if value < -40.0 or value > 80.0:
+                    errors.append(f"Temperature value {value} out of range [-40, 80]")
+            elif "moisture" in unit or unit in ("%", "percent"):
+                if value < 0.0 or value > 100.0:
+                    errors.append(f"Moisture value {value} out of range [0, 100]")
+
+        # Check custom rules
+        for rule_field, rule in self._rules.items():
+            if rule_field in reading and isinstance(reading[rule_field], (int, float)):
+                value = reading[rule_field]
+                if rule["min"] is not None and value < rule["min"]:
+                    errors.append(f"Field '{rule_field}' value {value} below minimum {rule['min']}")
+                if rule["max"] is not None and value > rule["max"]:
+                    errors.append(f"Field '{rule_field}' value {value} above maximum {rule['max']}")
+
+        return {"valid": len(errors) == 0, "errors": errors}
+
+
+# ===========================================================================
+# Data Quality Metrics (IOT-009)
+# ===========================================================================
+
+
+class DataQualityMetrics:
+    """Data quality metrics tracking.
+
+    Tracks per-sensor quality metrics:
+    - Total readings
+    - Valid/invalid counts
+    - Quality percentage
+    - Average latency
+    """
+
+    def __init__(self) -> None:
+        self._stats: Dict[str, Dict[str, Any]] = {}
+
+    def record(
+        self,
+        sensor_id: str,
+        valid: bool,
+        latency_ms: Optional[float] = None,
+    ) -> None:
+        """Record a reading for quality tracking."""
+        if sensor_id not in self._stats:
+            self._stats[sensor_id] = {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "latency_sum_ms": 0.0,
+                "latency_count": 0,
+            }
+
+        stats = self._stats[sensor_id]
+        stats["total"] += 1
+        if valid:
+            stats["valid"] += 1
+        else:
+            stats["invalid"] += 1
+
+        if latency_ms is not None:
+            stats["latency_sum_ms"] += latency_ms
+            stats["latency_count"] += 1
+
+    def get_stats(self, sensor_id: str) -> Dict[str, Any]:
+        """Get quality statistics for a sensor."""
+        if sensor_id not in self._stats:
+            return {
+                "total": 0,
+                "valid": 0,
+                "invalid": 0,
+                "quality_pct": 0.0,
+                "avg_latency_ms": 0.0,
+            }
+
+        stats = self._stats[sensor_id]
+        total = stats["total"]
+        quality_pct = (stats["valid"] / total * 100) if total > 0 else 0.0
+        avg_latency = (
+            stats["latency_sum_ms"] / stats["latency_count"] if stats["latency_count"] > 0 else 0.0
+        )
+
+        return {
+            "total": total,
+            "valid": stats["valid"],
+            "invalid": stats["invalid"],
+            "quality_pct": round(quality_pct, 2),
+            "avg_latency_ms": round(avg_latency, 2),
+        }
+
+
+# ===========================================================================
+# Backpressure Handler (IOT-012)
+# ===========================================================================
+
+
+class BackpressureHandler:
+    """Backpressure handling for slow consumers.
+
+    Implements bounded queue with flow control:
+    - accept() returns False when queue is full
+    - drain() clears the queue
+    - get_depth() returns current queue depth
+    """
+
+    def __init__(self, max_size: int = 1000) -> None:
+        self.max_size = max_size
+        self._queue: queue.Queue = queue.Queue(maxsize=max_size)
+
+    def accept(self, message: Any) -> bool:
+        """Accept a message if queue is not full.
+
+        Returns True if accepted, False if queue is full (backpressure).
+        """
+        try:
+            self._queue.put_nowait(message)
+            return True
+        except queue.Full:
+            return False
+
+    def drain(self) -> int:
+        """Drain all messages from the queue. Returns count drained."""
+        count = 0
+        while not self._queue.empty():
+            try:
+                self._queue.get_nowait()
+                count += 1
+            except queue.Empty:
+                break
+        return count
+
+    def get_depth(self) -> int:
+        """Get current queue depth."""
+        return self._queue.qsize()
+
+    def is_full(self) -> bool:
+        """Check if queue is full."""
+        return self._queue.full()
+
+
+# ===========================================================================
+# Retention Policy (IOT-013)
+# ===========================================================================
+
+
+class RetentionPolicy:
+    """Data retention policy enforcement.
+
+    Implements tiered storage:
+    - hot: recent data (0 to hot_days)
+    - warm: older data (hot_days to warm_days)
+    - cold: archival data (warm_days to retention_days)
+    - delete: data older than retention_days
+    """
+
+    def __init__(
+        self,
+        retention_days: int = 365,
+        hot_days: int = 7,
+        warm_days: int = 30,
+    ) -> None:
+        self.retention_days = retention_days
+        self.hot_days = hot_days
+        self.warm_days = warm_days
+
+    def should_keep(self, timestamp: float) -> bool:
+        """Check if data should be kept based on retention policy."""
+        age_days = (time.time() - timestamp) / 86400
+        return age_days <= self.retention_days
+
+    def get_tier(self, timestamp: float) -> str:
+        """Get the storage tier for a timestamp."""
+        age_days = (time.time() - timestamp) / 86400
+        if age_days <= self.hot_days:
+            return "hot"
+        elif age_days <= self.warm_days:
+            return "warm"
+        elif age_days <= self.retention_days:
+            return "cold"
+        else:
+            return "delete"
+
+
+# ===========================================================================
+# Partition Assigner (IOT-011)
+# ===========================================================================
+
+
+class PartitionAssigner:
+    """Consistent partition assignment for horizontal scaling.
+
+    Uses simple hash-based partitioning for sensor IDs.
+    """
+
+    def __init__(self, num_partitions: int = 4) -> None:
+        self.num_partitions = num_partitions
+
+    def get_partition(self, key: str) -> int:
+        """Get the partition number for a key."""
+        return hash(key) % self.num_partitions
+
+
+# ===========================================================================
+# Consumer Group (IOT-023)
+# ===========================================================================
+
+
+class ConsumerGroup:
+    """Consumer group for horizontal scaling.
+
+    Tracks group membership and partition assignment.
+    """
+
+    def __init__(self, group_id: str) -> None:
+        self.group_id = group_id
+        self._members: Set[str] = set()
+
+    def join(self, consumer_id: str) -> None:
+        """Add a consumer to the group."""
+        self._members.add(consumer_id)
+
+    def leave(self, consumer_id: str) -> None:
+        """Remove a consumer from the group."""
+        self._members.discard(consumer_id)
+
+    def size(self) -> int:
+        """Get the number of consumers in the group."""
+        return len(self._members)
+
+    def get_members(self) -> Set[str]:
+        """Get all members of the group."""
+        return set(self._members)

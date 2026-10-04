@@ -1,0 +1,140 @@
+{
+  "report": "Infrastructure Gap Audit v2",
+  "generated": "2026-10-04",
+  "files_audited": [
+    "pyproject.toml",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".github/workflows/ci.yml",
+    "Makefile"
+  ],
+  "gaps": [
+    {
+      "id": "INF-001",
+      "category": "CI/CD",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No caching for pip dependencies",
+      "description": "CI installs dependencies from scratch every run. pip cache and setup-python cache should be enabled.",
+      "impact": "Slower CI runs (~30s extra per job)",
+      "recommended_fix": "Add cache: pip to actions/setup-python"
+    },
+    {
+      "id": "INF-002",
+      "category": "CI/CD",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No concurrency group for CI",
+      "description": "Multiple pushes trigger redundant CI runs. Should cancel in-progress runs on same branch.",
+      "impact": "Wasted CI minutes on rapid pushes",
+      "recommended_fix": "Add concurrency: group: ci-${{ github.ref }}, cancel-in-progress: true"
+    },
+    {
+      "id": "INF-003",
+      "category": "CI/CD",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No Python 3.13 in test matrix",
+      "description": "Test matrix covers 3.10-3.12 but not 3.13. Should add forward-compat testing.",
+      "impact": "Potential breakage on Python 3.13",
+      "recommended_fix": "Add '3.13' to matrix (allow-failures: true)"
+    },
+    {
+      "id": "INF-004",
+      "category": "CI/CD",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No coverage reporting",
+      "description": "Tests run but no coverage report is generated or uploaded.",
+      "impact": "No visibility into test coverage trends",
+      "recommended_fix": "Add pytest-cov and upload to codecov"
+    },
+    {
+      "id": "INF-005",
+      "category": "Docker",
+      "severity": "high",
+      "module": "Dockerfile",
+      "title": "No multi-stage build",
+      "description": "Single-stage build includes build tools in final image. Multi-stage reduces image size.",
+      "impact": "Larger image (~500MB vs ~150MB)",
+      "recommended_fix": "Use multi-stage: builder stage + runtime stage"
+    },
+    {
+      "id": "INF-006",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No .dockerignore for gaps/",
+      "description": "gaps/ directory with JSON reports is copied into Docker image.",
+      "impact": "Unnecessary files in production image",
+      "recommended_fix": "Add gaps/ to .dockerignore"
+    },
+    {
+      "id": "INF-007",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "docker-compose.yml",
+      "title": "Hardcoded credentials in compose",
+      "description": "POSTGRES_PASSWORD=agtech is hardcoded. Should use .env file.",
+      "impact": "Security risk if repo is public",
+      "recommended_fix": "Use ${POSTGRES_PASSWORD:?} from .env"
+    },
+    {
+      "id": "INF-008",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No GPU service in compose",
+      "description": "GPU solvers (gpu_tsp, gpu_vrp) need NVIDIA runtime but compose doesn't configure it.",
+      "impact": "GPU modules fail in Docker",
+      "recommended_fix": "Add runtime: nvidia to app service"
+    },
+    {
+      "id": "INF-009",
+      "category": "Dependencies",
+      "severity": "medium",
+      "module": "pyproject.toml",
+      "title": "torch is a heavy dependency",
+      "description": "torch==2.5.1 is ~800MB. Most modules don't need it. Should be optional.",
+      "impact": "Slow installs for non-GPU users",
+      "recommended_fix": "Move torch to [project.optional-dependencies] gpu"
+    },
+    {
+      "id": "INF-010",
+      "category": "Dependencies",
+      "severity": "low",
+      "module": "pyproject.toml",
+      "title": "No version upper bounds on rdflib",
+      "description": "rdflib>=7.0,<8 is fine but other deps use ==. Inconsistent.",
+      "impact": "Potential future breakage",
+      "recommended_fix": "Use consistent pinning strategy"
+    },
+    {
+      "id": "INF-011",
+      "category": "Makefile",
+      "severity": "low",
+      "module": "Makefile",
+      "title": "No docker-test target",
+      "description": "Can't run tests inside Docker container.",
+      "impact": "Harder to verify containerized tests",
+      "recommended_fix": "Add docker-test: docker compose run app pytest"
+    },
+    {
+      "id": "INF-012",
+      "category": "CI/CD",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No scheduled CI runs",
+      "description": "No cron schedule to catch dependency breakage.",
+      "impact": "Stale dependencies may break silently",
+      "recommended_fix": "Add schedule: cron: '0 0 * * 1' (weekly)"
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "critical": 0,
+    "high": 2,
+    "medium": 5,
+    "low": 5
+  }
+}

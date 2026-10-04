@@ -1,13 +1,13 @@
 """Quickstart: run TSP, VRP, sensor placement, digital twin, and decision support in sequence."""
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from optimization.tsp import TSPInstance, TSPSolver
-from optimization.vrp import VRPInstance, VRPSolver
-from iot.sensor_placement import PlacementInstance, SensorPlacement
-from digital_twin.simulator import SimulationState, DigitalTwin
-from decision_support.recommender import FarmState, DecisionEngine
+from src.optimization.tsp import TSPInstance, TSPSolver
+from src.optimization.vrp import VRPInstance, VRPSolver
+from src.iot.sensor_placement import PlacementInstance, SensorPlacement
+from src.digital_twin.simulator import SimulationState, DigitalTwin
+from src.decision_support.recommender import FarmState, DecisionEngine
 
 
 def run_tsp():

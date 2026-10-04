@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Tuple
 
@@ -22,7 +23,11 @@ class VRPInstance:
     def __post_init__(self):
         if self.vehicle_capacity <= 0:
             raise ValueError("Capacity must be positive")
+        if len(self.demands) != len(self.customers):
+            raise ValueError("demands and customers must have the same length")
         for d in self.demands:
+            if d < 0:
+                raise ValueError("Demands must be non-negative")
             if d > self.vehicle_capacity:
                 raise ValueError("Demand exceeds vehicle capacity")
         if not self.customers:
@@ -30,6 +35,19 @@ class VRPInstance:
         n = len(self.customers) + 1  # +1 for depot
         if len(self.distance_matrix) != n:
             raise ValueError("Distance matrix size must match customers + depot")
+        for row in self.distance_matrix:
+            if len(row) != n:
+                raise ValueError("Distance matrix must be square")
+        # Check for NaN/Inf
+        for i in range(n):
+            for j in range(n):
+                if not math.isfinite(self.distance_matrix[i][j]):
+                    raise ValueError(f"Distance matrix contains NaN or Inf at ({i},{j})")
+        # Check non-negative
+        for i in range(n):
+            for j in range(n):
+                if self.distance_matrix[i][j] < 0:
+                    raise ValueError(f"Distance matrix contains negative value at ({i},{j})")
 
 
 @dataclass

@@ -1,0 +1,430 @@
+{
+  "audit_metadata": {
+    "project": "agtech-unified",
+    "audit_date": "2026-10-04",
+    "audit_wave": "Wave 1 Cluster 7",
+    "total_test_files": 50,
+    "total_source_files": 54,
+    "total_test_functions": 587,
+    "test_framework": "pytest",
+    "property_based_framework": "hypothesis (6.168.3)",
+    "mutation_framework": null,
+    "ci_config": "pyproject.toml + Makefile (no GitHub Actions workflow found)"
+  },
+  "summary": {
+    "untested_source_modules": "6 modules have no dedicated test file",
+    "property_based_tests": "LOW — 13 @given tests in 1 file (test_property_based.py); no property tests in any other file",
+    "mutation_tests": "CRITICAL — No mutation testing framework configured or used",
+    "concurrency_tests": "LOW — 10 tests in 1 file (test_concurrency.py); no async tests, no race condition tests for most modules",
+    "regression_tests": "MODERATE — 45 tests in test_regression.py; no bug-ID or issue-number references",
+    "edge_cases": "MODERATE — Most files have some edge case tests but coverage is inconsistent",
+    "shared_fixtures": "LOW — No conftest.py; only 6 files use @pytest.fixture",
+    "mock_usage": "LOW — Only test_context_broker.py uses mocks",
+    "async_tests": "NONE — Zero async test functions; all concurrency tests use threading"
+  },
+  "untested_modules": [
+    {
+      "module": "src/decision_support/recommender.py",
+      "classes": ["FarmState", "RecommendationResult", "DecisionEngine"],
+      "public_methods": ["DecisionEngine.recommend"],
+      "indirectly_tested_by": ["test_integration_e2e.py", "test_reliability.py", "test_performance.py"],
+      "gap": "No dedicated unit test file. DecisionEngine.recommend() is only tested indirectly through E2E and reliability tests. No tests for algorithm selection, boundary conditions, or invalid FarmState values.",
+      "severity": "high"
+    },
+    {
+      "module": "src/digital_twin/simulator.py",
+      "classes": ["SimulationState", "SimulationResult", "DigitalTwin"],
+      "public_methods": ["DigitalTwin.simulate"],
+      "indirectly_tested_by": ["test_reliability.py", "test_performance.py", "test_integration_e2e.py"],
+      "gap": "No dedicated unit test file. DigitalTwin.simulate() tested indirectly. No tests for algorithm selection (logistic_growth vs other), _step() correctness, _temp_factor()/_water_factor() boundary values, or multi-day simulation accuracy.",
+      "severity": "high"
+    },
+    {
+      "module": "src/genomics/crispr.py",
+      "classes": ["GuideRNA", "CRISPRDesigner"],
+      "public_methods": ["CRISPRDesigner.design_guide"],
+      "indirectly_tested_by": ["test_reliability.py"],
+      "gap": "No dedicated unit test file. Only 2 reliability tests (empty sequence, no PAM site). No tests for: guide length correctness, PAM sequence variants, GC content bounds, off-target scoring, efficiency scoring, multiple guides, or custom PAM/guide_length parameters.",
+      "severity": "high"
+    },
+    {
+      "module": "src/genomics/protein.py",
+      "classes": ["ProteinResult", "ProteinAnalyzer"],
+      "public_methods": ["ProteinAnalyzer.analyze"],
+      "indirectly_tested_by": ["test_reliability.py"],
+      "gap": "No dedicated unit test file. Only 2 reliability tests (empty sequence, invalid amino acid). No tests for: molecular weight accuracy, isoelectric point bounds, hydrophobicity, composition sums to 1.0, stability score bounds, instability index, or known protein sequences.",
+      "severity": "high"
+    },
+    {
+      "module": "src/onboarding/modules.py",
+      "classes": ["ModuleRegistry"],
+      "public_methods": ["ModuleRegistry.get_modules", "ModuleRegistry.all_tiers"],
+      "indirectly_tested_by": [],
+      "gap": "No test coverage at all. ModuleRegistry is completely untested. No tests for tier filtering, module listing, or invalid tier handling.",
+      "severity": "medium"
+    },
+    {
+      "module": "src/onboarding/sizing.py",
+      "classes": ["OrganizationProfiler"],
+      "public_methods": ["OrganizationProfiler.recommend_tier"],
+      "indirectly_tested_by": [],
+      "gap": "No test coverage at all. OrganizationProfiler is completely untested. No tests for tier recommendation boundaries, zero/negative inputs, or revenue/employee edge cases.",
+      "severity": "medium"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "PBT-V2-001",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/optimization/tsp.py",
+      "description": "TSP property tests exist in test_property_based.py but only cover tour validity and cost consistency. Missing: Christofides approximation ratio ≤ 1.5× optimal for metric instances, nearest-neighbor produces valid tours for all inputs, symmetric distance matrix produces symmetric tours.",
+      "affected_files": ["tests/test_property_based.py"],
+      "recommendation": "Add hypothesis tests for Christofides approximation ratio bound and nearest-neighbor tour validity across random metric instances."
+    },
+    {
+      "id": "PBT-V2-002",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/optimization/vrp.py",
+      "description": "VRP property tests exist but only cover capacity and coverage invariants. Missing: route cost equals sum of edge distances, all customers visited exactly once across all routes, empty customer list produces empty routes.",
+      "affected_files": ["tests/test_property_based.py"],
+      "recommendation": "Add hypothesis tests for route cost calculation correctness and complete customer coverage."
+    },
+    {
+      "id": "PBT-V2-003",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/multi_agent/task_allocation.py",
+      "description": "No property-based tests for task allocation. Missing: all tasks assigned exactly once, total cost equals sum of assigned costs, Hungarian algorithm produces optimal assignment for square matrices, rectangular matrix handling.",
+      "affected_files": ["tests/test_task_allocation.py"],
+      "recommendation": "Add hypothesis tests using random cost matrices to verify assignment invariants."
+    },
+    {
+      "id": "PBT-V2-004",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/multi_agent/consensus.py",
+      "description": "Consensus property tests exist but only cover quorum calculation. Missing: tally correctness for random vote distributions, n ≥ 3f+1 constraint validation, Byzantine fault tolerance with f faulty nodes.",
+      "affected_files": ["tests/test_property_based.py"],
+      "recommendation": "Add hypothesis tests for Byzantine fault tolerance with random vote distributions."
+    },
+    {
+      "id": "PBT-V2-005",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/genomics/protein.py",
+      "description": "No property-based tests for protein analysis. Missing: composition sums to 1.0, molecular weight > 0 for valid sequences, isoelectric point in [0, 14], stability score in [0, 1], hydrophobicity bounds.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add hypothesis tests using random valid amino acid sequences to verify all output invariants."
+    },
+    {
+      "id": "PBT-V2-006",
+      "category": "property_based_tests",
+      "severity": "high",
+      "module": "src/genomics/crispr.py",
+      "description": "No property-based tests for CRISPR design. Missing: guide length always equals configured length, PAM always ends with GG, GC content in [0, 1], off-target score in [0, 1], efficiency score bounds.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add hypothesis tests using random DNA sequences to verify guide design invariants."
+    },
+    {
+      "id": "PBT-V2-007",
+      "category": "property_based_tests",
+      "severity": "medium",
+      "module": "src/digital_twin/ontology.py",
+      "description": "No property-based tests for ontology. Missing: search scores sorted descending, concept count tracks add/remove, RDF roundtrip preserves all concepts, transitive closure correctness.",
+      "affected_files": ["tests/test_ontology.py"],
+      "recommendation": "Add hypothesis tests for ontology invariants using random concept/relationship graphs."
+    },
+    {
+      "id": "PBT-V2-008",
+      "category": "property_based_tests",
+      "severity": "medium",
+      "module": "src/digital_twin/knowledge_graph.py",
+      "description": "No property-based tests for knowledge graph. Missing: path existence transitivity, node degree bounds, edge weight non-negativity, query result consistency.",
+      "affected_files": ["tests/test_knowledge_graph.py"],
+      "recommendation": "Add hypothesis tests for knowledge graph invariants using random graph structures."
+    },
+    {
+      "id": "PBT-V2-009",
+      "category": "property_based_tests",
+      "severity": "medium",
+      "module": "src/iot/sensor_placement.py",
+      "description": "No property-based tests for sensor placement. Missing: coverage ratio in [0, 1], placement count ≤ target count, radius bounds respected, all targets covered when possible.",
+      "affected_files": ["tests/test_sensor_placement.py"],
+      "recommendation": "Add hypothesis tests for sensor placement invariants using random target/radius configurations."
+    },
+    {
+      "id": "PBT-V2-010",
+      "category": "property_based_tests",
+      "severity": "medium",
+      "module": "src/path_planning/coverage.py",
+      "description": "No property-based tests for coverage planning. Missing: path continuity, swath overlap bounds, complete coverage for simple boundaries, path cost monotonicity.",
+      "affected_files": ["tests/test_coverage.py"],
+      "recommendation": "Add hypothesis tests for coverage path invariants using random boundary shapes."
+    },
+    {
+      "id": "CONC-V2-001",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/iot/data_pipeline.py",
+      "description": "MQTTClient has concurrency tests in test_concurrency.py but KafkaStream and TimescaleDBStorage do not. Missing: concurrent produce/consume, thread-safe offset tracking, connection pool exhaustion.",
+      "affected_files": ["tests/test_concurrency.py"],
+      "recommendation": "Add thread-safety tests for KafkaStream and TimescaleDBStorage concurrent access patterns."
+    },
+    {
+      "id": "CONC-V2-002",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/integration/event_bus.py",
+      "description": "No concurrency tests for EventBus. Missing: concurrent publish/subscribe, thread-safe handler registration, event ordering under contention, handler exception isolation.",
+      "affected_files": ["tests/test_event_bus.py"],
+      "recommendation": "Add thread-safety tests for EventBus concurrent publish/subscribe patterns."
+    },
+    {
+      "id": "CONC-V2-003",
+      "category": "concurrency_tests",
+      "severity": "medium",
+      "module": "src/multi_agent/swarm.py",
+      "description": "No concurrency tests for swarm coordination. Missing: concurrent task claims, thread-safe state updates, agent failure during coordination, split-brain prevention.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Add concurrency tests for swarm agent coordination under parallel execution."
+    },
+    {
+      "id": "CONC-V2-004",
+      "category": "concurrency_tests",
+      "severity": "medium",
+      "module": "src/decision_support/audit.py",
+      "description": "AuditLogger has concurrency tests in test_audit.py but only for event ID uniqueness. Missing: concurrent event logging, thread-safe event_count, filter consistency under concurrent writes.",
+      "affected_files": ["tests/test_audit.py"],
+      "recommendation": "Add concurrent logging tests to verify event ordering and count accuracy."
+    },
+    {
+      "id": "CONC-V2-005",
+      "category": "concurrency_tests",
+      "severity": "medium",
+      "module": "all",
+      "description": "No async/await concurrency tests anywhere. All concurrency tests use threading. Missing: async event loop tests, async I/O race conditions, asyncio.gather correctness, async generator safety.",
+      "affected_files": ["tests/"],
+      "recommendation": "Add asyncio-based tests for any async-capable modules (data_pipeline, event_bus, api_gateway)."
+    },
+    {
+      "id": "MUT-V2-001",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "all",
+      "description": "No mutation testing framework is configured or used. No mutmut, cosmic-ray, or similar tool in dev dependencies. Mutation testing is completely absent.",
+      "affected_files": ["pyproject.toml", "Makefile"],
+      "recommendation": "Add mutmut or cosmic-ray to dev dependencies. Start with core algorithms (TSP, VRP, consensus, task allocation) to measure test suite strength."
+    },
+    {
+      "id": "MUT-V2-002",
+      "category": "mutation_tests",
+      "severity": "high",
+      "module": "src/optimization/tsp.py",
+      "description": "TSP solver has no mutation testing. Cannot verify that tests catch off-by-one errors, incorrect distance calculations, or algorithm selection bugs.",
+      "affected_files": ["tests/test_tsp.py", "tests/test_property_based.py"],
+      "recommendation": "Run mutation testing on TSP solver to identify weak test assertions."
+    },
+    {
+      "id": "MUT-V2-003",
+      "category": "mutation_tests",
+      "severity": "high",
+      "module": "src/multi_agent/consensus.py",
+      "description": "Consensus has no mutation testing. Cannot verify that tests catch quorum calculation errors, tally bugs, or Byzantine fault handling issues.",
+      "affected_files": ["tests/test_consensus.py", "tests/test_property_based.py"],
+      "recommendation": "Run mutation testing on consensus to verify Byzantine fault tolerance test coverage."
+    },
+    {
+      "id": "REG-V2-001",
+      "category": "regression_tests",
+      "severity": "medium",
+      "module": "all",
+      "description": "test_regression.py has 45 tests but none reference specific bug IDs, issue numbers, or commit hashes. Regression tests cannot be traced to the original defects they prevent.",
+      "affected_files": ["tests/test_regression.py"],
+      "recommendation": "Add bug-ID references to regression test docstrings (e.g., 'Regression test for #42: TSP empty cities crash')."
+    },
+    {
+      "id": "REG-V2-002",
+      "category": "regression_tests",
+      "severity": "medium",
+      "module": "src/decision_support/recommender.py",
+      "description": "No regression tests for DecisionEngine. The recommend() method is only tested indirectly. No tests for specific recommendation scenarios (e.g., low moisture → irrigate, high temperature → shade).",
+      "affected_files": ["tests/test_regression.py"],
+      "recommendation": "Add regression tests for specific DecisionEngine recommendation scenarios."
+    },
+    {
+      "id": "REG-V2-003",
+      "category": "regression_tests",
+      "severity": "medium",
+      "module": "src/digital_twin/simulator.py",
+      "description": "No regression tests for DigitalTwin simulation accuracy. No tests for known simulation edge cases (e.g., crop death at extreme temperature, growth saturation at optimal conditions).",
+      "affected_files": ["tests/test_regression.py"],
+      "recommendation": "Add regression tests for DigitalTwin simulation edge cases and known accuracy issues."
+    },
+    {
+      "id": "EDGE-V2-001",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/recommender.py",
+      "description": "DecisionEngine.recommend() has no dedicated edge case tests. Missing: all-zero FarmState, extreme values (moisture=0, temp=50), negative values, None values, boundary thresholds.",
+      "affected_files": ["tests/test_reliability.py"],
+      "recommendation": "Add edge case tests for DecisionEngine with boundary and invalid FarmState values."
+    },
+    {
+      "id": "EDGE-V2-002",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/digital_twin/simulator.py",
+      "description": "DigitalTwin.simulate() has limited edge case coverage. Missing: negative days, zero days, extreme temperature (0°C, 50°C), zero moisture, full moisture, very long simulations (365+ days).",
+      "affected_files": ["tests/test_reliability.py"],
+      "recommendation": "Add comprehensive edge case tests for DigitalTwin simulation boundaries."
+    },
+    {
+      "id": "EDGE-V2-003",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/genomics/crispr.py",
+      "description": "CRISPRDesigner has minimal edge case coverage. Missing: very short DNA sequences, sequences with no valid PAM, sequences with multiple PAM sites, lowercase DNA, non-ACGT characters, custom PAM sequences.",
+      "affected_files": ["tests/test_reliability.py"],
+      "recommendation": "Add edge case tests for CRISPRDesigner with various DNA sequence inputs."
+    },
+    {
+      "id": "EDGE-V2-004",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/genomics/protein.py",
+      "description": "ProteinAnalyzer has minimal edge case coverage. Missing: single amino acid, very long sequences, all-same-amino-acid sequences, sequences with rare amino acids (U, O, B, Z, X), lowercase input.",
+      "affected_files": ["tests/test_reliability.py"],
+      "recommendation": "Add edge case tests for ProteinAnalyzer with various sequence inputs."
+    },
+    {
+      "id": "EDGE-V2-005",
+      "category": "edge_cases",
+      "severity": "medium",
+      "module": "src/onboarding/modules.py",
+      "description": "ModuleRegistry has no tests at all. Missing: invalid tier names, empty module lists, tier with no modules, duplicate module names.",
+      "affected_files": [],
+      "recommendation": "Create test_onboarding.py with edge case tests for ModuleRegistry."
+    },
+    {
+      "id": "EDGE-V2-006",
+      "category": "edge_cases",
+      "severity": "medium",
+      "module": "src/onboarding/sizing.py",
+      "description": "OrganizationProfiler has no tests at all. Missing: zero employees, negative revenue, very large organizations, boundary between tiers, fractional employees.",
+      "affected_files": [],
+      "recommendation": "Create test_onboarding.py with edge case tests for OrganizationProfiler."
+    },
+    {
+      "id": "INFRA-V2-001",
+      "category": "test_infrastructure",
+      "severity": "medium",
+      "module": "tests/",
+      "description": "No conftest.py exists. Shared fixtures (e.g., common test data, mock objects, temp directories) must be duplicated across test files.",
+      "affected_files": ["tests/"],
+      "recommendation": "Create tests/conftest.py with shared fixtures for common test data and mock objects."
+    },
+    {
+      "id": "INFRA-V2-002",
+      "category": "test_infrastructure",
+      "severity": "medium",
+      "module": "tests/",
+      "description": "No GitHub Actions CI workflow found. test_infrastructure.py checks for CI workflow existence but the file may not exist. Tests are not automatically run on push/PR.",
+      "affected_files": [".github/workflows/"],
+      "recommendation": "Create .github/workflows/ci.yml with pytest, ruff, and bandit steps."
+    },
+    {
+      "id": "INFRA-V2-003",
+      "category": "test_infrastructure",
+      "severity": "low",
+      "module": "tests/",
+      "description": "No coverage reporting configured. Makefile has test-cov target but no coverage thresholds or enforcement. No coverage badge or reporting.",
+      "affected_files": ["Makefile", "pyproject.toml"],
+      "recommendation": "Add coverage thresholds (e.g., --cov-fail-under=80) and integrate with codecov or similar."
+    },
+    {
+      "id": "INFRA-V2-004",
+      "category": "test_infrastructure",
+      "severity": "low",
+      "module": "tests/",
+      "description": "No test categorization or markers. All tests run in a single suite with no way to run subsets (e.g., unit vs integration vs property-based).",
+      "affected_files": ["pyproject.toml"],
+      "recommendation": "Add pytest markers (e.g., @pytest.mark.unit, @pytest.mark.integration, @pytest.mark.property) for selective test execution."
+    },
+    {
+      "id": "INFRA-V2-005",
+      "category": "test_infrastructure",
+      "severity": "low",
+      "module": "tests/",
+      "description": "No test timeout configuration. Slow tests (e.g., performance tests, large TSP instances) can hang indefinitely.",
+      "affected_files": ["pyproject.toml"],
+      "recommendation": "Add pytest-timeout configuration with per-test or global timeout limits."
+    }
+  ],
+  "test_file_inventory": {
+    "total_files": 50,
+    "total_test_functions": 587,
+    "files_with_property_tests": 1,
+    "files_with_concurrency_tests": 2,
+    "files_with_regression_tests": 1,
+    "files_with_edge_cases": 44,
+    "files_with_fixtures": 6,
+    "files_with_mocks": 1,
+    "files_with_async_tests": 0,
+    "cross_cutting_test_files": [
+      "test_concurrency.py",
+      "test_examples.py",
+      "test_infrastructure.py",
+      "test_integration_e2e.py",
+      "test_performance.py",
+      "test_property_based.py",
+      "test_regression.py",
+      "test_reliability.py",
+      "test_streaming.py"
+    ]
+  },
+  "recommendations_priority": [
+    {
+      "priority": 1,
+      "action": "Create dedicated test files for 6 untested modules",
+      "modules": ["recommender.py", "simulator.py", "crispr.py", "protein.py", "modules.py", "sizing.py"],
+      "estimated_effort": "high"
+    },
+    {
+      "priority": 2,
+      "action": "Add mutation testing framework (mutmut) to dev dependencies",
+      "estimated_effort": "low"
+    },
+    {
+      "priority": 3,
+      "action": "Expand property-based tests beyond TSP/VRP/consensus to all pure functions",
+      "estimated_effort": "high"
+    },
+    {
+      "priority": 4,
+      "action": "Add concurrency tests for EventBus, KafkaStream, and swarm coordination",
+      "estimated_effort": "medium"
+    },
+    {
+      "priority": 5,
+      "action": "Create conftest.py with shared fixtures",
+      "estimated_effort": "low"
+    },
+    {
+      "priority": 6,
+      "action": "Add GitHub Actions CI workflow",
+      "estimated_effort": "low"
+    },
+    {
+      "priority": 7,
+      "action": "Add pytest markers and timeout configuration",
+      "estimated_effort": "low"
+    },
+    {
+      "priority": 8,
+      "action": "Add bug-ID references to regression tests",
+      "estimated_effort": "low"
+    }
+  ]
+}

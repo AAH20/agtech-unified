@@ -10,7 +10,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from email.mime.text import MIMEText
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +266,7 @@ class NotificationManager:
         message: str,
         channels: Optional[List[NotificationChannel]] = None,
         deduplicate: bool = True,
+        priority: str = "normal",
         **kwargs: Any,
     ) -> List[NotificationResult]:
         """Send a notification to all (or selected) channels."""
@@ -278,7 +279,7 @@ class NotificationManager:
                 if now - self._recent_keys[key] < self._dedup_window:
                     logger.info("Deduplicated notification on %s", channel.name)
                     continue
-            result = channel.send(subject, message, **kwargs)
+            result = channel.send(subject, message, priority=priority, **kwargs)
             self._recent_keys[key] = now
             self._history.append(result)
             results.append(result)
@@ -293,3 +294,185 @@ class NotificationManager:
         """Clear delivery history and dedup state."""
         self._history.clear()
         self._recent_keys.clear()
+
+    def send_template(
+        self,
+        template: "NotificationTemplate",
+        channels: Optional[List[NotificationChannel]] = None,
+        **kwargs: Any,
+    ) -> List[NotificationResult]:
+        """Send a notification using a template."""
+        rendered = template.render(**kwargs)
+        return self.send(
+            subject=rendered["subject"],
+            message=rendered["body"],
+            channels=channels,
+        )
+
+
+class NotificationTemplate:
+    """Template for notification messages with variable substitution."""
+
+    def __init__(
+        self,
+        name: str,
+        subject: str,
+        body: str,
+        translations: Optional[Dict[str, Dict[str, str]]] = None,
+    ):
+        self.name = name
+        self.subject = subject
+        self.body = body
+        self.translations = translations or {}
+
+    def render(self, lang: str = "en", **kwargs: Any) -> Dict[str, str]:
+        """Render the template with variable substitution."""
+        subject = self.subject
+        body = self.body
+
+        # Apply translations if available
+        if lang in self.translations:
+            subject = self.translations[lang].get("subject", subject)
+            body = self.translations[lang].get("body", body)
+
+        # Simple variable substitution
+        for key, value in kwargs.items():
+            placeholder = "{{" + key + "}}"
+            subject = subject.replace(placeholder, str(value))
+            body = body.replace(placeholder, str(value))
+
+        # Handle default filter: {{var|default('value')}}
+        import re
+
+        def replace_default(match):
+            var_name = match.group(1).strip()
+            default_val = match.group(2).strip().strip("'\"")
+            return str(kwargs.get(var_name, default_val))
+
+        subject = re.sub(r"\{\{(\w+)\|default\('([^']*)'\)\}\}", replace_default, subject)
+        body = re.sub(r"\{\{(\w+)\|default\('([^']*)'\)\}\}", replace_default, body)
+
+        # Handle conditionals: {% if condition %}...{% else %}...{% endif %}
+        def replace_conditional(match):
+            condition = match.group(1).strip()
+            true_block = match.group(2)
+            false_block = match.group(3) if match.group(3) else ""
+            # Simple equality check
+            if "==" in condition:
+                var, val = condition.split("==")
+                var = var.strip()
+                val = val.strip().strip("'\"")
+                if str(kwargs.get(var, "")) == val:
+                    return true_block
+            return false_block
+
+        body = re.sub(
+            r"\{%\s*if\s+(.+?)\s*%\}(.+?)(?:\{%\s*else\s*%\}(.+?))?\{%\s*endif\s*%\}",
+            replace_conditional,
+            body,
+            flags=re.DOTALL,
+        )
+
+        return {"subject": subject, "body": body}
+
+
+class PriorityRouter:
+    """Routes notifications based on priority levels."""
+
+    def __init__(self):
+        self._channels: List[Tuple[NotificationChannel, str]] = []
+        self._pending_escalations: List[Dict[str, Any]] = []
+
+    def add_channel(self, channel: NotificationChannel, priority: str = "normal") -> None:
+        """Add a channel with a priority level."""
+        self._channels.append((channel, priority))
+
+    def route(
+        self,
+        subject: str,
+        message: str,
+        priority: str = "normal",
+        escalate_after: Optional[float] = None,
+    ) -> None:
+        """Route a notification to appropriate channels."""
+        priority_levels = {"normal": 0, "critical": 1, "escalation": 2}
+        route_level = priority_levels.get(priority, 0)
+
+        for channel, chan_priority in self._channels:
+            chan_level = priority_levels.get(chan_priority, 0)
+            if route_level >= chan_level:
+                channel.send(subject, message)
+
+        # Schedule escalation if needed
+        if escalate_after is not None and priority == "critical":
+            self._pending_escalations.append(
+                {
+                    "subject": subject,
+                    "message": message,
+                    "escalate_at": time.time() + escalate_after,
+                    "escalated": False,
+                }
+            )
+
+    def process_escalations(self) -> None:
+        """Process any pending escalations."""
+        now = time.time()
+        for esc in self._pending_escalations:
+            if not esc["escalated"] and now >= esc["escalate_at"]:
+                esc["escalated"] = True
+                for channel, chan_priority in self._channels:
+                    if chan_priority == "escalation":
+                        channel.send(esc["subject"], esc["message"])
+
+
+class QuietHoursScheduler:
+    """Schedules notifications based on quiet hours."""
+
+    def __init__(self, quiet_start: int = 22, quiet_end: int = 6):
+        self.quiet_start = quiet_start
+        self.quiet_end = quiet_end
+
+    def should_send(self, severity: str, current_hour: Optional[int] = None) -> bool:
+        """Check if a notification should be sent based on quiet hours."""
+        if severity == "critical":
+            return True
+        if current_hour is None:
+            current_hour = time.localtime().tm_hour
+        if self.quiet_start > self.quiet_end:
+            # Quiet hours span midnight
+            return not (current_hour >= self.quiet_start or current_hour < self.quiet_end)
+        else:
+            return not (self.quiet_start <= current_hour < self.quiet_end)
+
+
+class DigestNotifier:
+    """Batches notifications into digests."""
+
+    def __init__(self, interval_seconds: float = 300.0):
+        self.interval_seconds = interval_seconds
+        self._channels: List[NotificationChannel] = []
+        self._buffer: List[Dict[str, Any]] = []
+        self._last_flush = time.time()
+
+    def add_channel(self, channel: NotificationChannel) -> None:
+        """Add a channel for digest delivery."""
+        self._channels.append(channel)
+
+    def add(self, subject: str, message: str, priority: str = "normal") -> None:
+        """Add a notification to the digest buffer."""
+        if priority == "critical":
+            # Critical notifications are sent immediately
+            for channel in self._channels:
+                channel.send(subject, message)
+            return
+        self._buffer.append({"subject": subject, "message": message})
+
+    def flush(self) -> None:
+        """Flush the buffer to all channels."""
+        if not self._buffer:
+            return
+        combined = "\n".join(f"{item['subject']}: {item['message']}" for item in self._buffer)
+        for channel in self._channels:
+            channel.send("Digest", combined)
+        self._buffer.clear()
+        self._last_flush = time.time()

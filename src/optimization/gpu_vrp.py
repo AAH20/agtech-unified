@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -46,6 +47,34 @@ class GPUVRPSolver:
                 routes=[], total_cost=0.0, algorithm=self.algorithm, device=self.device
             )
 
+        # Validate dimensions
+        if len(demands) != n:
+            raise ValueError("demands and customers must have the same length")
+        if vehicle_capacity <= 0:
+            raise ValueError("vehicle_capacity must be positive")
+        for d in demands:
+            if d < 0:
+                raise ValueError("Demands must be non-negative")
+            if d > vehicle_capacity:
+                raise ValueError("Demand exceeds vehicle capacity")
+
+        expected_size = n + 1  # +1 for depot
+        if len(distance_matrix) != expected_size:
+            raise ValueError(
+                f"Distance matrix size must match customers + depot "
+                f"(expected {expected_size}x{expected_size}, got "
+                f"{len(distance_matrix)}x{len(distance_matrix[0]) if distance_matrix else 0})"
+            )
+        for row in distance_matrix:
+            if len(row) != expected_size:
+                raise ValueError("Distance matrix must be square")
+
+        # Validate NaN/Inf
+        for i in range(expected_size):
+            for j in range(expected_size):
+                if not math.isfinite(distance_matrix[i][j]):
+                    raise ValueError(f"Distance matrix contains NaN or Inf at ({i},{j})")
+
         if self.algorithm == "savings":
             routes, total_cost = self._gpu_savings(distance_matrix, demands, vehicle_capacity)
         else:
@@ -79,8 +108,10 @@ class GPUVRPSolver:
         s(i,j) = d(0, i+1) + d(0, j+1) - d(i+1, j+1)
         """
         n = dist.shape[0] - 1  # Number of customers (excluding depot)
-        if n <= 1:
-            return torch.zeros((n, n), dtype=torch.float32, device=self.device)
+        if n <= 0:
+            return torch.zeros((0, 0), dtype=torch.float32, device=self.device)
+        if n == 1:
+            return torch.zeros((1, 1), dtype=torch.float32, device=self.device)
 
         # d(0, i) for all customers i (1-indexed in dist matrix)
         d_depot = dist[0, 1:]  # (n,)

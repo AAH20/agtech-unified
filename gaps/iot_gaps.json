@@ -7,15 +7,17 @@
       "sensor_placement.py",
       "context_broker.py",
       "smart_models.py",
-      "data_pipeline.py"
+      "data_pipeline.py",
+      "device_management.py",
+      "data_validation.py"
     ]
   },
   "summary": {
-    "total_gaps": 42,
-    "critical": 8,
-    "high": 14,
-    "medium": 12,
-    "low": 8
+    "total_gaps": 61,
+    "critical": 9,
+    "high": 18,
+    "medium": 22,
+    "low": 12
   },
   "gaps": [
     {
@@ -437,6 +439,196 @@
       "description": "No encryption of data at rest. Sensor data stored in plaintext.",
       "impact": "Security vulnerability. No compliance with data protection regulations.",
       "recommendation": "Add encryption at rest: AES-256 encryption, key management, envelope encryption."
+    },
+    {
+      "id": "IOT-043",
+      "category": "missing_device_management",
+      "severity": "critical",
+      "module": "device_management.py",
+      "title": "No device authentication/authorization",
+      "description": "DeviceRegistry has no auth mechanism. Any caller can register/update/delete any device. No API keys, certificates, or tokens.",
+      "impact": "Security vulnerability: unauthorized device control and data injection.",
+      "recommendation": "Add device authentication: API keys, X.509 certificates, or JWT tokens. Implement per-device ACLs."
+    },
+    {
+      "id": "IOT-044",
+      "category": "missing_device_management",
+      "severity": "high",
+      "module": "device_management.py",
+      "title": "No device command/control (downlink)",
+      "description": "No mechanism to send commands to devices (e.g., 'open irrigation valve', 'change sampling rate'). Only uplink data exists.",
+      "impact": "Cannot remotely control actuators or reconfigure devices.",
+      "recommendation": "Add command dispatch: POST /devices/{id}/commands. Support command queuing, status tracking, and timeout handling."
+    },
+    {
+      "id": "IOT-045",
+      "category": "missing_device_management",
+      "severity": "high",
+      "module": "device_management.py",
+      "title": "No device shadow/digital twin sync",
+      "description": "No device shadow representation that persists desired state and reported state separately. No conflict resolution between desired and actual.",
+      "impact": "Cannot manage devices that are intermittently connected; no desired-state tracking.",
+      "recommendation": "Add device shadow: GET/PUT /devices/{id}/shadow. Support desired/reported state, version tracking, and delta computation."
+    },
+    {
+      "id": "IOT-046",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "device_management.py",
+      "title": "No device grouping/batching",
+      "description": "No way to group devices by field, zone, type, or custom tags. list_devices only filters by status and device_type.",
+      "impact": "Cannot manage devices at scale; no bulk operations per field/zone.",
+      "recommendation": "Add device grouping: tags, zones, fields. Support bulk operations per group."
+    },
+    {
+      "id": "IOT-047",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "device_management.py",
+      "title": "No device decommissioning workflow",
+      "description": "unregister() simply removes the device. No graceful decommission: no data archival, no certificate revocation, no notification to dependent systems.",
+      "impact": "Abrupt device removal can break downstream consumers.",
+      "recommendation": "Add decommission workflow: archive data, revoke credentials, notify dependents, mark as decommissioned."
+    },
+    {
+      "id": "IOT-048",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "device_management.py",
+      "title": "No bulk operations",
+      "description": "No bulk_register, bulk_update_health, bulk_provision. Each operation is O(1) per device with no batch API.",
+      "impact": "Slow at scale; N API calls for N devices.",
+      "recommendation": "Add bulk operations: bulk_register, bulk_update, bulk_provision with transactional semantics."
+    },
+    {
+      "id": "IOT-049",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "device_management.py",
+      "title": "No device configuration versioning",
+      "description": "provision() overwrites config with no history. No rollback to previous config, no config diff.",
+      "impact": "Cannot audit config changes or recover from bad configurations.",
+      "recommendation": "Add config versioning: store config history, support rollback, config diffing."
+    },
+    {
+      "id": "IOT-050",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "device_management.py",
+      "title": "No device alert/notification system",
+      "description": "check_health() returns a status but no alert is generated or dispatched. No integration with notification channels.",
+      "impact": "Operators are not notified of device failures or degraded health.",
+      "recommendation": "Add alerting: webhook notifications, email/SMS alerts, integration with alerting systems."
+    },
+    {
+      "id": "IOT-051",
+      "category": "missing_device_management",
+      "severity": "low",
+      "module": "device_management.py",
+      "title": "No device capability discovery",
+      "description": "No mechanism for devices to advertise their capabilities (sensors, actuators, supported commands).",
+      "impact": "Cannot auto-configure data pipelines based on device capabilities.",
+      "recommendation": "Add capability advertisement: devices report supported sensors/actuators on registration."
+    },
+    {
+      "id": "IOT-052",
+      "category": "missing_data_validation",
+      "severity": "high",
+      "module": "data_validation.py",
+      "title": "No cross-field validation",
+      "description": "SchemaValidator validates each field independently. No support for conditional rules (e.g., 'if irrigation=on then flow_rate must be > 0').",
+      "impact": "Cannot enforce business rules that span multiple fields.",
+      "recommendation": "Add cross-field validation: conditional rules, field dependencies, composite constraints."
+    },
+    {
+      "id": "IOT-053",
+      "category": "missing_data_validation",
+      "severity": "high",
+      "module": "data_validation.py",
+      "title": "No temporal validation",
+      "description": "No validation of timestamp ordering, future timestamps, or stale data detection. A reading with timestamp 2099 passes all checks.",
+      "impact": "Corrupted or malicious timestamps go undetected.",
+      "recommendation": "Add temporal validation: reject future timestamps, flag stale data, enforce monotonic ordering."
+    },
+    {
+      "id": "IOT-054",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_validation.py",
+      "title": "No unit conversion/validation",
+      "description": "No unit system enforcement. A temperature reading in Fahrenheit passes the same schema as Celsius. No unit conversion utilities.",
+      "impact": "Data from devices using different unit systems is silently mixed.",
+      "recommendation": "Add unit validation: enforce SI units, support unit conversion, validate unit consistency."
+    },
+    {
+      "id": "IOT-055",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_validation.py",
+      "title": "No data quality scoring",
+      "description": "Validation is binary (valid/invalid). No quality score based on completeness, freshness, or anomaly history.",
+      "impact": "Cannot prioritize data cleaning or flag suspicious sensors.",
+      "recommendation": "Add quality scoring: completeness %, freshness score, anomaly rate, overall quality metric."
+    },
+    {
+      "id": "IOT-056",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_validation.py",
+      "title": "No custom validator functions",
+      "description": "Schema only supports type/min/max/allowed. No way to plug in custom validation functions (e.g., regex, checksum, geographic bounds).",
+      "impact": "Cannot express domain-specific validation rules.",
+      "recommendation": "Add custom validators: support callable validators, regex patterns, geographic bounds."
+    },
+    {
+      "id": "IOT-057",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_validation.py",
+      "title": "No nested object validation",
+      "description": "SchemaValidator only validates top-level fields. No support for nested dicts or lists within a record.",
+      "impact": "Cannot validate complex sensor payloads with nested structures.",
+      "recommendation": "Add nested validation: recursive schema validation for nested dicts and lists."
+    },
+    {
+      "id": "IOT-058",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_validation.py",
+      "title": "No batch validation",
+      "description": "validate() processes one record at a time. No batch API for validating a list of records efficiently.",
+      "impact": "Slow validation of bulk sensor data.",
+      "recommendation": "Add batch validation: validate_batch() for efficient bulk processing."
+    },
+    {
+      "id": "IOT-059",
+      "category": "missing_data_validation",
+      "severity": "low",
+      "module": "data_validation.py",
+      "title": "No validation error severity levels",
+      "description": "All errors are equal. No distinction between critical errors (reject record) and warnings (accept with flag).",
+      "impact": "Cannot implement tiered data quality policies.",
+      "recommendation": "Add severity levels: critical (reject), warning (accept with flag), info (log only)."
+    },
+    {
+      "id": "IOT-060",
+      "category": "missing_data_validation",
+      "severity": "low",
+      "module": "data_validation.py",
+      "title": "No schema versioning/migration",
+      "description": "No version field in Schema. No migration path when schema evolves.",
+      "impact": "Breaking schema changes cannot be managed gracefully.",
+      "recommendation": "Add schema versioning: version field, migration tools, backward compatibility checks."
+    },
+    {
+      "id": "IOT-061",
+      "category": "missing_data_validation",
+      "severity": "low",
+      "module": "data_validation.py",
+      "title": "No sensor calibration validation",
+      "description": "No validation of calibration parameters (offset, scale, drift). No detection of sensor drift over time.",
+      "impact": "Uncalibrated sensors produce silently wrong data.",
+      "recommendation": "Add calibration validation: track calibration params, detect drift, flag uncalibrated sensors."
     }
   ],
   "recommendations": {

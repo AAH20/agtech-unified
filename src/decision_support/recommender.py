@@ -3,21 +3,15 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+from src.integration.farm_state import FarmState  # re-export for backward compatibility
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class FarmState:
-    """Current state of the farm."""
-
-    soil_moisture: float  # 0.0 to 1.0
-    temperature: float  # Celsius
-    crop_height: float  # meters
-    nutrient_level: float  # 0.0 to 1.0
-    pest_pressure: float  # 0.0 to 1.0
+__all__ = ["FarmState", "RecommendationResult", "DecisionEngine"]
 
 
 @dataclass
@@ -28,6 +22,9 @@ class RecommendationResult:
     priority_score: float
     algorithm: str
     actions: List[str]
+    tenant_id: Optional[str] = None
+    confidence: float = 0.0
+    feature_importance: Dict[str, float] = field(default_factory=dict)
 
 
 class DecisionEngine:
@@ -90,9 +87,28 @@ class DecisionEngine:
 
         priority_score = min(1.0, priority_score)
 
+        # Confidence based on number of triggered rules (more rules = higher confidence)
+        confidence = min(1.0, len(recommendations) * 0.2 + 0.3)
+
+        # Feature importance: which metrics contributed most to the score
+        feature_importance: Dict[str, float] = {}
+        if state.soil_moisture < 0.4:
+            feature_importance["soil_moisture"] = 0.4 if state.soil_moisture < 0.2 else 0.2
+        if state.temperature > 38 or state.temperature < 5:
+            feature_importance["temperature"] = 0.3
+        if state.nutrient_level < 0.4:
+            feature_importance["nutrient_level"] = 0.2 if state.nutrient_level < 0.2 else 0.1
+        if state.pest_pressure > 0.4:
+            feature_importance["pest_pressure"] = 0.4 if state.pest_pressure > 0.7 else 0.1
+        if state.crop_height < 0.1 and state.soil_moisture > 0.3:
+            feature_importance["crop_height"] = 0.1
+
         return RecommendationResult(
             recommendations=recommendations,
             priority_score=priority_score,
             algorithm=self.algorithm,
             actions=actions,
+            tenant_id=state.tenant_id,
+            confidence=confidence,
+            feature_importance=feature_importance,
         )

@@ -62,6 +62,24 @@ class Graph:
         """Get weight of an edge, 0 if not present."""
         return self.edges.get(source, {}).get(target, 0.0)
 
+    @classmethod
+    def from_knowledge_graph(cls, kg) -> Graph:
+        """Convert an AgriKnowledgeGraph to a Graph for algorithm execution.
+
+        Args:
+            kg: AgriKnowledgeGraph instance.
+
+        Returns:
+            Graph with nodes from entities and edges from relationships.
+        """
+        g = cls()
+        for entity_id in kg._entities:
+            g.add_node(entity_id)
+        for rel in kg._relationships:
+            weight = rel.properties.get("strength", 1.0) if rel.properties else 1.0
+            g.add_edge(rel.source, rel.target, weight=weight)
+        return g
+
     def to_adjacency_matrix(self) -> Tuple[List[str], List[List[float]]]:
         """Convert to adjacency matrix representation.
 
@@ -323,6 +341,83 @@ class GraphAlgorithms:
                     q += a_ij - (k_i * k_j) / (2.0 * total_weight)
 
         return q / (2.0 * total_weight)
+
+    @staticmethod
+    def dijkstra(graph: Graph, source: str, target: str) -> Tuple[float, List[str]]:
+        """Find shortest path using Dijkstra's algorithm.
+
+        Args:
+            graph: The graph to search.
+            source: Starting node ID.
+            target: Target node ID.
+
+        Returns:
+            Tuple of (distance, path). Distance is infinity if no path exists.
+        """
+        import heapq
+
+        if source not in graph.nodes or target not in graph.nodes:
+            return float("inf"), []
+
+        if source == target:
+            return 0.0, [source]
+
+        # Priority queue: (distance, node, path)
+        pq = [(0.0, source, [source])]
+        visited: Set[str] = set()
+
+        while pq:
+            dist, current, path = heapq.heappop(pq)
+
+            if current in visited:
+                continue
+            visited.add(current)
+
+            if current == target:
+                return dist, path
+
+            for neighbor in graph.get_neighbors(current):
+                if neighbor not in visited:
+                    weight = graph.edge_weight(current, neighbor)
+                    heapq.heappush(pq, (dist + weight, neighbor, path + [neighbor]))
+
+        return float("inf"), []
+
+    @staticmethod
+    def dijkstra_all(graph: Graph, source: str) -> Dict[str, float]:
+        """Compute shortest distances from source to all nodes.
+
+        Args:
+            graph: The graph to search.
+            source: Starting node ID.
+
+        Returns:
+            Dict mapping node IDs to shortest distance from source.
+        """
+        import heapq
+
+        if source not in graph.nodes:
+            return {}
+
+        pq = [(0.0, source)]
+        distances: Dict[str, float] = {source: 0.0}
+        visited: Set[str] = set()
+
+        while pq:
+            dist, current = heapq.heappop(pq)
+
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for neighbor in graph.get_neighbors(current):
+                weight = graph.edge_weight(current, neighbor)
+                new_dist = dist + weight
+                if neighbor not in distances or new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+
+        return distances
 
     @staticmethod
     def betweenness_centrality(graph: Graph, normalized: bool = True) -> Dict[str, float]:

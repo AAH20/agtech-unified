@@ -185,3 +185,86 @@ class ProteinAnalyzer:
             if sequence[i : i + 2] in unstable_dipeptides:
                 count += 1
         return count * 10.0 / max(1, len(sequence) - 1)
+
+
+# Amino acid charge classification
+_AA_CHARGE = {
+    "K": 1,
+    "R": 1,
+    "H": 0.5,
+    "D": -1,
+    "E": -1,
+}
+
+# Known allergen motifs for screening
+_ALLERGEN_MOTIFS = [
+    "QQEQQFKR",
+    "FKRELRNLP",
+    "NLPQQCGLR",
+    "CGLR",
+    "QQEQQF",
+    "KRELRNLP",
+    "ELRNLPQ",
+    "RNLPQQC",
+    "LPQQCGL",
+    "PQQCGLR",
+    "QQCGLR",
+    "QCGLR",
+    "GLR",
+]
+
+
+def predict_variant_effect(protein_sequence: str, position: int, alt_aa: str) -> str:
+    """Predict the effect of a variant on protein function.
+
+    Args:
+        protein_sequence: Reference amino acid sequence.
+        position: 0-based position of the variant.
+        alt_aa: Alternate amino acid.
+
+    Returns:
+        'benign', 'possibly_damaging', or 'probably_damaging'.
+    """
+    if not protein_sequence:
+        raise ValueError("Protein sequence cannot be empty")
+    seq = protein_sequence.upper()
+    alt = alt_aa.upper()
+    if position < 0 or position >= len(seq):
+        raise ValueError(f"Position {position} out of range for sequence of length {len(seq)}")
+    ref_aa = seq[position]
+    if ref_aa == alt:
+        return "benign"
+
+    ref_charge = _AA_CHARGE.get(ref_aa, 0)
+    alt_charge = _AA_CHARGE.get(alt, 0)
+    ref_hydro = AA_HYDROPHOBICITY.get(ref_aa, 0)
+    alt_hydro = AA_HYDROPHOBICITY.get(alt, 0)
+    hydro_diff = abs(ref_hydro - alt_hydro)
+
+    # Charge reversal is highly damaging
+    if ref_charge != 0 and alt_charge != 0 and ref_charge != alt_charge:
+        return "probably_damaging"
+    # Large hydrophobicity change
+    if hydro_diff > 3.0:
+        return "probably_damaging"
+    # Moderate changes
+    if ref_charge != alt_charge or hydro_diff > 1.5:
+        return "possibly_damaging"
+    # Conservative substitution
+    return "benign"
+
+
+def screen_allergenicity(protein_sequence: str) -> float:
+    """Screen a protein sequence for known allergen motifs.
+
+    Args:
+        protein_sequence: Amino acid sequence to screen.
+
+    Returns:
+        Allergenicity score between 0 and 1.
+    """
+    if not protein_sequence:
+        raise ValueError("Protein sequence cannot be empty")
+    seq = protein_sequence.upper()
+    matches = sum(1 for motif in _ALLERGEN_MOTIFS if motif in seq)
+    return min(1.0, matches / len(_ALLERGEN_MOTIFS))

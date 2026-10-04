@@ -1,0 +1,402 @@
+{
+  "audit_metadata": {
+    "project": "agtech-unified",
+    "audit_date": "2026-10-04",
+    "auditor": "Wave 1 Cluster 8",
+    "scope": "README.md, all module docstrings, examples/, docs/, __init__.py files, deployment guides, tutorials, API references",
+    "supersedes": "gaps/docs_gaps.json (Wave 1 Cluster 9)",
+    "correction_note": "Cluster 9 reported several files as missing that actually exist (LICENSE, pyproject.toml, requirements.txt, Dockerfile, docker-compose.yml, Makefile, .github/workflows/ci.yml, examples/quickstart.py, docs/deployment.md). This v2 report corrects those false positives and identifies only genuine remaining gaps."
+  },
+  "summary": {
+    "total_gaps": 32,
+    "critical": 3,
+    "high": 12,
+    "medium": 12,
+    "low": 5,
+    "false_positives_corrected": 9
+  },
+  "files_verified_present": [
+    "LICENSE",
+    "pyproject.toml",
+    "requirements.txt",
+    "Dockerfile",
+    "docker-compose.yml",
+    "Makefile",
+    ".github/workflows/ci.yml",
+    "examples/quickstart.py",
+    "docs/deployment.md"
+  ],
+  "gaps": [
+    {
+      "id": "DOC2-001",
+      "category": "missing_file",
+      "severity": "critical",
+      "title": "9 of 11 __init__.py files are empty",
+      "description": "Only src/integration/__init__.py and src/onboarding/__init__.py have docstrings. The remaining 9 (src/__init__.py, src/decision_support/, src/digital_twin/, src/genomics/, src/iot/, src/multi_agent/, src/optimization/, src/path_planning/, tests/__init__.py) are completely empty — no module docstring, no re-exports, no __all__.",
+      "impact": "No package-level documentation; IDEs cannot show package help; no public API surface definition; users must discover classes by reading source.",
+      "recommendation": "Add module docstrings to each __init__.py describing the package purpose. Re-export key classes for convenient imports. Define __all__ for explicit public API."
+    },
+    {
+      "id": "DOC2-002",
+      "category": "missing_file",
+      "severity": "critical",
+      "title": "docs/deployment.md is minimal (35 lines)",
+      "description": "The deployment guide is only 563 bytes / 35 lines. It shows basic docker build/run and kubectl apply commands but the referenced k8s/ directory does not exist. No environment variable documentation, no health check endpoints, no rollback procedures, no monitoring setup, no SSL/TLS configuration.",
+      "impact": "Users cannot actually deploy to production. The kubectl commands reference non-existent manifests. No guidance for edge deployment (Jetson/Raspberry Pi).",
+      "recommendation": "Expand deployment.md to 200+ lines with: environment variables table, health check endpoints, resource requirements, scaling guidance, monitoring/observability setup, SSL/TLS configuration, rollback procedures. Create k8s/ directory with actual manifests (deployment.yaml, service.yaml, configmap.yaml, hpa.yaml). Add edge deployment guide for Jetson/Raspberry Pi."
+    },
+    {
+      "id": "DOC2-003",
+      "category": "missing_file",
+      "severity": "critical",
+      "title": "Only 1 example file for 18+ modules",
+      "description": "examples/ contains only quickstart.py (2314 bytes) which covers 5 of 18 modules (TSP, VRP, sensor placement, digital twin, decision support). No examples for: swarm coordination, consensus, task allocation, IoT pipeline, context broker, smart models, data validation, knowledge graph, ontology, API gateway, security, GPS anti-spoofing, edge AI, crop vision, genomics (CRISPR/protein), path planning, collision avoidance, fault tolerance, unified optimizer, event bus, farm state, onboarding.",
+      "impact": "Users must read source code to understand usage patterns for 13+ modules. High onboarding friction.",
+      "recommendation": "Create examples/ with: basic_tsp.py, basic_vrp.py, swarm_coordination.py, byzantine_consensus.py, task_allocation.py, iot_pipeline.py, context_broker_demo.py, digital_twin_sim.py, knowledge_graph_demo.py, ontology_demo.py, decision_support.py, api_gateway_demo.py, security_demo.py, gps_antispoof_demo.py, edge_ai_demo.py, crop_vision_demo.py, crispr_demo.py, protein_demo.py, path_planning_demo.py, collision_avoidance.py, fault_tolerance_demo.py, unified_optimizer_demo.py, event_bus_demo.py, onboarding_demo.py, end_to_end_farm.py."
+    },
+    {
+      "id": "DOC2-004",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No tutorials",
+      "description": "No step-by-step tutorials exist for any workflow. Users cannot learn how to: deploy a digital twin, set up an IoT pipeline, design CRISPR guides, configure swarm coordination, or integrate modules end-to-end.",
+      "impact": "Users cannot learn workflows; only API-level snippets available in README.",
+      "recommendation": "Create tutorials/ with: 01-getting-started.md, 02-optimization-basics.md, 03-swarm-coordination.md, 04-iot-data-pipeline.md, 05-digital-twin-simulation.md, 06-decision-support.md, 07-api-gateway.md, 08-genomics.md, 09-end-to-end-farm.md, 10-deployment.md."
+    },
+    {
+      "id": "DOC2-005",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No API reference documentation",
+      "description": "No comprehensive API reference exists for the Python library. The FastAPI app has auto-generated docs at /docs but there is no documentation for the Python classes, methods, dataclasses, parameters, and return types. Users must read source code to understand the API.",
+      "impact": "No searchable reference; IDE tooltips incomplete; high barrier for new users.",
+      "recommendation": "Generate API docs with pdoc, Sphinx autodoc, or mkdocstrings. Document all public classes, methods, dataclasses, and their parameters/returns."
+    },
+    {
+      "id": "DOC2-006",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No CONTRIBUTING.md",
+      "description": "No contribution guidelines exist. New contributors have no guidance on code style, PR process, or development setup.",
+      "impact": "Barrier to external contributions; inconsistent code quality from lack of standards.",
+      "recommendation": "Add CONTRIBUTING.md covering: dev environment setup, code style (ruff formatter/linter), PR process, commit message conventions, testing requirements."
+    },
+    {
+      "id": "DOC2-007",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No SECURITY.md",
+      "description": "No security policy exists. The project has a security module (JWT, RBAC, rate limiting, GPS anti-spoofing) but no documented security reporting process.",
+      "impact": "Security vulnerabilities have no disclosure channel; users don't know how to report issues.",
+      "recommendation": "Add SECURITY.md with supported versions, reporting process, and scope (aligned with the zero-trust architecture)."
+    },
+    {
+      "id": "DOC2-008",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No CHANGELOG.md",
+      "description": "No changelog exists. Users cannot track what changed between versions.",
+      "impact": "Poor maintainability; users cannot assess upgrade risk.",
+      "recommendation": "Add CHANGELOG.md following Keep a Changelog format. Document the initial release."
+    },
+    {
+      "id": "DOC2-009",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No CODE_OF_CONDUCT.md",
+      "description": "No code of conduct exists for the community.",
+      "impact": "Missing community standards; less welcoming to new contributors.",
+      "recommendation": "Adopt the Contributor Covenant v2.1 as CODE_OF_CONDUCT.md."
+    },
+    {
+      "id": "DOC2-010",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No .env.example",
+      "description": "No example environment file. The project uses secrets (JWT secret, database passwords) but documents no environment variable conventions.",
+      "impact": "Users don't know what env vars are needed; risk of committing secrets.",
+      "recommendation": "Add .env.example with: JWT_SECRET, DATABASE_URL, MQTT_BROKER_URL, KAFKA_BOOTSTRAP_SERVERS, TIMESCALEDB_URL, API_PORT, LOG_LEVEL, AGTECH_ENV."
+    },
+    {
+      "id": "DOC2-011",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No PR template or issue templates",
+      "description": "No .github/PULL_REQUEST_TEMPLATE.md or .github/ISSUE_TEMPLATE/ directory exists.",
+      "impact": "Inconsistent PR/issue quality; missing context in submissions.",
+      "recommendation": "Add PR template (description, testing, checklist) and issue templates (bug report, feature request, documentation)."
+    },
+    {
+      "id": "DOC2-012",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No architecture decision records (ADRs)",
+      "description": "No docs/adr/ directory. Key architectural choices (in-memory vs. real backends, PBFT consensus approach, NGSI-LD integration) are undocumented.",
+      "impact": "Lost design context; future maintainers don't know why decisions were made.",
+      "recommendation": "Create docs/adr/ with: 0001-in-memory-backends.md, 0002-pbft-consensus-simulation.md, 0003-ngsi-ld-integration.md, 0004-fastapi-for-api-gateway.md, 0005-pytorch-for-gpu-optimization.md."
+    },
+    {
+      "id": "DOC2-013",
+      "category": "missing_file",
+      "severity": "high",
+      "title": "No testing guide",
+      "description": "README shows basic pytest commands but no comprehensive testing guide (test organization, fixtures, mocking strategy, coverage goals, E2E testing).",
+      "impact": "New contributors don't know how to write tests; inconsistent test quality.",
+      "recommendation": "Add docs/testing.md covering: test structure, running tests, writing unit tests, integration tests, E2E tests, coverage requirements, mocking external services."
+    },
+    {
+      "id": "DOC2-014",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No performance tuning guide",
+      "description": "No documentation on performance characteristics, benchmarking, or tuning. The project has GPU acceleration and performance tests but no guide.",
+      "impact": "Users cannot optimize deployments; no baseline performance data documented.",
+      "recommendation": "Add docs/performance.md with: benchmark methodology, baseline results, GPU vs. CPU comparison, tuning parameters."
+    },
+    {
+      "id": "DOC2-015",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No troubleshooting guide",
+      "description": "No FAQ or troubleshooting documentation. Common issues (GPU not found, ONNX model loading failures, MQTT connection problems) are undocumented.",
+      "impact": "Users struggle with common issues; increased support burden.",
+      "recommendation": "Add docs/troubleshooting.md and docs/faq.md with common issues and solutions."
+    },
+    {
+      "id": "DOC2-016",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No glossary",
+      "description": "No glossary of agricultural and technical terms. The domain uses specialized vocabulary (AGROVOC, NGSI-LD, PBFT, boustrophedon, PAM site, etc.).",
+      "impact": "Barrier for users unfamiliar with agricultural or distributed systems terminology.",
+      "recommendation": "Add docs/glossary.md with terms: AGROVOC, NGSI-LD, PBFT, TSP, VRP, CPP, MRTA, MAPF, PAM, CRISPR, boustrophedon, Christofides, Clarke-Wright, etc."
+    },
+    {
+      "id": "DOC2-017",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No code style guide",
+      "description": "No documented code style conventions. The codebase uses type hints and docstrings but there's no formal style guide or enforced linter config beyond ruff.",
+      "impact": "Inconsistent code style; review friction.",
+      "recommendation": "Add docs/style-guide.md and configure ruff/mypy in pyproject.toml. Document naming conventions, docstring format, type hint requirements."
+    },
+    {
+      "id": "DOC2-018",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No onboarding guide for new developers",
+      "description": "No developer onboarding documentation. New team members have no guided path to understand the codebase.",
+      "impact": "Slow ramp-up for new developers.",
+      "recommendation": "Add docs/onboarding.md with: codebase tour, key concepts, first tasks, development workflow, where to get help."
+    },
+    {
+      "id": "DOC2-019",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No data flow documentation beyond README diagrams",
+      "description": "README has Mermaid diagrams but no detailed data flow documentation (schema definitions, event formats, API contracts).",
+      "impact": "Integration partners lack interface specifications.",
+      "recommendation": "Add docs/data-flows.md with: MQTT topic schema, Kafka message format, NGSI-LD entity schemas, API request/response examples, WebSocket message format."
+    },
+    {
+      "id": "DOC2-020",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No k8s/ manifests",
+      "description": "docs/deployment.md references 'kubectl apply -f k8s/deployment.yaml' and 'k8s/service.yaml' but the k8s/ directory does not exist.",
+      "impact": "Deployment guide is broken; users cannot deploy to Kubernetes.",
+      "recommendation": "Create k8s/ directory with: deployment.yaml, service.yaml, configmap.yaml, hpa.yaml, ingress.yaml."
+    },
+    {
+      "id": "DOC2-021",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No py.typed marker",
+      "description": "The project uses type hints but has no py.typed marker file, so type checkers won't use the inline types for external consumers.",
+      "impact": "Type information not available to downstream users.",
+      "recommendation": "Add py.typed marker file to src/ and configure pyproject.toml to include it in package data."
+    },
+    {
+      "id": "DOC2-022",
+      "category": "missing_file",
+      "severity": "medium",
+      "title": "No OpenAPI/Swagger spec export",
+      "description": "The FastAPI app generates /docs but there's no exported OpenAPI spec file for API consumers.",
+      "impact": "API consumers cannot generate client SDKs.",
+      "recommendation": "Add a script to export OpenAPI spec to docs/openapi.json. Document how to generate client SDKs."
+    },
+    {
+      "id": "DOC2-023",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in optimization module",
+      "description": "Several public methods lack full docstrings: TSPSolver.__init__, TSPSolver.solve, VRPSolver.__init__, VRPSolver.solve, GPUTSPSolver.__init__, GPUTSPSolver.solve, GPUVRPSolver.__init__, GPUVRPSolver.solve, CoveragePlanner.__init__, CoveragePlanner.plan.",
+      "impact": "IDE tooltips and generated docs are incomplete.",
+      "recommendation": "Add Google-style docstrings with Args, Returns, Raises sections to all public methods."
+    },
+    {
+      "id": "DOC2-024",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in multi_agent module",
+      "description": "SwarmCoordinator.__init__ has docstring but many methods lack full documentation. ByzantineConsensus.propose and tally_votes have minimal docstrings. TaskAllocator methods lack parameter documentation.",
+      "impact": "Incomplete API documentation for swarm coordination.",
+      "recommendation": "Add comprehensive docstrings to all public methods with examples."
+    },
+    {
+      "id": "DOC2-025",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in iot module",
+      "description": "MQTTClient, KafkaStream, and TimescaleDBStorage have class docstrings but many public methods lack parameter/return documentation. NGSILDBroker methods have minimal docstrings.",
+      "impact": "IoT module API is poorly documented for external users.",
+      "recommendation": "Add docstrings to all public methods with type information and examples."
+    },
+    {
+      "id": "DOC2-026",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in digital_twin module",
+      "description": "DigitalTwin.__init__ and simulate have docstrings but _step, _temp_factor, _water_factor lack them. AgriKnowledgeGraph methods have minimal docstrings. AGROVOCOntology methods lack parameter docs.",
+      "impact": "Digital twin and knowledge graph APIs are under-documented.",
+      "recommendation": "Add docstrings to all public methods, especially query methods and serialization."
+    },
+    {
+      "id": "DOC2-027",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in decision_support module",
+      "description": "DecisionEngine.recommend has docstring but FarmDashboard, AlertManager, APIGateway, ZeroTrustAuth, GPSSpoofingDetector methods lack comprehensive documentation.",
+      "impact": "Decision support and security APIs are poorly documented.",
+      "recommendation": "Add docstrings to all public methods with security considerations noted."
+    },
+    {
+      "id": "DOC2-028",
+      "category": "docstring_gap",
+      "severity": "medium",
+      "title": "Missing method docstrings in genomics module",
+      "description": "CRISPRDesigner and ProteinAnalyzer have class docstrings but methods lack parameter documentation and examples.",
+      "impact": "Genomics module is hard to use without reading source.",
+      "recommendation": "Add docstrings with biological context and usage examples."
+    },
+    {
+      "id": "DOC2-029",
+      "category": "readme_gap",
+      "severity": "medium",
+      "title": "README Quick Start covers only 1 of 18 modules",
+      "description": "Quick Start shows only TSP usage. No examples for VRP, swarm, IoT, digital twin, decision support, API gateway, or genomics. No end-to-end example.",
+      "impact": "Users only learn about 1 of 18 modules from the Quick Start.",
+      "recommendation": "Expand Quick Start with a 'Module Examples' section showing basic usage for each module. Add an end-to-end farm simulation example."
+    },
+    {
+      "id": "DOC2-030",
+      "category": "readme_gap",
+      "severity": "medium",
+      "title": "README Security section lacks usage examples",
+      "description": "Security section lists features (JWT, RBAC, rate limiting, GPS anti-spoofing) but shows no code examples of how to use ZeroTrustAuth or GPSSpoofingDetector.",
+      "impact": "Users cannot implement security without reading source code.",
+      "recommendation": "Add code examples for: generating/validating JWT tokens, checking roles, rate limiting, GPS spoofing detection."
+    },
+    {
+      "id": "DOC2-031",
+      "category": "readme_gap",
+      "severity": "low",
+      "title": "README lacks community/support section",
+      "description": "No links to community channels, support, or discussion forums.",
+      "impact": "Users don't know where to get help.",
+      "recommendation": "Add a Community section with: Discord/Slack link, GitHub Discussions, Stack Overflow tag, email contact."
+    },
+    {
+      "id": "DOC2-032",
+      "category": "readme_gap",
+      "severity": "low",
+      "title": "README lacks badges",
+      "description": "No CI status, coverage, PyPI version, or license badges.",
+      "impact": "Reduced discoverability and trust.",
+      "recommendation": "Add badges: CI status, code coverage, PyPI version, license, Python versions."
+    }
+  ],
+  "module_docstring_audit": {
+    "optimization": {
+      "tsp.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstrings, minimal method docs"},
+      "vrp.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Similar to tsp.py"},
+      "gpu_tsp.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstring with usage"},
+      "gpu_vrp.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Similar to gpu_tsp.py"},
+      "edge_ai.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Best documented module"},
+      "crop_vision.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstrings"},
+      "local_search.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "gpu_fallback.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "path_planning": {
+      "coverage.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings only"},
+      "obstacles.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "multi_agent": {
+      "swarm.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Well documented with examples"},
+      "consensus.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Has doctest example"},
+      "task_allocation.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "collision_avoidance.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "fault_tolerance.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "iot": {
+      "sensor_placement.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "context_broker.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstring"},
+      "smart_models.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Well documented with param docs"},
+      "data_pipeline.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Comprehensive docstrings"},
+      "device_management.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "data_validation.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "digital_twin": {
+      "simulator.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "knowledge_graph.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstring"},
+      "ontology.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstring"},
+      "water_balance.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "nutrient_cycling.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "graph_algorithms.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "decision_support": {
+      "recommender.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "dashboard.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "alerts.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "partial", "notes": "Good class docstrings"},
+      "api_gateway.py": {"module_docstring": true, "class_docstrings": false, "method_docstrings": "minimal", "notes": "Poorly documented, uses dataclasses"},
+      "security.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Well documented with raises"},
+      "gps_antispoof.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "good", "notes": "Well documented"},
+      "ml_models.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "notifications.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "audit.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "genomics": {
+      "crispr.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"},
+      "protein.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "minimal", "notes": "Basic docstrings"}
+    },
+    "integration": {
+      "event_bus.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "unified_optimizer.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "farm_state.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    },
+    "onboarding": {
+      "sizing.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"},
+      "modules.py": {"module_docstring": true, "class_docstrings": true, "method_docstrings": "unknown", "notes": "Not audited in detail"}
+    }
+  },
+  "recommendations_priority": [
+    "1. Populate all 9 empty __init__.py files with docstrings and re-exports",
+    "2. Expand docs/deployment.md from 35 lines to comprehensive guide; create k8s/ manifests",
+    "3. Create examples/ for all 18+ modules (currently only 1 example)",
+    "4. Add CONTRIBUTING.md (contributor onboarding)",
+    "5. Add SECURITY.md (security reporting)",
+    "6. Add CHANGELOG.md (version history)",
+    "7. Add CODE_OF_CONDUCT.md (community standards)",
+    "8. Add .env.example (environment variable documentation)",
+    "9. Add tutorials/ with step-by-step guides for all major workflows",
+    "10. Generate API reference documentation (pdoc/Sphinx/mkdocstrings)",
+    "11. Add PR/issue templates in .github/",
+    "12. Add architecture decision records (ADRs)",
+    "13. Add testing guide",
+    "14. Add performance tuning guide",
+    "15. Add troubleshooting/FAQ guide",
+    "16. Add glossary of domain terms",
+    "17. Add code style guide",
+    "18. Add py.typed marker for type information"
+  ]
+}

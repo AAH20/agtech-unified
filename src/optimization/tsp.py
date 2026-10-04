@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -15,6 +16,7 @@ class TSPInstance:
 
     cities: List[str]
     distance_matrix: List[List[float]]
+    validate_metric: bool = False
 
     def __post_init__(self):
         n = len(self.cities)
@@ -23,20 +25,31 @@ class TSPInstance:
         for row in self.distance_matrix:
             if len(row) != n:
                 raise ValueError("Distance matrix must be square")
-        # Check metric property (triangle inequality)
+        # Check for NaN/Inf
         for i in range(n):
             for j in range(n):
-                for k in range(n):
-                    if (
-                        self.distance_matrix[i][j]
-                        > self.distance_matrix[i][k] + self.distance_matrix[k][j] + 1e-9
-                    ):
-                        logger.warning(
-                            f"Non-Metric TSP: d({i},{j})={self.distance_matrix[i][j]:.2f} > "
-                            f"d({i},{k})+d({k},{j})="
-                            f"{self.distance_matrix[i][k] + self.distance_matrix[k][j]:.2f}"
-                        )
-                        return
+                if not math.isfinite(self.distance_matrix[i][j]):
+                    raise ValueError(f"Distance matrix contains NaN or Inf at ({i},{j})")
+        # Check non-negative
+        for i in range(n):
+            for j in range(n):
+                if self.distance_matrix[i][j] < 0:
+                    raise ValueError(f"Distance matrix contains negative value at ({i},{j})")
+        # Check metric property (triangle inequality) — optional
+        if self.validate_metric:
+            for i in range(n):
+                for j in range(n):
+                    for k in range(n):
+                        if (
+                            self.distance_matrix[i][j]
+                            > self.distance_matrix[i][k] + self.distance_matrix[k][j] + 1e-9
+                        ):
+                            logger.warning(
+                                f"Non-Metric TSP: d({i},{j})={self.distance_matrix[i][j]:.2f} > "
+                                f"d({i},{k})+d({k},{j})="
+                                f"{self.distance_matrix[i][k] + self.distance_matrix[k][j]:.2f}"
+                            )
+                            return
 
 
 @dataclass
@@ -52,11 +65,21 @@ class TSPResult:
 class TSPSolver:
     """TSP solver supporting multiple algorithms."""
 
-    def __init__(self, algorithm: str = "christofides"):
+    def __init__(self, algorithm: str = "christofides", improve: bool = True):
         self.algorithm = algorithm
+        self.improve = improve
 
     def solve(self, instance: TSPInstance) -> TSPResult:
         """Solve TSP instance."""
+        # Input validation: check for NaN/Inf and negative distances
+        n = len(instance.cities)
+        for i in range(n):
+            for j in range(n):
+                if not math.isfinite(instance.distance_matrix[i][j]):
+                    raise ValueError(f"Distance matrix contains NaN or Inf at ({i},{j})")
+                if instance.distance_matrix[i][j] < 0:
+                    raise ValueError(f"Distance matrix contains negative value at ({i},{j})")
+
         if not instance.cities:
             return TSPResult(tour=[], cost=0.0, algorithm=self.algorithm)
 
@@ -64,14 +87,34 @@ class TSPSolver:
             return TSPResult(tour=instance.cities[:], cost=0.0, algorithm=self.algorithm)
 
         if self.algorithm == "christofides":
-            return self._christofides(instance)
+            result = self._christofides(instance)
         elif self.algorithm == "nearest_neighbor":
-            return self._nearest_neighbor(instance)
+            result = self._nearest_neighbor(instance)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
+        if self.improve:
+            from src.optimization.local_search import TwoOpt
+
+            tour_indices = [instance.cities.index(c) for c in result.tour]
+            improved = TwoOpt().improve(tour_indices, instance.distance_matrix)
+            new_cost = self._tour_cost(improved, instance.distance_matrix)
+            result = TSPResult(
+                tour=[instance.cities[i] for i in improved],
+                cost=new_cost,
+                algorithm=result.algorithm,
+                approximation_ratio=result.approximation_ratio,
+            )
+
+        return result
+
     def _christofides(self, instance: TSPInstance) -> TSPResult:
-        """Christofides algorithm: 1.5-approximation for metric TSP."""
+        """Christofides algorithm: 1.5-approximation for metric TSP.
+
+        Note: Uses greedy matching, not optimal Edmonds' blossom algorithm.
+        The 1.5-approximation guarantee requires optimal matching, so
+        approximation_ratio is set to None.
+        """
         n = len(instance.cities)
         if n <= 2:
             tour = instance.cities[:]
@@ -107,7 +150,7 @@ class TSPSolver:
 
         tour = [instance.cities[i] for i in tour_indices]
         cost = self._tour_cost(tour_indices, instance.distance_matrix)
-        return TSPResult(tour=tour, cost=cost, algorithm="christofides", approximation_ratio=1.5)
+        return TSPResult(tour=tour, cost=cost, algorithm="christofides", approximation_ratio=None)
 
     def _nearest_neighbor(self, instance: TSPInstance) -> TSPResult:
         """Nearest neighbor heuristic for TSP."""
@@ -186,8 +229,14 @@ class TSPSolver:
             graph[u].append(v)
             graph[v].append(u)
 
-        # Start from vertex 0
-        stack = [0]
+        # Start from the first vertex that has edges
+        start = 0
+        for v in range(n):
+            if graph[v]:
+                start = v
+                break
+
+        stack = [start]
         tour = []
         while stack:
             v = stack[-1]

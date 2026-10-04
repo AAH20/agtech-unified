@@ -1,0 +1,166 @@
+{
+  "report": "Cross-Module Integration Gap Audit v2",
+  "generated": "2026-10-04",
+  "files_audited": "All 43 source files in src/",
+  "cross_module_imports_found": 7,
+  "cross_module_imports_expected": 50,
+  "gaps": [
+    {
+      "id": "INT-001",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "module": "src/iot/",
+      "title": "IoT modules have zero cross-module imports",
+      "description": "sensor_placement, context_broker, smart_models, data_pipeline, device_management, data_validation are completely isolated. No data flows from IoT to decision_support or digital_twin.",
+      "impact": "Sensor data never reaches decision engine or digital twin. System is a collection of independent tools, not a unified platform.",
+      "recommended_fix": "Create src/iot/iot_orchestrator.py that subscribes to data_pipeline events and publishes to event_bus"
+    },
+    {
+      "id": "INT-002",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "module": "src/digital_twin/",
+      "title": "Digital twin modules have zero cross-module imports",
+      "description": "simulator, knowledge_graph, ontology, water_balance, nutrient_cycling, graph_algorithms are isolated. Simulation results never trigger recommendations.",
+      "impact": "Digital twin is a standalone simulation tool, not connected to the decision loop.",
+      "recommended_fix": "Create src/digital_twin/twin_orchestrator.py that publishes simulation results to event_bus"
+    },
+    {
+      "id": "INT-003",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "module": "src/genomics/",
+      "title": "Genomics modules have zero cross-module imports",
+      "description": "crispr and protein modules are isolated. No connection to knowledge_graph or decision_support.",
+      "impact": "Genomic analysis results never inform crop recommendations or knowledge graph.",
+      "recommended_fix": "Create src/genomics/genomics_orchestrator.py that publishes to knowledge_graph and event_bus"
+    },
+    {
+      "id": "INT-004",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "module": "src/multi_agent/",
+      "title": "Multi-agent modules have zero cross-module imports",
+      "description": "swarm, consensus, task_allocation, fault_tolerance, collision_avoidance are isolated. No connection to optimization or decision_support.",
+      "impact": "Multi-agent coordination cannot trigger optimization or receive tasks from decision engine.",
+      "recommended_fix": "Create src/multi_agent/agent_orchestrator.py that subscribes to event_bus and calls unified_optimizer"
+    },
+    {
+      "id": "INT-005",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "module": "src/onboarding/",
+      "title": "Onboarding modules have zero cross-module imports",
+      "description": "sizing and modules are isolated. No connection to any other module.",
+      "impact": "Onboarding cannot validate that recommended modules actually work together.",
+      "recommended_fix": "Add validation in ModuleRegistry that imports and smoke-tests each recommended module"
+    },
+    {
+      "id": "INT-006",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "module": "src/integration/",
+      "title": "Integration modules have zero cross-module imports",
+      "description": "event_bus and farm_state are isolated. No other module imports them.",
+      "impact": "Event bus is defined but never used. FarmState validation exists but is never called.",
+      "recommended_fix": "Wire event_bus into all module orchestrators. Use FarmState in decision_support endpoints."
+    },
+    {
+      "id": "INT-007",
+      "category": "missing_event_driven_patterns",
+      "severity": "critical",
+      "module": "src/integration/event_bus.py",
+      "title": "Event bus is defined but never used",
+      "description": "EventBus class exists with pub/sub, but zero modules publish or subscribe to it.",
+      "impact": "No event-driven communication between modules. System is request-response only.",
+      "recommended_fix": "Create orchestrator modules that publish domain events (SensorDataReceived, SimulationComplete, AlertTriggered)"
+    },
+    {
+      "id": "INT-008",
+      "category": "missing_event_driven_patterns",
+      "severity": "high",
+      "module": "src/decision_support/alerts.py",
+      "title": "Alerts never reach dashboard or API",
+      "description": "AlertManager creates alerts but they are never published to dashboard or API gateway.",
+      "impact": "Users cannot see alerts in real-time dashboard or query them via API.",
+      "recommended_fix": "Add AlertManager.publish_to(event_bus) and AlertManager.push_to(dashboard)"
+    },
+    {
+      "id": "INT-009",
+      "category": "missing_data_flow_validation",
+      "severity": "high",
+      "module": "src/integration/farm_state.py",
+      "title": "FarmState validation is never called",
+      "description": "FarmState has __post_init__ validation but no module uses it. Invalid data flows to DecisionEngine.",
+      "impact": "Invalid sensor data (negative moisture, extreme temperature) reaches decision engine unchecked.",
+      "recommended_fix": "Use FarmState in api_gateway endpoints and iot_orchestrator"
+    },
+    {
+      "id": "INT-010",
+      "category": "missing_data_flow_validation",
+      "severity": "medium",
+      "module": "src/iot/data_validation.py",
+      "title": "Data validation is never invoked",
+      "description": "SchemaValidator and AnomalyDetector exist but no module calls them.",
+      "impact": "Invalid or anomalous sensor data is stored and processed without checks.",
+      "recommended_fix": "Call SchemaValidator in data_pipeline MQTTClient and KafkaStream"
+    },
+    {
+      "id": "INT-011",
+      "category": "missing_api_contracts",
+      "severity": "high",
+      "module": "src/decision_support/api_gateway.py",
+      "title": "API gateway only exposes recommender",
+      "description": "API gateway has endpoints for tenants, farms, sensor readings, and recommendations. No endpoints for optimization, genomics, or multi-agent.",
+      "impact": "External systems cannot trigger optimization or query genomics results via API.",
+      "recommended_fix": "Add /api/v1/optimize, /api/v1/genomics, /api/v1/swarm endpoints"
+    },
+    {
+      "id": "INT-012",
+      "category": "missing_api_contracts",
+      "severity": "medium",
+      "module": "src/decision_support/api_gateway.py",
+      "title": "No WebSocket endpoint for real-time data",
+      "description": "Dashboard supports WebSocket but API gateway does not expose it.",
+      "impact": "External systems cannot subscribe to real-time farm data streams.",
+      "recommended_fix": "Add /ws/farm/{farm_id} WebSocket endpoint to API gateway"
+    },
+    {
+      "id": "INT-013",
+      "category": "missing_inter_module_communication",
+      "severity": "medium",
+      "module": "src/optimization/",
+      "title": "Optimization results never reach decision support",
+      "description": "UnifiedOptimizer solves problems but results are never published to event_bus or sent to decision_support.",
+      "impact": "Optimization results are computed but never acted upon.",
+      "recommended_fix": "Add UnifiedOptimizer.publish_result(event_bus) after solving"
+    },
+    {
+      "id": "INT-014",
+      "category": "missing_inter_module_communication",
+      "severity": "medium",
+      "module": "src/path_planning/",
+      "title": "Path planning results never reach multi-agent",
+      "description": "CoveragePlanner and ObstacleField compute paths but never send them to swarm or task_allocation.",
+      "impact": "Drones and robots cannot receive computed paths.",
+      "recommended_fix": "Add PathPlanner.publish_to(event_bus) and SwarmCoordinator.subscribe_to(event_bus)"
+    },
+    {
+      "id": "INT-015",
+      "category": "missing_data_flow_validation",
+      "severity": "medium",
+      "module": "src/digital_twin/simulator.py",
+      "title": "Digital twin never receives sensor data",
+      "description": "SimulationState is created manually, never from IoT sensor data.",
+      "impact": "Digital twin is a standalone simulation, not a real-time twin.",
+      "recommended_fix": "Add DigitalTwin.ingest_sensor_data(FarmState) that updates SimulationState"
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "critical": 4,
+    "high": 5,
+    "medium": 6
+  },
+  "key_finding": "Only 7 cross-module imports exist across 43 source files. The system is a collection of independent tools, not a unified platform. The event_bus, farm_state, and unified_optimizer are defined but never used by other modules. Orchestrator modules are needed to wire everything together."
+}

@@ -1,29 +1,48 @@
 {
   "audit_metadata": {
-    "timestamp": "2026-10-04T00:00:00+03:00",
+    "timestamp": "2026-10-04T11:30:00+03:00",
     "auditor": "Wave 1 Cluster 4",
     "scope": [
       "src/digital_twin/simulator.py",
       "src/digital_twin/knowledge_graph.py",
-      "src/digital_twin/ontology.py"
+      "src/digital_twin/ontology.py",
+      "src/digital_twin/water_balance.py",
+      "src/digital_twin/nutrient_cycling.py",
+      "src/digital_twin/graph_algorithms.py"
     ],
-    "files_examined": 4,
-    "test_files_examined": 3
+    "files_examined": 6,
+    "test_files_examined": 6,
+    "previous_audit": "2026-10-04T00:00:00+03:00",
+    "modules_added_since_previous": [
+      "water_balance.py",
+      "nutrient_cycling.py",
+      "graph_algorithms.py"
+    ]
   },
   "summary": {
-    "total_gaps": 28,
+    "total_gaps": 52,
     "by_category": {
-      "simulation_models": 7,
-      "graph_algorithms": 6,
+      "simulation_models": 16,
+      "graph_algorithms": 10,
       "ontology_mappings": 5,
-      "real_time_sync": 6,
-      "cross_cutting": 4
+      "real_time_sync": 9,
+      "cross_cutting": 12
     },
     "by_severity": {
-      "critical": 5,
-      "high": 10,
-      "medium": 9,
-      "low": 4
+      "critical": 7,
+      "high": 16,
+      "medium": 23,
+      "low": 6
+    },
+    "by_status": {
+      "addressed_by_new_module": 4,
+      "remaining": 24,
+      "new": 24
+    },
+    "previously_identified": {
+      "total": 28,
+      "addressed": 4,
+      "remaining": 24
     }
   },
   "gaps": [
@@ -37,7 +56,9 @@
       "lines": "84-85",
       "current_behavior": "Moisture monotonically decreases; no replenishment mechanism.",
       "expected_behavior": "Support irrigation scheduling, rainfall events, and water balance equations (e.g., FAO-56 crop evapotranspiration).",
-      "impact": "Cannot evaluate irrigation strategies or drought response — core digital twin use case."
+      "impact": "Cannot evaluate irrigation strategies or drought response — core digital twin use case.",
+      "status": "addressed_by_new_module",
+      "addressed_by": "water_balance.py"
     },
     {
       "id": "SIM-002",
@@ -49,7 +70,9 @@
       "lines": "18, 77, 91",
       "current_behavior": "nutrient_level never changes during simulation.",
       "expected_behavior": "Dynamic nutrient pools with uptake, mineralization, leaching, and fertilization events.",
-      "impact": "Cannot model fertilizer optimization or soil health degradation."
+      "impact": "Cannot model fertilizer optimization or soil health degradation.",
+      "status": "addressed_by_new_module",
+      "addressed_by": "nutrient_cycling.py"
     },
     {
       "id": "SIM-003",
@@ -61,7 +84,8 @@
       "lines": "12-18, 72-92",
       "current_behavior": "Only abiotic stress (temp, water, nutrient) affects growth.",
       "expected_behavior": "Pest/disease submodels with population dynamics, infection rates, and yield loss.",
-      "impact": "Cannot simulate integrated pest management or disease outbreak scenarios."
+      "impact": "Cannot simulate integrated pest management or disease outbreak scenarios.",
+      "status": "remaining"
     },
     {
       "id": "SIM-004",
@@ -73,7 +97,8 @@
       "lines": "16, 89",
       "current_behavior": "Temperature constant throughout simulation.",
       "expected_behavior": "Time-varying weather driver (observed or forecast) with stochastic events.",
-      "impact": "Cannot run realistic season-long simulations or climate scenario analysis."
+      "impact": "Cannot run realistic season-long simulations or climate scenario analysis.",
+      "status": "remaining"
     },
     {
       "id": "SIM-005",
@@ -85,7 +110,8 @@
       "lines": "12-18, 31-38",
       "current_behavior": "One-size-fits-all logistic growth with hardcoded parameters.",
       "expected_behavior": "Crop-specific parameter sets, phenological stage models, and rotation carryover effects.",
-      "impact": "Cannot compare crop choices or model rotation benefits."
+      "impact": "Cannot compare crop choices or model rotation benefits.",
+      "status": "remaining"
     },
     {
       "id": "SIM-006",
@@ -97,7 +123,8 @@
       "lines": "22-28, 62-70",
       "current_behavior": "total_growth is height difference only.",
       "expected_behavior": "Yield model (e.g., harvest index × biomass) with quality metrics.",
-      "impact": "Cannot connect simulation to economic or supply-chain decisions."
+      "impact": "Cannot connect simulation to economic or supply-chain decisions.",
+      "status": "remaining"
     },
     {
       "id": "SIM-007",
@@ -109,7 +136,125 @@
       "lines": "72-92",
       "current_behavior": "Growth is purely logistic with stress multipliers.",
       "expected_behavior": "Radiation-driven biomass accumulation with CO2 response curves.",
-      "impact": "Cannot model climate change scenarios or greenhouse production."
+      "impact": "Cannot model climate change scenarios or greenhouse production.",
+      "status": "remaining"
+    },
+    {
+      "id": "WB-001",
+      "category": "simulation_models",
+      "severity": "high",
+      "title": "No FAO-56 Penman-Monteith evapotranspiration calculation",
+      "description": "Water balance model accepts ET as input but does not compute it from weather data. No crop coefficient (Kc) adjustment for different growth stages.",
+      "file": "src/digital_twin/water_balance.py",
+      "lines": "80-101",
+      "current_behavior": "ET must be provided externally; no internal ET computation.",
+      "expected_behavior": "FAO-56 dual crop coefficient method with Kcb, Ke, and Kc adjustment for climate and crop stage.",
+      "impact": "Cannot run water balance from raw weather station data alone.",
+      "status": "new"
+    },
+    {
+      "id": "WB-002",
+      "category": "simulation_models",
+      "severity": "medium",
+      "title": "No multi-layer soil water model",
+      "description": "Single bucket model with uniform soil moisture. No vertical water movement, root water uptake by depth, or layered soil horizons.",
+      "file": "src/digital_twin/water_balance.py",
+      "lines": "57-78",
+      "current_behavior": "Single soil layer with one moisture value.",
+      "expected_behavior": "Multi-layer model (e.g., 3-10 layers) with percolation between layers and depth-dependent root uptake.",
+      "impact": "Cannot model deep percolation, root zone depletion profiles, or layered soil textures.",
+      "status": "new"
+    },
+    {
+      "id": "WB-003",
+      "category": "simulation_models",
+      "severity": "medium",
+      "title": "No soil water retention curve (van Genuchten)",
+      "description": "Linear stress factor between wilting point and field capacity. No soil-type-specific water retention or hydraulic conductivity curves.",
+      "file": "src/digital_twin/water_balance.py",
+      "lines": "209-219",
+      "current_behavior": "Linear interpolation for stress factor.",
+      "expected_behavior": "Van Genuchten or Campbell curves parameterized by soil texture (sand, silt, clay fractions).",
+      "impact": "Cannot accurately model water availability for different soil types.",
+      "status": "new"
+    },
+    {
+      "id": "WB-004",
+      "category": "simulation_models",
+      "severity": "low",
+      "title": "No salinity / electrical conductivity tracking",
+      "description": "No salt accumulation or leaching fraction modeling. Irrigation water quality not considered.",
+      "file": "src/digital_twin/water_balance.py",
+      "lines": "57-286",
+      "current_behavior": "No salinity state variable or salt balance.",
+      "expected_behavior": "Salt balance with irrigation water EC, leaching requirement, and salinity stress factor.",
+      "impact": "Cannot model irrigation with brackish water or salinization risk.",
+      "status": "new"
+    },
+    {
+      "id": "NC-001",
+      "category": "simulation_models",
+      "severity": "high",
+      "title": "No nitrification / denitrification split",
+      "description": "Nitrogen mineralization is a single rate. No separate nitrification (NH4→NO3) and denitrification (NO3→N2/N2O) processes with environmental controls.",
+      "file": "src/digital_twin/nutrient_cycling.py",
+      "lines": "83-99, 164-172",
+      "current_behavior": "Single mineralization rate; no N species differentiation.",
+      "expected_behavior": "Split N pool (NH4, NO3) with temperature/moisture-dependent nitrification and anaerobic denitrification.",
+      "impact": "Cannot model N losses to atmosphere or nitrate leaching accurately.",
+      "status": "new"
+    },
+    {
+      "id": "NC-002",
+      "category": "simulation_models",
+      "severity": "medium",
+      "title": "No phosphorus sorption / desorption dynamics",
+      "description": "P leaching is a simple first-order rate. No sorption isotherms, P fixation, or labile/stable P pool differentiation.",
+      "file": "src/digital_twin/nutrient_cycling.py",
+      "lines": "88, 195-196",
+      "current_behavior": "P leached at constant rate regardless of soil chemistry.",
+      "expected_behavior": "Langmuir/Freundlich sorption with pH-dependent P availability and fixation.",
+      "impact": "Cannot model P fertilizer efficiency or long-term P depletion.",
+      "status": "new"
+    },
+    {
+      "id": "NC-003",
+      "category": "simulation_models",
+      "severity": "medium",
+      "title": "No micronutrient modeling",
+      "description": "Only N, P, K macronutrients tracked. No Zn, Fe, Mn, Cu, B, Mo, or other micronutrients.",
+      "file": "src/digital_twin/nutrient_cycling.py",
+      "lines": "18-33",
+      "current_behavior": "Three macronutrients only.",
+      "expected_behavior": "Micronutrient pools with deficiency thresholds and interactions.",
+      "impact": "Cannot model micronutrient deficiencies common in high-yield systems.",
+      "status": "new"
+    },
+    {
+      "id": "NC-004",
+      "category": "simulation_models",
+      "severity": "medium",
+      "title": "No nutrient interaction / antagonism effects",
+      "description": "Nutrient uptake is independent. No N×P×K interactions, cation exchange, or pH-dependent availability beyond a simple multiplier.",
+      "file": "src/digital_twin/nutrient_cycling.py",
+      "lines": "174-191",
+      "current_behavior": "pH factor applied uniformly; no nutrient-nutrient interactions.",
+      "expected_behavior": "Liebig's law of the minimum with interaction terms and CEC-based cation balance.",
+      "impact": "Cannot model nutrient antagonism (e.g., high K inhibiting Mg uptake).",
+      "status": "new"
+    },
+    {
+      "id": "NC-005",
+      "category": "simulation_models",
+      "severity": "low",
+      "title": "No organic matter decomposition dynamics",
+      "description": "Organic matter is a static input. No C:N ratio-driven decomposition, humification, or residue incorporation.",
+      "file": "src/digital_twin/nutrient_cycling.py",
+      "lines": "18-33, 164-167",
+      "current_behavior": "organic_matter is constant; mineralization is a fixed fraction.",
+      "expected_behavior": "Dynamic SOM pools (active, slow, passive) with C:N ratio controls on mineralization/immobilization.",
+      "impact": "Cannot model cover crop residue effects or long-term soil health.",
+      "status": "new"
     },
     {
       "id": "KG-001",
@@ -121,7 +266,9 @@
       "lines": "34-225",
       "current_behavior": "Only BFS path_exists and basic neighbor queries.",
       "expected_behavior": "PageRank, betweenness centrality, degree centrality, and eigenvector centrality.",
-      "impact": "Cannot prioritize entities for monitoring, intervention, or resource allocation."
+      "impact": "Cannot prioritize entities for monitoring, intervention, or resource allocation.",
+      "status": "addressed_by_new_module",
+      "addressed_by": "graph_algorithms.py"
     },
     {
       "id": "KG-002",
@@ -133,7 +280,9 @@
       "lines": "34-225",
       "current_behavior": "No clustering or community structure analysis.",
       "expected_behavior": "Louvain, label propagation, or connected components for community detection.",
-      "impact": "Cannot auto-discover management zones or functional modules in the farm graph."
+      "impact": "Cannot auto-discover management zones or functional modules in the farm graph.",
+      "status": "addressed_by_new_module",
+      "addressed_by": "graph_algorithms.py"
     },
     {
       "id": "KG-003",
@@ -145,7 +294,8 @@
       "lines": "151-169",
       "current_behavior": "Binary path existence only; no path cost or optimal route.",
       "expected_behavior": "Dijkstra or A* with edge weights for logistics and routing.",
-      "impact": "Cannot optimize machinery routes, irrigation flow, or supply chain paths."
+      "impact": "Cannot optimize machinery routes, irrigation flow, or supply chain paths.",
+      "status": "remaining"
     },
     {
       "id": "KG-004",
@@ -157,7 +307,8 @@
       "lines": "34-225",
       "current_behavior": "Only explicit relationships stored and queried.",
       "expected_behavior": "Rule-based inference (e.g., if A grows B and B produces C, then A indirectly_produces C).",
-      "impact": "Cannot answer complex analytical questions or detect indirect risks."
+      "impact": "Cannot answer complex analytical questions or detect indirect risks.",
+      "status": "remaining"
     },
     {
       "id": "KG-005",
@@ -169,7 +320,8 @@
       "lines": "34-225",
       "current_behavior": "Graph is a static snapshot.",
       "expected_behavior": "Temporal graph with valid-time edges and historical traversal.",
-      "impact": "Cannot analyze how relationships evolve or replay past states."
+      "impact": "Cannot analyze how relationships evolve or replay past states.",
+      "status": "remaining"
     },
     {
       "id": "KG-006",
@@ -180,8 +332,61 @@
       "file": "src/digital_twin/knowledge_graph.py",
       "lines": "111-138",
       "current_behavior": "Simple property/relationship filters only.",
-      "expected_behavior": "Pattern matching (e.g., find all field->crop->pest paths of length 3).",
-      "impact": "Cannot express complex structural queries for decision support."
+      "expected_behavior": "Pattern matching (e.g., find all field→crop→pest paths of length 3).",
+      "impact": "Cannot express complex structural queries for decision support.",
+      "status": "remaining"
+    },
+    {
+      "id": "GA-001",
+      "category": "graph_algorithms",
+      "severity": "high",
+      "title": "No Dijkstra / A* shortest path in graph_algorithms",
+      "description": "graph_algorithms.py provides PageRank, community detection, and betweenness centrality but no weighted shortest path algorithm.",
+      "file": "src/digital_twin/graph_algorithms.py",
+      "lines": "101-373",
+      "current_behavior": "No shortest path computation available.",
+      "expected_behavior": "Dijkstra or A* with edge weights for routing and logistics optimization.",
+      "impact": "Cannot optimize machinery routes, irrigation flow, or supply chain paths.",
+      "status": "new"
+    },
+    {
+      "id": "GA-002",
+      "category": "graph_algorithms",
+      "severity": "medium",
+      "title": "No connected components algorithm",
+      "description": "No weakly or strongly connected components detection. Cannot identify isolated subgraphs or disconnected farm zones.",
+      "file": "src/digital_twin/graph_algorithms.py",
+      "lines": "101-373",
+      "current_behavior": "No connected components computation.",
+      "expected_behavior": "Tarjan's or Kosaraju's algorithm for SCC, and union-find for WCC.",
+      "impact": "Cannot detect disconnected sensor networks or isolated field zones.",
+      "status": "new"
+    },
+    {
+      "id": "GA-003",
+      "category": "graph_algorithms",
+      "severity": "medium",
+      "title": "No eigenvector or degree centrality",
+      "description": "Only PageRank and betweenness centrality implemented. No eigenvector centrality, degree centrality, or clustering coefficient.",
+      "file": "src/digital_twin/graph_algorithms.py",
+      "lines": "101-373",
+      "current_behavior": "Two centrality measures only.",
+      "expected_behavior": "Eigenvector centrality, degree centrality, and local clustering coefficient.",
+      "impact": "Limited options for different network analysis perspectives.",
+      "status": "new"
+    },
+    {
+      "id": "GA-004",
+      "category": "graph_algorithms",
+      "severity": "medium",
+      "title": "No integration between Graph and AgriKnowledgeGraph",
+      "description": "graph_algorithms.py defines its own Graph class, completely separate from AgriKnowledgeGraph. No adapter or bridge exists.",
+      "file": "src/digital_twin/graph_algorithms.py + knowledge_graph.py",
+      "lines": "N/A",
+      "current_behavior": "Two independent graph implementations with no data flow.",
+      "expected_behavior": "Adapter to convert AgriKnowledgeGraph entities/relationships to Graph for algorithm execution.",
+      "impact": "Cannot run PageRank or community detection on the knowledge graph.",
+      "status": "new"
     },
     {
       "id": "ONT-001",
@@ -193,7 +398,8 @@
       "lines": "34-200",
       "current_behavior": "Single isolated ontology with no external links.",
       "expected_behavior": "SKOS mapping properties (exactMatch, closeMatch, relatedMatch) to external ontologies.",
-      "impact": "Cannot integrate data from diverse sources using different semantic standards."
+      "impact": "Cannot integrate data from diverse sources using different semantic standards.",
+      "status": "remaining"
     },
     {
       "id": "ONT-002",
@@ -205,7 +411,8 @@
       "lines": "143-168",
       "current_behavior": "Export to rdflib Graph only; no query capability.",
       "expected_behavior": "SPARQL SELECT/CONSTRUCT/ASK support over the ontology graph.",
-      "impact": "External tools and researchers cannot query the ontology programmatically."
+      "impact": "External tools and researchers cannot query the ontology programmatically.",
+      "status": "remaining"
     },
     {
       "id": "ONT-003",
@@ -217,7 +424,8 @@
       "lines": "34-200",
       "current_behavior": "Explicit broader/narrower links only; no transitive inference.",
       "expected_behavior": "OWL RL or RDFS reasoning for class subsumption and property inference.",
-      "impact": "Cannot infer that a query for 'cereal' should match 'wheat' via hierarchy."
+      "impact": "Cannot infer that a query for 'cereal' should match 'wheat' via hierarchy.",
+      "status": "remaining"
     },
     {
       "id": "ONT-004",
@@ -229,7 +437,8 @@
       "lines": "16-23, 89-122",
       "current_behavior": "Plain string labels; search is language-agnostic but not multilingual.",
       "expected_behavior": "Language-tagged literals (e.g., 'Wheat'@en, 'Blé'@fr) with locale-aware search.",
-      "impact": "Cannot serve international users or integrate multilingual data sources."
+      "impact": "Cannot serve international users or integrate multilingual data sources.",
+      "status": "remaining"
     },
     {
       "id": "ONT-005",
@@ -241,7 +450,8 @@
       "lines": "34-200",
       "current_behavior": "Concepts are stateless with no history.",
       "expected_behavior": "Versioned concepts with timestamps, source attribution, and change logs.",
-      "impact": "Cannot audit ontology changes or roll back to previous versions."
+      "impact": "Cannot audit ontology changes or roll back to previous versions.",
+      "status": "remaining"
     },
     {
       "id": "RT-001",
@@ -253,7 +463,8 @@
       "lines": "1-105",
       "current_behavior": "Simulation is purely deterministic from initial state.",
       "expected_behavior": "Sensor data adapter with MQTT/WebSocket ingestion and state reconciliation.",
-      "impact": "Digital twin cannot reflect actual field conditions — not a real 'twin'."
+      "impact": "Digital twin cannot reflect actual field conditions — not a real 'twin'.",
+      "status": "remaining"
     },
     {
       "id": "RT-002",
@@ -265,7 +476,8 @@
       "lines": "40-70",
       "current_behavior": "Fixed-step loop with no event injection.",
       "expected_behavior": "Discrete event simulation with priority queue and event handlers.",
-      "impact": "Cannot model management interventions or unexpected events."
+      "impact": "Cannot model management interventions or unexpected events.",
+      "status": "remaining"
     },
     {
       "id": "RT-003",
@@ -277,7 +489,8 @@
       "lines": "1-105",
       "current_behavior": "Synchronous batch simulation only.",
       "expected_behavior": "Streaming simulation updates via WebSocket or SSE for live dashboards.",
-      "impact": "Cannot power real-time monitoring dashboards or alerting systems."
+      "impact": "Cannot power real-time monitoring dashboards or alerting systems.",
+      "status": "remaining"
     },
     {
       "id": "RT-004",
@@ -289,7 +502,8 @@
       "lines": "N/A",
       "current_behavior": "Two isolated modules with no data flow between them.",
       "expected_behavior": "Bidirectional sync: graph entities parameterize simulation; simulation results update graph properties.",
-      "impact": "Cannot use the graph to configure scenarios or persist results back."
+      "impact": "Cannot use the graph to configure scenarios or persist results back.",
+      "status": "remaining"
     },
     {
       "id": "RT-005",
@@ -300,8 +514,9 @@
       "file": "src/digital_twin/ontology.py + knowledge_graph.py",
       "lines": "N/A",
       "current_behavior": "Graph entities have no ontology concept references.",
-      "expected_behhavior": "Entity-to-concept mapping with semantic type annotation.",
-      "impact": "Cannot leverage ontology search or reasoning over the knowledge graph."
+      "expected_behavior": "Entity-to-concept mapping with semantic type annotation.",
+      "impact": "Cannot leverage ontology search or reasoning over the knowledge graph.",
+      "status": "remaining"
     },
     {
       "id": "RT-006",
@@ -313,19 +528,60 @@
       "lines": "N/A",
       "current_behavior": "to_dict/from_dict exists for graph but no simulator state persistence.",
       "expected_behavior": "State snapshots with timestamped persistence (DB or file) for replay and audit.",
-      "impact": "Cannot resume long simulations or analyze historical runs."
+      "impact": "Cannot resume long simulations or analyze historical runs.",
+      "status": "remaining"
+    },
+    {
+      "id": "RT-007",
+      "category": "real_time_sync",
+      "severity": "high",
+      "title": "No water balance ↔ simulator coupling",
+      "description": "water_balance.py and simulator.py both track soil moisture independently. No shared state or feedback loop.",
+      "file": "src/digital_twin/water_balance.py + simulator.py",
+      "lines": "N/A",
+      "current_behavior": "Two separate moisture models with no data exchange.",
+      "expected_behavior": "Water balance model provides moisture to simulator; simulator reports ET demand to water balance.",
+      "impact": "Cannot run integrated water-growth simulations.",
+      "status": "new"
+    },
+    {
+      "id": "RT-008",
+      "category": "real_time_sync",
+      "severity": "high",
+      "title": "No nutrient cycling ↔ simulator coupling",
+      "description": "nutrient_cycling.py and simulator.py both track nutrient levels independently. No shared state or feedback loop.",
+      "file": "src/digital_twin/nutrient_cycling.py + simulator.py",
+      "lines": "N/A",
+      "current_behavior": "Two separate nutrient models with no data exchange.",
+      "expected_behavior": "Nutrient model provides N/P/K to simulator; simulator reports nutrient demand to nutrient model.",
+      "impact": "Cannot run integrated nutrient-growth simulations.",
+      "status": "new"
+    },
+    {
+      "id": "RT-009",
+      "category": "real_time_sync",
+      "severity": "medium",
+      "title": "No water balance ↔ nutrient cycling coupling",
+      "description": "Nutrient leaching in nutrient_cycling.py uses a fixed rate, not driven by water flow from water_balance.py.",
+      "file": "src/digital_twin/water_balance.py + nutrient_cycling.py",
+      "lines": "N/A",
+      "current_behavior": "Leaching is independent of actual water drainage.",
+      "expected_behavior": "Leaching proportional to drainage volume from water balance model.",
+      "impact": "Cannot accurately model nutrient losses under different irrigation regimes.",
+      "status": "new"
     },
     {
       "id": "CC-001",
       "category": "cross_cutting",
       "severity": "high",
       "title": "No unified digital twin orchestrator",
-      "description": "No top-level coordinator that ties simulator, knowledge graph, and ontology together into a cohesive digital twin.",
+      "description": "No top-level coordinator that ties simulator, knowledge graph, ontology, water balance, nutrient cycling, and graph algorithms together into a cohesive digital twin.",
       "file": "src/digital_twin/__init__.py",
       "lines": "1 (empty)",
       "current_behavior": "Package init is empty; modules are independent.",
-      "expected_behavior": "DigitalTwin facade that coordinates all three subsystems with a unified API.",
-      "impact": "Consumers must wire modules manually; no single entry point for the digital twin."
+      "expected_behavior": "DigitalTwin facade that coordinates all subsystems with a unified API.",
+      "impact": "Consumers must wire modules manually; no single entry point for the digital twin.",
+      "status": "remaining"
     },
     {
       "id": "CC-002",
@@ -337,7 +593,8 @@
       "lines": "34-38",
       "current_behavior": "Constructor defaults only; no external config.",
       "expected_behavior": "YAML/JSON config with per-crop parameter profiles.",
-      "impact": "Cannot adapt to different crops or regions without code changes."
+      "impact": "Cannot adapt to different crops or regions without code changes.",
+      "status": "remaining"
     },
     {
       "id": "CC-003",
@@ -349,7 +606,8 @@
       "lines": "1-105",
       "current_behavior": "No ground-truth comparison or parameter fitting.",
       "expected_behavior": "Calibration module with RMSE/MAE metrics and parameter optimization.",
-      "impact": "Cannot ensure simulation accuracy or improve model fidelity over time."
+      "impact": "Cannot ensure simulation accuracy or improve model fidelity over time.",
+      "status": "remaining"
     },
     {
       "id": "CC-004",
@@ -361,30 +619,144 @@
       "lines": "9",
       "current_behavior": "logger defined but unused; no observability.",
       "expected_behavior": "Structured logging, simulation metrics export, and trace spans.",
-      "impact": "Cannot debug production issues or monitor simulation health."
+      "impact": "Cannot debug production issues or monitor simulation health.",
+      "status": "remaining"
+    },
+    {
+      "id": "CC-005",
+      "category": "cross_cutting",
+      "severity": "high",
+      "title": "No shared state model across modules",
+      "description": "Each module defines its own state dataclass (SimulationState, WaterBalanceState, NutrientState) with overlapping fields (soil_moisture, nutrient_level). No canonical shared state.",
+      "file": "src/digital_twin/simulator.py + water_balance.py + nutrient_cycling.py",
+      "lines": "N/A",
+      "current_behavior": "Three independent state models with duplicate/overlapping fields.",
+      "expected_behavior": "Unified FarmState or DigitalTwinState that all modules read/write.",
+      "impact": "State inconsistencies when modules are used together; no single source of truth.",
+      "status": "new"
+    },
+    {
+      "id": "CC-006",
+      "category": "cross_cutting",
+      "severity": "medium",
+      "title": "No event bus integration for digital twin modules",
+      "description": "integration/event_bus.py exists but no digital twin module publishes or subscribes to events. Simulation completion, water stress alerts, and nutrient deficiencies are not emitted as domain events.",
+      "file": "src/digital_twin/*.py + src/integration/event_bus.py",
+      "lines": "N/A",
+      "current_behavior": "Digital twin modules are not connected to the event bus.",
+      "expected_behavior": "Modules publish SIMULATION_COMPLETED, WATER_STRESS_ALERT, NUTRIENT_DEFICIENCY events.",
+      "impact": "Cannot trigger downstream actions (alerts, recommendations) from simulation results.",
+      "status": "new"
+    },
+    {
+      "id": "CC-007",
+      "category": "cross_cutting",
+      "severity": "medium",
+      "title": "No time-series data persistence for simulation results",
+      "description": "Simulation history is returned in-memory only. No integration with TimescaleDBStorage or any persistence layer for historical analysis.",
+      "file": "src/digital_twin/simulator.py + water_balance.py + nutrient_cycling.py",
+      "lines": "N/A",
+      "current_behavior": "History lists are ephemeral; lost after simulation completes.",
+      "expected_behavior": "Automatic persistence of simulation runs to time-series DB for trend analysis and replay.",
+      "impact": "Cannot analyze long-term trends or compare multiple simulation runs.",
+      "status": "new"
+    },
+    {
+      "id": "CC-008",
+      "category": "cross_cutting",
+      "severity": "medium",
+      "title": "No scenario management / what-if analysis",
+      "description": "No mechanism to define, save, and compare multiple simulation scenarios (e.g., different irrigation strategies, fertilizer plans).",
+      "file": "src/digital_twin/simulator.py",
+      "lines": "1-105",
+      "current_behavior": "Single simulation run with no scenario comparison.",
+      "expected_behavior": "Scenario builder with parameter sweeps, A/B comparison, and sensitivity analysis.",
+      "impact": "Cannot systematically evaluate management alternatives.",
+      "status": "new"
+    },
+    {
+      "id": "CC-009",
+      "category": "cross_cutting",
+      "severity": "low",
+      "title": "No API surface / RPC interface",
+      "description": "No REST, gRPC, or other API to expose digital twin functionality to external systems or the dashboard.",
+      "file": "src/digital_twin/__init__.py",
+      "lines": "1 (empty)",
+      "current_behavior": "No public API; direct Python imports required.",
+      "expected_behavior": "REST API or gRPC service for simulation runs, graph queries, and ontology search.",
+      "impact": "Cannot integrate with dashboard, mobile apps, or external decision support tools.",
+      "status": "new"
+    },
+    {
+      "id": "CC-010",
+      "category": "cross_cutting",
+      "severity": "low",
+      "title": "No parallel / batch simulation support",
+      "description": "No support for running multiple simulations in parallel (e.g., parameter sweeps, Monte Carlo uncertainty analysis).",
+      "file": "src/digital_twin/simulator.py",
+      "lines": "40-70",
+      "current_behavior": "Single-threaded sequential simulation only.",
+      "expected_behavior": "Parallel execution with multiprocessing or asyncio for batch scenarios.",
+      "impact": "Slow exploration of large parameter spaces or uncertainty quantification.",
+      "status": "new"
+    },
+    {
+      "id": "CC-011",
+      "category": "cross_cutting",
+      "severity": "medium",
+      "title": "No uncertainty quantification / stochastic modeling",
+      "description": "All models are deterministic. No Monte Carlo simulation, parameter uncertainty propagation, or confidence intervals on predictions.",
+      "file": "src/digital_twin/*.py",
+      "lines": "N/A",
+      "current_behavior": "Point estimates only; no uncertainty bounds.",
+      "expected_behavior": "Stochastic weather generation, parameter sampling, and prediction intervals.",
+      "impact": "Cannot assess risk or confidence in simulation results.",
+      "status": "new"
+    },
+    {
+      "id": "CC-012",
+      "category": "cross_cutting",
+      "severity": "low",
+      "title": "No digital twin versioning / lineage tracking",
+      "description": "No tracking of which model versions, parameters, or input data produced a given simulation result.",
+      "file": "src/digital_twin/*.py",
+      "lines": "N/A",
+      "current_behavior": "No provenance or lineage metadata.",
+      "expected_behavior": "Run ID with model version, parameter hash, and input data reference.",
+      "impact": "Cannot reproduce results or audit simulation decisions.",
+      "status": "new"
     }
   ],
   "recommendations": {
     "immediate": [
-      "Implement water balance model with irrigation events (SIM-001)",
-      "Add PageRank and community detection to knowledge graph (KG-001, KG-002)",
-      "Create cross-ontology mapping layer with SKOS match properties (ONT-001)",
-      "Build sensor data ingestion adapter with MQTT (RT-001)",
-      "Create DigitalTwin orchestrator facade (CC-001)"
+      "Create DigitalTwin orchestrator facade that wires all 6 modules together (CC-001)",
+      "Build shared state model (DigitalTwinState) to replace overlapping per-module state (CC-005)",
+      "Implement water balance ↔ simulator coupling for integrated moisture-growth simulation (RT-007)",
+      "Implement nutrient cycling ↔ simulator coupling for integrated nutrient-growth simulation (RT-008)",
+      "Create adapter between AgriKnowledgeGraph and Graph for algorithm execution (GA-004)"
     ],
     "short_term": [
-      "Add nutrient cycling dynamics (SIM-002)",
-      "Implement discrete event simulation (RT-002)",
-      "Add SPARQL query support (ONT-002)",
-      "Build graph ↔ simulator synchronization (RT-004)",
-      "Add configuration management (CC-002)"
+      "Add Dijkstra/A* shortest path to graph_algorithms (GA-001, KG-003)",
+      "Implement FAO-56 Penman-Monteith ET calculation in water balance (WB-001)",
+      "Add nitrification/denitrification split to nutrient cycling (NC-001)",
+      "Connect digital twin modules to event bus for downstream alerts (CC-006)",
+      "Add persistence layer for simulation results (CC-007)",
+      "Implement cross-ontology mapping with SKOS match properties (ONT-001)"
     ],
     "medium_term": [
+      "Build scenario management and what-if analysis framework (CC-008)",
+      "Add OWL reasoning for ontology inference (ONT-003)",
+      "Implement multi-layer soil water model (WB-002)",
+      "Add SPARQL query support (ONT-002)",
+      "Build REST API surface for external integration (CC-009)",
+      "Add uncertainty quantification with Monte Carlo support (CC-011)"
+    ],
+    "long_term": [
       "Implement pest/disease submodels (SIM-003)",
-      "Add OWL reasoning (ONT-003)",
-      "Build streaming output for dashboards (RT-003)",
-      "Add calibration framework (CC-003)",
-      "Implement temporal graph queries (KG-005)"
+      "Add weather/climate data integration with stochastic events (SIM-004)",
+      "Build parallel batch simulation support (CC-010)",
+      "Implement temporal graph queries (KG-005)",
+      "Add multilingual label support (ONT-004)"
     ]
   }
 }

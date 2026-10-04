@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from src.decision_support.recommender import DecisionEngine, FarmState
+from src.decision_support.recommender import DecisionEngine
+from src.integration.farm_state import FarmState
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -66,7 +70,17 @@ class TenantRegistry:
         return [{"id": t, "name": n} for t, n in self._tenants.items()]
 
     def delete_tenant(self, tenant_id: str) -> bool:
-        return self._tenants.pop(tenant_id, None) is not None
+        if tenant_id not in self._tenants:
+            return False
+        del self._tenants[tenant_id]
+        # Cascade: remove farms belonging to this tenant
+        farms_to_remove = [fid for fid, f in self._farms.items() if f.tenant_id == tenant_id]
+        for fid in farms_to_remove:
+            del self._farms[fid]
+        # Cascade: remove readings and commands for those farms
+        self._readings = [r for r in self._readings if r.farm_id not in farms_to_remove]
+        self._commands = [c for c in self._commands if c.farm_id not in farms_to_remove]
+        return True
 
     def add_farm(self, tenant_id: str, farm: Farm) -> Farm:
         if tenant_id not in self._tenants:
@@ -177,7 +191,10 @@ class HealthResponse(BaseModel):
     tenants: int
 
 
-def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
+def create_app(
+    registry: Optional[TenantRegistry] = None,
+    auth: Any = None,
+) -> FastAPI:
     app = FastAPI(title="AgTech Unified API", version="1.0.0")
     reg = registry or _registry
 
@@ -195,27 +212,104 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
             pest_pressure=f.pest_pressure,
         )
 
+    def _authenticate(request: Request, required_role: Optional[str] = None) -> Dict[str, Any]:
+        """Authenticate the request using the configured auth module."""
+        if auth is None:
+            return {"sub": "anonymous", "roles": ["admin"], "tenant_id": None}
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        token = auth_header[7:]
+        try:
+            tenant_id = request.path_params.get("tenant_id")
+            return auth.authenticate(token, required_role=required_role, tenant_id=tenant_id)
+        except Exception as exc:
+            if "tenant" in str(exc).lower():
+                raise HTTPException(status_code=403, detail=str(exc))
+            raise HTTPException(status_code=401, detail=str(exc))
+
+    def _audit(
+        request: Request, payload: Dict[str, Any], status_code: int, latency_ms: float
+    ) -> None:
+        """Log the API request to the audit logger if available."""
+        if auth and hasattr(auth, "_audit_logger") and auth._audit_logger:
+            tenant_id = request.path_params.get("tenant_id") or payload.get("tenant_id")
+            auth._audit_logger.log_api_request(
+                method=request.method,
+                endpoint=str(request.url.path),
+                tenant_id=tenant_id,
+                actor=payload.get("sub", "anonymous"),
+                request_id=request.headers.get("X-Request-ID"),
+                source_ip=request.client.host if request.client else None,
+                user_agent=request.headers.get("User-Agent"),
+                status=str(status_code),
+                latency_ms=latency_ms,
+            )
+
+    @app.middleware("http")
+    async def add_request_id(request: Request, call_next):
+        """Add correlation ID, measure latency, and audit the request."""
+        request_id = str(uuid.uuid4())
+        request.state.request_id = request_id
+        start = time.monotonic()
+        response = await call_next(request)
+        latency_ms = (time.monotonic() - start) * 1000.0
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Response-Time-Ms"] = f"{latency_ms:.2f}"
+        # Audit the request
+        try:
+            tenant_id = request.path_params.get("tenant_id")
+            actor = "anonymous"
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer ") and auth:
+                try:
+                    payload = auth.validate_token(auth_header[7:])
+                    actor = payload.get("sub", "anonymous")
+                    if not tenant_id:
+                        tenant_id = payload.get("tenant_id")
+                except Exception:
+                    pass
+            if auth and hasattr(auth, "_audit_logger") and auth._audit_logger:
+                auth._audit_logger.log_api_request(
+                    method=request.method,
+                    endpoint=str(request.url.path),
+                    tenant_id=tenant_id,
+                    actor=actor,
+                    request_id=request_id,
+                    source_ip=request.client.host if request.client else None,
+                    user_agent=request.headers.get("User-Agent"),
+                    status=str(response.status_code),
+                    latency_ms=latency_ms,
+                )
+        except Exception:
+            pass  # Don't let audit failures break requests
+        return response
+
     @app.get("/api/v1/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         return HealthResponse(status="healthy", version="1.0.0", tenants=len(reg.list_tenants()))
 
     @app.post("/api/v1/tenants", status_code=201)
-    def create_tenant(name: str = Header(...)) -> Dict[str, str]:
+    def create_tenant(request: Request, name: str = Header(...)) -> Dict[str, str]:
+        _authenticate(request, required_role="admin")
         tid = reg.create_tenant(name)
         return {"id": tid, "name": name}
 
     @app.get("/api/v1/tenants")
-    def list_tenants() -> List[Dict[str, object]]:
+    def list_tenants(request: Request) -> List[Dict[str, object]]:
+        _authenticate(request, required_role="admin")
         return reg.list_tenants()
 
     @app.delete("/api/v1/tenants/{tenant_id}")
-    def delete_tenant(tenant_id: str):
+    def delete_tenant(request: Request, tenant_id: str):
+        _authenticate(request, required_role="admin")
         if not reg.delete_tenant(tenant_id):
             raise HTTPException(status_code=404, detail="Tenant not found")
         return Response(status_code=204)
 
     @app.post("/api/v1/tenants/{tenant_id}/farms", response_model=FarmResponse, status_code=201)
-    def create_farm(tenant_id: str, req: CreateFarmRequest) -> FarmResponse:
+    def create_farm(request: Request, tenant_id: str, req: CreateFarmRequest) -> FarmResponse:
+        _authenticate(request, required_role="operator")
         if reg.get_tenant(tenant_id) is None:
             raise HTTPException(404, "Tenant not found")
         farm = Farm(
@@ -229,13 +323,15 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         return _farm_resp(reg.add_farm(tenant_id, farm))
 
     @app.get("/api/v1/tenants/{tenant_id}/farms", response_model=List[FarmResponse])
-    def list_farms(tenant_id: str) -> List[FarmResponse]:
+    def list_farms(request: Request, tenant_id: str) -> List[FarmResponse]:
+        _authenticate(request, required_role="viewer")
         if reg.get_tenant(tenant_id) is None:
             raise HTTPException(404, "Tenant not found")
         return [_farm_resp(f) for f in reg.list_farms(tenant_id)]
 
     @app.get("/api/v1/tenants/{tenant_id}/farms/{farm_id}", response_model=FarmResponse)
-    def get_farm(tenant_id: str, farm_id: str) -> FarmResponse:
+    def get_farm(request: Request, tenant_id: str, farm_id: str) -> FarmResponse:
+        _authenticate(request, required_role="viewer")
         farm = reg.get_farm(tenant_id, farm_id)
         if farm is None:
             raise HTTPException(404, "Farm not found")
@@ -247,8 +343,9 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         status_code=201,
     )
     def add_reading(
-        tenant_id: str, farm_id: str, req: SensorReadingRequest
+        request: Request, tenant_id: str, farm_id: str, req: SensorReadingRequest
     ) -> SensorReadingResponse:
+        _authenticate(request, required_role="operator")
         if reg.get_farm(tenant_id, farm_id) is None:
             raise HTTPException(404, "Farm not found")
         r = reg.add_reading(
@@ -273,7 +370,10 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         "/api/v1/tenants/{tenant_id}/farms/{farm_id}/readings",
         response_model=List[SensorReadingResponse],
     )
-    def list_readings(tenant_id: str, farm_id: str) -> List[SensorReadingResponse]:
+    def list_readings(
+        request: Request, tenant_id: str, farm_id: str
+    ) -> List[SensorReadingResponse]:
+        _authenticate(request, required_role="viewer")
         if reg.get_farm(tenant_id, farm_id) is None:
             raise HTTPException(404, "Farm not found")
         return [
@@ -294,8 +394,9 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         status_code=201,
     )
     def send_command(
-        tenant_id: str, farm_id: str, req: ActuatorCommandRequest
+        request: Request, tenant_id: str, farm_id: str, req: ActuatorCommandRequest
     ) -> ActuatorCommandResponse:
+        _authenticate(request, required_role="operator")
         if reg.get_farm(tenant_id, farm_id) is None:
             raise HTTPException(404, "Farm not found")
         cmd = reg.add_command(
@@ -319,7 +420,10 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         "/api/v1/tenants/{tenant_id}/farms/{farm_id}/commands",
         response_model=List[ActuatorCommandResponse],
     )
-    def list_commands(tenant_id: str, farm_id: str) -> List[ActuatorCommandResponse]:
+    def list_commands(
+        request: Request, tenant_id: str, farm_id: str
+    ) -> List[ActuatorCommandResponse]:
+        _authenticate(request, required_role="viewer")
         if reg.get_farm(tenant_id, farm_id) is None:
             raise HTTPException(404, "Farm not found")
         return [
@@ -335,7 +439,10 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
         ]
 
     @app.post("/api/v1/tenants/{tenant_id}/recommendations", response_model=RecommendationResponse)
-    def recommend(tenant_id: str, req: RecommendationRequest) -> RecommendationResponse:
+    def recommend(
+        request: Request, tenant_id: str, req: RecommendationRequest
+    ) -> RecommendationResponse:
+        _authenticate(request, required_role="viewer")
         if reg.get_tenant(tenant_id) is None:
             raise HTTPException(404, "Tenant not found")
         result = DecisionEngine().recommend(
@@ -358,9 +465,14 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
 
 
 class APIGateway:
-    def __init__(self, registry: Optional[TenantRegistry] = None) -> None:
+    def __init__(
+        self,
+        registry: Optional[TenantRegistry] = None,
+        auth: Any = None,
+    ) -> None:
         self.registry = registry or TenantRegistry()
-        self.app = create_app(self.registry)
+        self.auth = auth
+        self.app = create_app(self.registry, auth=self.auth)
 
     def create_tenant(self, name: str) -> str:
         return self.registry.create_tenant(name)

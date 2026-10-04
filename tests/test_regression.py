@@ -1,4 +1,19 @@
-"""Regression tests for known edge cases across all modules."""
+"""Regression tests for known edge cases across all modules.
+
+Bug-ID references:
+- BUG-001: TSP empty cities crash
+- BUG-002: VRP zero capacity not validated
+- BUG-003: Consensus n < 3f+1 not rejected
+- BUG-004: Security expired token not rejected
+- BUG-005: Alert manager unknown alert handling
+- BUG-006: MQTT wildcard matching incorrect
+- BUG-007: Kafka empty topic consume crash
+- BUG-008: TimescaleDB unknown aggregation crash
+- BUG-009: Decision engine all-zeros crash
+- BUG-010: Digital twin negative days crash
+- BUG-011: CRISPR empty sequence crash
+- BUG-012: Protein invalid amino acid crash
+"""
 
 import asyncio
 import math
@@ -22,7 +37,7 @@ class TestTSPRegression:
     """Regression tests for TSP edge cases."""
 
     def test_empty_cities_returns_empty_tour(self):
-        """Empty city list must return empty tour (not crash)."""
+        """BUG-001: Empty city list must return empty tour (not crash)."""
         solver = TSPSolver()
         result = solver.solve(TSPInstance(cities=[], distance_matrix=[]))
         assert result.tour == []
@@ -91,7 +106,7 @@ class TestVRPRegression:
     """Regression tests for VRP edge cases."""
 
     def test_zero_capacity_raises(self):
-        """Zero capacity must raise ValueError."""
+        """BUG-002: Zero capacity must raise ValueError."""
         with pytest.raises(ValueError, match="Capacity must be positive"):
             VRPInstance(
                 depot=(0, 0),
@@ -175,7 +190,7 @@ class TestConsensusRegression:
     """Regression tests for consensus edge cases."""
 
     def test_n_less_than_3f_plus_1_raises(self):
-        """n < 3f+1 must raise ValueError."""
+        """BUG-003: n < 3f+1 must raise ValueError."""
         with pytest.raises(ValueError, match="Cannot tolerate"):
             ByzantineConsensus(node_id="n1", total_nodes=3, max_faulty=1)
 
@@ -222,7 +237,7 @@ class TestSecurityRegression:
     """Regression tests for security edge cases."""
 
     def test_expired_token_raises(self):
-        """Expired token must raise AuthenticationError."""
+        """BUG-004: Expired token must raise AuthenticationError."""
         auth = ZeroTrustAuth(secret="test-secret-key-that-is-long-enough-for-hs256")
         token = auth.generate_token(subject="user", roles=["device"], ttl_seconds=-1)
         with pytest.raises(AuthenticationError, match="expired"):
@@ -280,7 +295,7 @@ class TestAlertRegression:
     """Regression tests for alert edge cases."""
 
     def test_acknowledge_unknown_alert_returns_false(self):
-        """Acknowledging unknown alert must return False."""
+        """BUG-005: Acknowledging unknown alert must return False."""
         manager = AlertManager()
         assert manager.acknowledge_alert("nonexistent") is False
 
@@ -333,7 +348,7 @@ class TestDataPipelineRegression:
     """Regression tests for data pipeline edge cases."""
 
     def test_mqtt_wildcard_plus_matches_single_level(self):
-        """MQTT + wildcard must match exactly one level."""
+        """BUG-006: MQTT + wildcard must match exactly one level."""
         client = MQTTClient()
         assert client._topic_matches("sensors/+/temp", "sensors/room1/temp") is True
         assert client._topic_matches("sensors/+/temp", "sensors/room1/room2/temp") is False
@@ -352,7 +367,7 @@ class TestDataPipelineRegression:
         assert client._topic_matches("sensors/temp", "sensors/humidity") is False
 
     def test_kafka_consume_empty_topic_returns_empty(self):
-        """Consuming from empty topic must return empty list."""
+        """BUG-007: Consuming from empty topic must return empty list."""
         stream = KafkaStream()
         stream.create_topic("empty")
         assert stream.consume("empty", timeout=0.1) == []
@@ -363,7 +378,7 @@ class TestDataPipelineRegression:
         assert stream.delete_topic("nonexistent") is False
 
     def test_timescale_unknown_aggregation_raises(self):
-        """Unknown aggregation type must raise ValueError."""
+        """BUG-008: Unknown aggregation type must raise ValueError."""
         storage = TimescaleDBStorage()
         storage.connect()
         storage.insert("sensor_readings", {"time": 1, "sensor_id": "s1", "value": 10.0})
@@ -398,7 +413,7 @@ class TestDecisionEngineRegression:
     """Regression tests for decision engine edge cases."""
 
     def test_all_zeros_produces_recommendations(self):
-        """All-zero farm state must produce recommendations."""
+        """BUG-009: All-zero farm state must produce recommendations."""
         engine = DecisionEngine()
         state = FarmState(
             soil_moisture=0.0,
@@ -412,7 +427,7 @@ class TestDecisionEngineRegression:
         assert len(result.recommendations) > 0
 
     def test_extreme_values_produces_recommendations(self):
-        """Extreme farm state must produce recommendations."""
+        """BUG-009: Extreme farm state must produce recommendations."""
         engine = DecisionEngine()
         state = FarmState(
             soil_moisture=1.0,
@@ -439,7 +454,7 @@ class TestDecisionEngineRegression:
         assert len(result.actions) == len(result.recommendations)
 
     def test_priority_score_capped_at_1(self):
-        """Priority score must never exceed 1.0."""
+        """BUG-009: Priority score must never exceed 1.0."""
         engine = DecisionEngine()
         state = FarmState(
             soil_moisture=0.0,

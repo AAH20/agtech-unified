@@ -256,6 +256,79 @@ class NutrientCyclingModel:
         deviation = abs(ph - self.optimal_ph)
         return max(0.0, math.exp(-deviation / 2.0))
 
+    def nitrification_rate(self, temperature: float, soil_moisture: float) -> float:
+        """Compute nitrification rate (NH4 → NO3).
+
+        Temperature and moisture dependent. Optimal at 25-30°C and
+        moderate moisture.
+
+        Args:
+            temperature: Soil temperature (°C).
+            soil_moisture: Soil moisture (m³/m³).
+
+        Returns:
+            Nitrification rate (0-1).
+        """
+        # Temperature factor (Q10 = 2)
+        if temperature < 5.0 or temperature > 45.0:
+            temp_factor = 0.0
+        else:
+            temp_factor = 2.0 ** ((temperature - 25.0) / 10.0)
+            temp_factor = min(1.0, temp_factor)
+
+        # Moisture factor (optimal at 0.3 m³/m³)
+        if soil_moisture < 0.05:
+            moisture_factor = 0.0
+        elif soil_moisture > 0.5:
+            moisture_factor = 0.3  # Reduced under waterlogged conditions
+        else:
+            moisture_factor = 1.0 - abs(soil_moisture - 0.3) / 0.3
+
+        return max(0.0, min(1.0, temp_factor * moisture_factor))
+
+    def denitrification_rate(self, soil_moisture: float, temperature: float) -> float:
+        """Compute denitrification rate (NO3 → N2/N2O).
+
+        Occurs under anaerobic (waterlogged) conditions.
+
+        Args:
+            soil_moisture: Soil moisture (m³/m³).
+            temperature: Soil temperature (°C).
+
+        Returns:
+            Denitrification rate (0-1).
+        """
+        # Denitrification requires high moisture (>0.4 m³/m³)
+        if soil_moisture < 0.4:
+            return 0.0
+
+        # Moisture factor
+        moisture_factor = min(1.0, (soil_moisture - 0.4) / 0.3)
+
+        # Temperature factor
+        if temperature < 5.0:
+            temp_factor = 0.0
+        elif temperature > 35.0:
+            temp_factor = 0.5
+        else:
+            temp_factor = 1.0
+
+        return max(0.0, min(1.0, moisture_factor * temp_factor))
+
+    def split_n_pools(self, state: NutrientState) -> tuple:
+        """Split total nitrogen into NH4 and NO3 pools.
+
+        Args:
+            state: Current nutrient state.
+
+        Returns:
+            Tuple of (nh4, no3) in kg/ha.
+        """
+        # Simplified: 20% NH4, 80% NO3 at typical conditions
+        nh4 = state.nitrogen * 0.2
+        no3 = state.nitrogen * 0.8
+        return nh4, no3
+
     def nutrient_deficiency(self, state: NutrientState) -> Dict[str, bool]:
         """Check for nutrient deficiencies.
 

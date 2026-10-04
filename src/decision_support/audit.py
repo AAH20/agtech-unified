@@ -171,6 +171,8 @@ class AuditLogger:
         tenant_id: Optional[str] = None,
         actor: Optional[str] = None,
         limit: Optional[int] = None,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
     ) -> List[AuditEvent]:
         """Query recorded events with optional filters."""
         with self._lock:
@@ -181,6 +183,10 @@ class AuditLogger:
             events = [e for e in events if e.tenant_id == tenant_id]
         if actor is not None:
             events = [e for e in events if e.actor == actor]
+        if start_time is not None:
+            events = [e for e in events if e.timestamp >= start_time]
+        if end_time is not None:
+            events = [e for e in events if e.timestamp <= end_time]
         events.sort(key=lambda e: e.timestamp)
         if limit is not None:
             events = events[-limit:]
@@ -216,3 +222,82 @@ class AuditLogger:
             self._events.clear()
             self._request_index.clear()
             self._last_hash = None
+
+    def save_to_file(self, path: str) -> None:
+        """Save all events to a JSONL file."""
+        with self._lock:
+            events = list(self._events)
+        with open(path, "w") as f:
+            for event in events:
+                f.write(event.to_json() + "\n")
+        logger.info("Saved %d audit events to %s", len(events), path)
+
+    def load_from_file(self, path: str) -> None:
+        """Load events from a JSONL file."""
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                data = json.loads(line)
+                event = AuditEvent(
+                    event_id=data["event_id"],
+                    timestamp=data["timestamp"],
+                    event_type=AuditEventType(data["event_type"]),
+                    actor=data["actor"],
+                    action=data["action"],
+                    resource=data["resource"],
+                    tenant_id=data.get("tenant_id"),
+                    request_id=data.get("request_id"),
+                    source_ip=data.get("source_ip"),
+                    user_agent=data.get("user_agent"),
+                    status=data.get("status"),
+                    latency_ms=data.get("latency_ms"),
+                    metadata=data.get("metadata", {}),
+                    previous_hash=data.get("previous_hash"),
+                )
+                with self._lock:
+                    self._last_hash = self._compute_hash(event)
+                    self._events.append(event)
+                    if event.request_id is not None:
+                        self._request_index.setdefault(event.request_id, []).append(event)
+        logger.info("Loaded audit events from %s", path)
+
+    def export_csv(self) -> str:
+        """Export all events as a CSV string."""
+        with self._lock:
+            events = list(self._events)
+        if not events:
+            return (
+                "event_id,timestamp,event_type,actor,action,resource,tenant_id,status,latency_ms\n"
+            )
+        lines = ["event_id,timestamp,event_type,actor,action,resource,tenant_id,status,latency_ms"]
+        for e in events:
+            lines.append(
+                f"{e.timestamp},{e.event_type},{e.actor},{e.action},{e.resource},"
+                f"{e.tenant_id or ''},{e.status or ''},{e.latency_ms or ''}"
+            )
+        return "\n".join(lines)
+
+    def archive_old_events(self, path: str, max_age_seconds: float) -> int:
+        """Archive events older than max_age_seconds to a file. Returns count archived."""
+        now = time.time()
+        with self._lock:
+            old_events = [e for e in self._events if now - e.timestamp > max_age_seconds]
+            self._events = [e for e in self._events if now - e.timestamp <= max_age_seconds]
+            # Rebuild request index
+            self._request_index.clear()
+            for e in self._events:
+                if e.request_id is not None:
+                    self._request_index.setdefault(e.request_id, []).append(e)
+            # Reset chain
+            self._last_hash = None
+            for e in self._events:
+                e.previous_hash = self._last_hash
+                self._last_hash = self._compute_hash(e)
+        # Write archived events
+        with open(path, "w") as f:
+            for event in old_events:
+                f.write(event.to_json() + "\n")
+        logger.info("Archived %d audit events to %s", len(old_events), path)
+        return len(old_events)

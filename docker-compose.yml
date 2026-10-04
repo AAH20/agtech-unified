@@ -9,7 +9,7 @@ services:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - TIMESCALEDB_URL=postgresql://agtech:agtech@timescaledb:5432/agtech
+      - TIMESCALEDB_URL=postgresql://agtech:${POSTGRES_PASSWORD:?}@timescaledb:5432/agtech
       - PYTHONUNBUFFERED=1
     depends_on:
       redis:
@@ -17,6 +17,7 @@ services:
       timescaledb:
         condition: service_healthy
     restart: unless-stopped
+    runtime: nvidia
     networks:
       - agtech-network
 
@@ -42,7 +43,7 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=agtech
-      - POSTGRES_PASSWORD=agtech
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?}
       - POSTGRES_DB=agtech
     volumes:
       - timescale-data:/var/lib/postgresql/data

@@ -11,7 +11,7 @@ htmlcov/
 .DS_Store
 .git/
 .github/
-.gaps/
+gaps/
 *.md
 !README.md
 !LICENSE

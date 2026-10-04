@@ -107,7 +107,7 @@ def test_simulation_result_contains_algorithm():
 
 
 def test_simulation_negative_days():
-    """Negative days raises ValueError."""
+    """BUG-010: Negative days raises ValueError."""
     twin = DigitalTwin()
     state = SimulationState(
         soil_moisture=0.5,

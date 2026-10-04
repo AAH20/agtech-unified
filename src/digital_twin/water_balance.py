@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -284,3 +284,115 @@ class WaterBalanceModel:
         if total_irrigation <= 0:
             return 0.0
         return total_et / total_irrigation
+
+    def compute_et0(self, weather: Dict[str, float]) -> float:
+        """Compute reference evapotranspiration (ET0) using FAO-56 Penman-Monteith.
+
+        Args:
+            weather: Dict with keys:
+                temp_max (°C), temp_min (°C), humidity_max (%),
+                humidity_min (%), wind_speed (m/s),
+                solar_radiation (MJ/m²/day), latitude (degrees),
+                day_of_year (1-365).
+
+        Returns:
+            Reference ET in mm/day.
+        """
+        import math
+
+        t_max = weather.get("temp_max", 30.0)
+        t_min = weather.get("temp_min", 20.0)
+        rh_max = weather.get("humidity_max", 80.0)
+        rh_min = weather.get("humidity_min", 40.0)
+        wind_speed = weather.get("wind_speed", 2.0)
+        solar_rad = weather.get("solar_radiation", 20.0)
+        weather.get("latitude", 35.0)
+        weather.get("day_of_year", 180)
+
+        t_mean = (t_max + t_min) / 2.0
+
+        # Saturation vapor pressure
+        es_tmax = 0.6108 * math.exp(17.27 * t_max / (t_max + 237.3))
+        es_tmin = 0.6108 * math.exp(17.27 * t_min / (t_min + 237.3))
+        es = (es_tmax + es_tmin) / 2.0
+
+        # Actual vapor pressure
+        ea = (es_tmin * rh_max / 100.0 + es_tmax * rh_min / 100.0) / 2.0
+
+        # Slope of saturation vapor pressure curve
+        delta = (
+            4098.0
+            * (0.6108 * math.exp(17.27 * t_mean / (t_mean + 237.3)))
+            / ((t_mean + 237.3) ** 2)
+        )
+
+        # Psychrometric constant
+        gamma = 0.000665 * 101.3 * ((293.0 - 0.0065 * 100.0) / 293.0) ** 5.26
+
+        # Net radiation (simplified)
+        rns = 0.77 * solar_rad
+        # Net longwave radiation
+        sigma = 4.903e-9
+        rnl = (
+            sigma
+            * ((t_max + 273.16) ** 4 + (t_min + 273.16) ** 4)
+            / 2.0
+            * (0.34 - 0.14 * math.sqrt(ea))
+            * (1.35 * solar_rad / (0.75 * solar_rad + 2.45) - 0.35)
+        )
+        rn = max(0.0, rns - rnl)
+
+        # Soil heat flux (negligible for daily)
+        g = 0.0
+
+        # Wind speed at 2m (assume already at 2m)
+        u2 = wind_speed
+
+        # FAO-56 Penman-Monteith equation
+        numerator = 0.408 * delta * (rn - g) + gamma * 900.0 / (t_mean + 273.0) * u2 * (es - ea)
+        denominator = delta + gamma * (1.0 + 0.34 * u2)
+
+        et0 = numerator / denominator
+        return max(0.0, et0)
+
+    def crop_evapotranspiration(self, et0: float, kc: float) -> float:
+        """Compute crop evapotranspiration from reference ET and crop coefficient.
+
+        Args:
+            et0: Reference evapotranspiration (mm/day).
+            kc: Crop coefficient.
+
+        Returns:
+            Crop ET in mm/day.
+        """
+        return et0 * kc
+
+    def dual_crop_coefficient_et(self, et0: float, kcb: float, ke: float) -> float:
+        """Compute crop ET using dual crop coefficient method.
+
+        Args:
+            et0: Reference evapotranspiration (mm/day).
+            kcb: Basal crop coefficient.
+            ke: Soil evaporation coefficient.
+
+        Returns:
+            Crop ET in mm/day.
+        """
+        return et0 * (kcb + ke)
+
+    def get_kc_for_stage(self, stage: str) -> float:
+        """Get crop coefficient for a growth stage.
+
+        Args:
+            stage: One of 'initial', 'development', 'mid_season', 'late_season'.
+
+        Returns:
+            Crop coefficient value.
+        """
+        kc_values = {
+            "initial": 0.3,
+            "development": 0.7,
+            "mid_season": 1.15,
+            "late_season": 0.8,
+        }
+        return kc_values.get(stage, 1.0)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -44,6 +45,20 @@ class GPUTSPSolver:
                 tour=cities[:], cost=0.0, algorithm=self.algorithm, device=self.device
             )
 
+        # Validate dimensions
+        n = len(cities)
+        if len(distance_matrix) != n:
+            raise ValueError("Distance matrix must be square")
+        for row in distance_matrix:
+            if len(row) != n:
+                raise ValueError("Distance matrix must be square")
+
+        # Validate NaN/Inf
+        for i in range(n):
+            for j in range(n):
+                if not math.isfinite(distance_matrix[i][j]):
+                    raise ValueError(f"Distance matrix contains NaN or Inf at ({i},{j})")
+
         dist_tensor = torch.tensor(distance_matrix, dtype=torch.float32, device=self.device)
 
         if self.algorithm == "nearest_neighbor":
@@ -76,6 +91,9 @@ class GPUTSPSolver:
         Returns:
             Tensor of shape (B, N, N) with pairwise Euclidean distances.
         """
+        if not coordinates_batch:
+            return torch.empty(0, 0, 0, dtype=torch.float32, device=self.device)
+
         max_n = max(len(coords) for coords in coordinates_batch)
         batch_size = len(coordinates_batch)
 
@@ -110,11 +128,13 @@ class GPUTSPSolver:
 
         return tour
 
-    def _gpu_two_opt(self, dist: torch.Tensor, tour: List[int]) -> List[int]:
+    def _gpu_two_opt(
+        self, dist: torch.Tensor, tour: List[int], max_iterations: int = 1000
+    ) -> List[int]:
         """Parallel 2-opt improvement on GPU.
 
         Evaluates all possible 2-opt moves in parallel and applies the best one.
-        Repeats until no improving move exists.
+        Repeats until no improving move exists or max_iterations is reached.
         """
         n = len(tour)
         if n <= 3:
@@ -122,9 +142,11 @@ class GPUTSPSolver:
 
         tour_tensor = torch.tensor(tour, dtype=torch.long, device=self.device)
         improved = True
+        iterations = 0
 
-        while improved:
+        while improved and iterations < max_iterations:
             improved = False
+            iterations += 1
 
             # Generate all (i, j) pairs where i < j
             indices = torch.arange(n, device=self.device)

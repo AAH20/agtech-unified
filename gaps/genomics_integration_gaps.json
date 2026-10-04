@@ -1,0 +1,409 @@
+{
+  "audit_metadata": {
+    "project": "agtech-unified",
+    "audit_date": "2026-10-04",
+    "scope": "genomics, onboarding, integration — remaining gaps after prior audits",
+    "modules_audited": [
+      "genomics.crispr",
+      "genomics.protein",
+      "onboarding.sizing",
+      "onboarding.modules",
+      "integration.event_bus",
+      "integration.unified_optimizer",
+      "integration.farm_state"
+    ],
+    "source_files_examined": 7,
+    "test_files_examined": 5,
+    "prior_gaps_referenced": [
+      "gaps/genomics_gaps.json (GEN-001 through GEN-018)",
+      "gaps/integration_gaps.json (GAP-001 through GAP-020)"
+    ]
+  },
+  "summary": {
+    "total_gaps": 32,
+    "critical": 6,
+    "high": 14,
+    "medium": 8,
+    "low": 4,
+    "categories": {
+      "missing_algorithm": 8,
+      "missing_data_format": 3,
+      "missing_integration": 7,
+      "missing_reliability": 6,
+      "missing_api": 4,
+      "missing_state_management": 4
+    }
+  },
+  "gaps": [
+    {
+      "id": "GIG-001",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No codon optimization for target organism expression",
+      "description": "CRISPR design and protein analysis do not include codon optimization. For agricultural biotechnology, genes must be codon-optimized for the target crop species (e.g., rice, wheat, maize) to ensure high expression. No codon usage table integration exists.",
+      "current_state": "CRISPRDesigner.design_guide() returns guide RNA sequences without considering codon usage bias for the target organism. ProteinAnalyzer does not back-translate protein sequences to optimized DNA.",
+      "expected": "CodonOptimizer class with species-specific codon usage tables (from Codon Usage Database). Integrate into CRISPR design pipeline: after guide selection, optimize the donor DNA template codon usage. Provide back-translation for protein sequences.",
+      "file": "src/genomics/crispr.py, src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-002",
+      "category": "missing_algorithm",
+      "severity": "critical",
+      "title": "No variant effect prediction (SIFT/PolyPhen-style)",
+      "description": "No ability to predict whether a genetic variant is deleterious. Critical for assessing CRISPR off-target effects and for breeding program decisions. Cannot distinguish between synonymous, missense, and nonsense mutations.",
+      "current_state": "Not implemented. No variant annotation or effect prediction.",
+      "expected": "VariantEffectPredictor that classifies variants as synonymous/missense/nonsense/frameshift. Integration with protein analysis to predict impact on protein structure and function. SIFT-style conservation scoring or PolyPhen-style structural impact prediction.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-003",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No allergenicity or toxicity prediction for GMO safety",
+      "description": "Agricultural biotechnology products require allergenicity and toxicity assessment before regulatory approval. No tools exist to screen novel proteins against known allergen databases or to predict toxicity.",
+      "current_state": "Not implemented. ProteinAnalyzer provides basic properties but no safety assessment.",
+      "expected": "AllergenicityPredictor using FAO/WHO decision tree approach (sequence similarity to known allergens, 8-mer exact match screening). ToxicityPredictor for hemolytic or cytotoxic peptide prediction. Integration with regulatory report generation.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-004",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No protein solubility prediction",
+      "description": "Protein solubility is critical for agricultural biotechnology applications (e.g., engineering soluble enzymes for crop improvement). No prediction of whether a protein will be soluble when expressed in a heterologous system.",
+      "current_state": "Not implemented. ProteinAnalyzer provides hydrophobicity but not solubility prediction.",
+      "expected": "SolubilityPredictor using sequence features (charge, hydrophobicity, aromaticity). Integration with ProteinResult to flag insoluble proteins early in the design pipeline.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-005",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No protein subcellular localization prediction",
+      "description": "For agricultural protein engineering, targeting proteins to specific organelles (chloroplast, mitochondria, nucleus) is essential. No prediction of where a protein will localize within a plant cell.",
+      "current_state": "Not implemented.",
+      "expected": "SubcellularLocalizationPredictor using signal peptide detection, transit peptide recognition, and NLS/NES motif scanning. Predict localization to chloroplast, mitochondria, nucleus, ER, or secretion pathway.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-006",
+      "category": "missing_algorithm",
+      "severity": "high",
+      "title": "No restriction site analysis for cloning",
+      "description": "CRISPR construct design requires restriction enzyme analysis for cloning guide RNA expression cassettes. No ability to identify restriction sites in sequences or to design silent mutations to remove/add sites.",
+      "current_state": "Not implemented.",
+      "expected": "RestrictionSiteAnalyzer with common enzyme database (EcoRI, BamHI, HindIII, etc.). Identify sites in guide sequences and donor templates. Suggest silent mutations to remove unwanted sites for Golden Gate or traditional cloning.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-007",
+      "category": "missing_algorithm",
+      "severity": "medium",
+      "title": "No primer design for PCR validation",
+      "description": "After CRISPR guide design, PCR primers are needed for genotyping and validation. No automated primer design for amplifying target regions or for T7E1/Surveyor assays.",
+      "current_state": "Not implemented.",
+      "expected": "PrimerDesigner that designs primers flanking the cut site for genotyping. Include melting temperature calculation, GC clamp checking, and dimer detection. Support for T7E1 assay primers and Sanger sequencing primers.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-008",
+      "category": "missing_algorithm",
+      "severity": "medium",
+      "title": "No protein post-translational modification prediction",
+      "description": "Post-translational modifications (PTMs) like phosphorylation, glycosylation, and ubiquitination affect protein function in crops. No PTM site prediction exists.",
+      "current_state": "Not implemented.",
+      "expected": "PTMPredictor for common modifications: N-linked glycosylation (N-X-S/T motif), phosphorylation (kinase-specific motifs), ubiquitination (degron motifs). Flag PTM sites in ProteinResult.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-009",
+      "category": "missing_data_format",
+      "severity": "high",
+      "title": "No GFF/GTF genome annotation format support",
+      "description": "Cannot read or write GFF3/GTF files for genome annotations. Cannot integrate with standard genome annotation pipelines or export CRISPR targets with genomic coordinates.",
+      "current_state": "Not implemented. No GFF/GTF parsing or serialization.",
+      "expected": "GFF3 parser for reading gene, CDS, exon, and regulatory feature annotations. GTF parser for transcript-level annotations. Export CRISPR guide designs with genomic coordinates in GFF3 format.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-010",
+      "category": "missing_data_format",
+      "severity": "medium",
+      "title": "No BED format support for genomic intervals",
+      "description": "Cannot read or write BED files for genomic intervals. Cannot represent CRISPR target regions, off-target sites, or coverage tracks in standard BED format.",
+      "current_state": "Not implemented.",
+      "expected": "BED parser and writer for genomic intervals. Support for BED3-BED12 formats. Export off-target sites and guide target regions as BED tracks for genome browser visualization.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-011",
+      "category": "missing_data_format",
+      "severity": "medium",
+      "title": "No SBOL (Synthetic Biology Open Language) support",
+      "description": "Cannot read or write SBOL files for synthetic biology designs. Cannot export CRISPR constructs or genetic circuits in standard synthetic biology format.",
+      "current_state": "Not implemented.",
+      "expected": "SBOL parser and writer for genetic design exchange. Export CRISPR guide RNA cassettes, donor templates, and regulatory elements as SBOL components.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-012",
+      "category": "missing_integration",
+      "severity": "critical",
+      "title": "Event bus has no persistence — events lost on restart",
+      "description": "EventBus stores events only in memory (_history list). All events are lost on process restart. No write-ahead log, no event store, no replay capability. Critical for agricultural operations where audit trails are required.",
+      "current_state": "EventBus._history is a plain list. No persistence backend. No event store.",
+      "expected": "Pluggable event store backend (in-memory, file-based, or database). Write-ahead log for durability. Event replay for recovery. Integration with TimescaleDB or PostgreSQL for long-term event storage.",
+      "file": "src/integration/event_bus.py",
+      "lines": "62-64"
+    },
+    {
+      "id": "GIG-013",
+      "category": "missing_integration",
+      "severity": "critical",
+      "title": "Event bus has no delivery guarantees",
+      "description": "EventBus provides no delivery guarantees. Events can be lost if a handler fails (the exception is caught and logged, but the event is not retried). No at-least-once or exactly-once semantics. No dead letter queue for failed events.",
+      "current_state": "publish() catches handler exceptions and logs them. Failed events are not retried. No dead letter queue.",
+      "expected": "Configurable delivery semantics: at-most-once (current), at-least-once (with retry), exactly-once (with deduplication). Dead letter queue for events that exceed max retries. Retry with exponential backoff.",
+      "file": "src/integration/event_bus.py",
+      "lines": "81-97"
+    },
+    {
+      "id": "GIG-014",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "Event bus has no event schema validation",
+      "description": "DomainEvent accepts any payload dict with no schema validation. Events with malformed payloads are published without error. No contract between event producers and consumers.",
+      "current_state": "DomainEvent.payload is Dict[str, Any] with no validation. No event schema registry.",
+      "expected": "Event schema registry with JSON Schema or Pydantic models per event type. Validate payload on publish. Schema versioning for backward compatibility. Reject or flag events that don't conform to schema.",
+      "file": "src/integration/event_bus.py",
+      "lines": "32-48"
+    },
+    {
+      "id": "GIG-015",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "Event bus has no event versioning or evolution",
+      "description": "No mechanism for evolving event schemas over time. Breaking changes to event payloads will silently break consumers. No version field on events.",
+      "current_state": "DomainEvent has no version field. No schema evolution strategy.",
+      "expected": "Add version field to DomainEvent. Support multiple concurrent schema versions. Upcaster pattern for transforming old events to new schema. Deprecation warnings for old event versions.",
+      "file": "src/integration/event_bus.py",
+      "lines": "32-48"
+    },
+    {
+      "id": "GIG-016",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "Event bus has no replay capability",
+      "description": "Cannot replay historical events for debugging, testing, or recovery. No time-travel debugging. Cannot reconstruct state from event history.",
+      "current_state": "get_history() returns events but there is no replay mechanism. No event sourcing support.",
+      "expected": "Event replay by time range or event ID. Event sourcing pattern: reconstruct aggregate state from event log. Integration with FarmState for state reconstruction. Snapshot support for performance.",
+      "file": "src/integration/event_bus.py",
+      "lines": "99-103"
+    },
+    {
+      "id": "GIG-017",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "Event bus has no wildcard or pattern-based subscriptions",
+      "description": "Subscribers must know exact event type strings. No support for wildcard patterns (e.g., 'sensor.*' or 'alert.#'). Limits flexibility in event-driven workflows.",
+      "current_state": "subscribe() requires exact event type string. No pattern matching.",
+      "expected": "Support for wildcard patterns: 'sensor.*' matches all sensor events, 'alert.#' matches alert hierarchy. Topic-based routing with hierarchical event types.",
+      "file": "src/integration/event_bus.py",
+      "lines": "66-73"
+    },
+    {
+      "id": "GIG-018",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "Event bus has no async handler support",
+      "description": "All handlers are synchronous. Cannot integrate with async I/O operations (e.g., calling external APIs, writing to databases). Blocks the publishing thread during handler execution.",
+      "current_state": "publish() calls handlers synchronously. No async/await support.",
+      "expected": "AsyncEventBus with async publish() and async handler support. Backpressure handling for slow handlers. Optional sync-to-async bridge for gradual migration.",
+      "file": "src/integration/event_bus.py",
+      "lines": "81-97"
+    },
+    {
+      "id": "GIG-019",
+      "category": "missing_reliability",
+      "severity": "high",
+      "title": "Event bus has no backpressure handling",
+      "description": "If handlers are slow or the event rate is high, the event bus can be overwhelmed. No flow control, no buffering limits, no backpressure propagation to publishers.",
+      "current_state": "No queue depth limits. No backpressure. Unbounded _history list can cause memory issues.",
+      "expected": "Configurable queue depth limits. Backpressure: slow down or drop events when queue is full. Metrics for queue depth, publish rate, handler latency. Circuit breaker for failing handlers.",
+      "file": "src/integration/event_bus.py",
+      "lines": "62-64"
+    },
+    {
+      "id": "GIG-020",
+      "category": "missing_reliability",
+      "severity": "medium",
+      "title": "Event bus has no metrics or monitoring",
+      "description": "No visibility into event bus health. Cannot monitor publish rates, handler latency, error rates, or queue depth. No integration with observability stack.",
+      "current_state": "No metrics collection. No health check endpoint. No monitoring hooks.",
+      "expected": "Metrics: events published per second, handler latency histogram, error rate, queue depth. Health check endpoint. Integration with Prometheus or OpenTelemetry. Structured logging for all bus operations.",
+      "file": "src/integration/event_bus.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-021",
+      "category": "missing_reliability",
+      "severity": "medium",
+      "title": "Event bus has no distributed tracing",
+      "description": "Events flow across modules but there is no tracing context propagated. Cannot trace an event from producer through all consumers. No correlation IDs for debugging distributed workflows.",
+      "current_state": "No tracing context in DomainEvent. No correlation ID propagation.",
+      "expected": "Add trace_id and span_id to DomainEvent. Propagate tracing context through handler chain. Integration with OpenTelemetry or Jaeger. End-to-end trace visualization for event flows.",
+      "file": "src/integration/event_bus.py",
+      "lines": "32-48"
+    },
+    {
+      "id": "GIG-022",
+      "category": "missing_reliability",
+      "severity": "low",
+      "title": "Event bus has no event archival or compaction",
+      "description": "Event history grows unbounded. No archival to cold storage. No compaction for event sourcing. Long-running systems will accumulate millions of events in memory.",
+      "current_state": "_history is an unbounded list. No archival. No compaction.",
+      "expected": "Configurable retention policy. Archive old events to cold storage (S3, file). Event compaction: replace detailed events with summary snapshots. TTL-based cleanup for transient events.",
+      "file": "src/integration/event_bus.py",
+      "lines": "62-64"
+    },
+    {
+      "id": "GIG-023",
+      "category": "missing_api",
+      "severity": "high",
+      "title": "No onboarding API endpoints",
+      "description": "Onboarding module has no REST API. Cannot integrate with the API gateway. No way to query tier recommendations or module lists via HTTP.",
+      "current_state": "OrganizationProfiler and ModuleRegistry are pure Python classes with no API layer. No integration with api_gateway.py.",
+      "expected": "REST endpoints: POST /api/v1/onboarding/recommend-tier, GET /api/v1/onboarding/modules/{tier}. Integration with the existing FastAPI gateway. Pydantic request/response models.",
+      "file": "src/onboarding/sizing.py, src/onboarding/modules.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-024",
+      "category": "missing_api",
+      "severity": "medium",
+      "title": "No onboarding workflow or state machine",
+      "description": "Onboarding is a static tier-to-module mapping. No workflow engine for guiding users through onboarding steps. No state machine for tracking onboarding progress.",
+      "current_state": "ModuleRegistry returns a static list of modules. No workflow, no state machine, no progress tracking.",
+      "expected": "OnboardingWorkflow with state machine: not_started → in_progress → completed. Step-by-step guidance through modules. Progress tracking per tenant. Resume capability for interrupted onboarding.",
+      "file": "src/onboarding/modules.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-025",
+      "category": "missing_api",
+      "severity": "medium",
+      "title": "No onboarding event publishing",
+      "description": "Onboarding events (tier assigned, module completed, onboarding finished) are not published to the event bus. Other modules cannot react to onboarding state changes.",
+      "current_state": "No integration with EventBus. Onboarding is a dead-end computation.",
+      "expected": "Publish onboarding events: OnboardingStarted, ModuleCompleted, OnboardingCompleted, TierChanged. Integration with EventBus. Enable reactive workflows (e.g., 'when onboarding completes, provision default farm').",
+      "file": "src/onboarding/",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-026",
+      "category": "missing_api",
+      "severity": "low",
+      "title": "No onboarding analytics or metrics",
+      "description": "No visibility into onboarding effectiveness. Cannot track completion rates, time-to-complete, or drop-off points. No A/B testing of onboarding flows.",
+      "current_state": "No analytics. No metrics collection.",
+      "expected": "Onboarding analytics: completion rate, time-to-complete per module, drop-off points. Integration with metrics collection. Dashboard for onboarding health.",
+      "file": "src/onboarding/",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-027",
+      "category": "missing_state_management",
+      "severity": "high",
+      "title": "FarmState has no history or time series",
+      "description": "FarmState is a snapshot with no temporal dimension. Cannot track how farm state changes over time. No trend analysis, no rate-of-change detection, no historical comparison.",
+      "current_state": "FarmState is a single snapshot. No history. No time series storage.",
+      "expected": "FarmStateHistory with time-series storage. Trend analysis: soil moisture declining, temperature rising. Rate-of-change alerts. Historical comparison (e.g., 'moisture 20% lower than last week').",
+      "file": "src/integration/farm_state.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-028",
+      "category": "missing_state_management",
+      "severity": "high",
+      "title": "FarmState has no state diff or change tracking",
+      "description": "Cannot determine what changed between two FarmState snapshots. No change detection for triggering events or alerts. No audit trail of state transitions.",
+      "current_state": "No diff mechanism. No change tracking.",
+      "expected": "FarmStateDiff that identifies changed fields and magnitude. Change events published to event bus. Audit trail of all state transitions. Integration with EventBus for change-driven workflows.",
+      "file": "src/integration/farm_state.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-029",
+      "category": "missing_state_management",
+      "severity": "medium",
+      "title": "FarmState has no serialization or deserialization",
+      "description": "FarmState cannot be serialized to JSON, protobuf, or other formats. Cannot be stored in databases or transmitted over networks. No schema definition for persistence.",
+      "current_state": "FarmState is a plain dataclass with no to_dict(), from_dict(), or serialization methods.",
+      "expected": "to_dict(), from_dict(), to_json(), from_json() methods. Pydantic model for validation and serialization. Protobuf schema for efficient network transmission. Avro schema for event store integration.",
+      "file": "src/integration/farm_state.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-030",
+      "category": "missing_state_management",
+      "severity": "medium",
+      "title": "FarmState has no state transition validation",
+      "description": "No validation of state transitions. Cannot enforce rules like 'soil_moisture cannot increase without irrigation event' or 'crop_height cannot decrease'. Invalid state transitions are silently accepted.",
+      "current_state": "No transition validation. Any state change is accepted.",
+      "expected": "StateTransitionValidator with rules: moisture increase requires irrigation, crop_height decrease requires harvest or stress event. Reject or flag invalid transitions. Integration with event bus for transition validation.",
+      "file": "src/integration/farm_state.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GIG-031",
+      "category": "missing_reliability",
+      "severity": "low",
+      "title": "Unified optimizer has no solver selection heuristics",
+      "description": "Cannot auto-select the best solver based on problem size, constraints, or hardware availability. Users must manually choose between TSP, VRP, GPU_TSP, GPU_VRP.",
+      "current_state": "SolverType must be explicitly specified. No auto-selection logic.",
+      "expected": "Auto-select solver based on problem characteristics: small problems → CPU, large problems → GPU, capacity constraints → VRP. Solver recommendation engine. Benchmark-based selection.",
+      "file": "src/integration/unified_optimizer.py",
+      "lines": "77-88"
+    },
+    {
+      "id": "GIG-032",
+      "category": "missing_reliability",
+      "severity": "low",
+      "title": "Unified optimizer has no timeout or retry handling",
+      "description": "Solver calls have no timeout. A slow or hung solver blocks the entire pipeline. No retry logic for transient failures.",
+      "current_state": "No timeout on solver calls. No retry logic.",
+      "expected": "Configurable timeout per solver. Retry with exponential backoff for transient failures. Circuit breaker for consistently failing solvers. Fallback to simpler solver on timeout.",
+      "file": "src/integration/unified_optimizer.py",
+      "lines": "77-88"
+    }
+  ],
+  "cross_cutting_gaps": [
+    {
+      "title": "No shared event schema registry",
+      "description": "Event bus, farm state, and genomics modules have no shared schema definitions. Each module defines its own data structures with no contract between them."
+    },
+    {
+      "title": "No module health checks",
+      "description": "None of the audited modules expose health check endpoints or status indicators. Cannot monitor module health in production."
+    },
+    {
+      "title": "No configuration management",
+      "description": "No config file support for any audited module. Scoring models, solver parameters, and validation rules are hardcoded."
+    },
+    {
+      "title": "No structured logging or correlation IDs",
+      "description": "Modules log independently with no correlation IDs. Cannot trace requests across module boundaries."
+    }
+  ]
+}

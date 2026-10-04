@@ -3,6 +3,8 @@
 Builds NGSI-LD compliant entity payloads for the core agricultural
 model types defined by the FIWARE Smart Data Models programme
 (https://smartdatamodels.org): Crop, Soil, Weather, and Device.
+
+Also provides ModelValidator for validating entities against model schemas.
 """
 
 from __future__ import annotations
@@ -153,3 +155,56 @@ class AgriculturalSmartModels:
                 "coordinates": [coords[0], coords[1]],
             },
         }
+
+
+# ===========================================================================
+# Model Validator (IOT-010)
+# ===========================================================================
+
+
+class ModelValidator:
+    """Validates NGSI-LD entities against smart data model schemas.
+
+    Checks:
+    - Entity type matches expected model
+    - Required properties are present
+    - Property types are valid (Property, GeoProperty, etc.)
+    """
+
+    _REQUIRED_PROPS = {
+        "Crop": ["growthStage"],
+        "Soil": ["moisture"],
+        "Weather": [],
+        "Device": ["status"],
+    }
+
+    _VALID_PROP_TYPES = {"Property", "GeoProperty", "Relationship", "LanguageProperty"}
+
+    def validate(self, entity: Dict[str, Any], model_type: str) -> Dict[str, Any]:
+        """Validate an entity against a model type.
+
+        Returns {"valid": bool, "errors": List[str]}.
+        """
+        errors: List[str] = []
+
+        # Check entity type
+        if entity.get("type") != model_type:
+            errors.append(
+                f"Entity type '{entity.get('type')}' does not match model type '{model_type}'"
+            )
+
+        # Check required properties
+        required = self._REQUIRED_PROPS.get(model_type, [])
+        for prop in required:
+            if prop not in entity:
+                errors.append(f"Missing required property: {prop}")
+
+        # Check property types
+        for key, value in entity.items():
+            if key in ("id", "type"):
+                continue
+            if isinstance(value, dict) and "type" in value:
+                if value["type"] not in self._VALID_PROP_TYPES:
+                    errors.append(f"Property '{key}' has invalid type '{value['type']}'")
+
+        return {"valid": len(errors) == 0, "errors": errors}

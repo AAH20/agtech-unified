@@ -8,21 +8,24 @@
       "src/decision_support/alerts.py",
       "src/decision_support/api_gateway.py",
       "src/decision_support/security.py",
-      "src/decision_support/gps_antispoof.py"
+      "src/decision_support/gps_antispoof.py",
+      "src/decision_support/ml_models.py",
+      "src/decision_support/notifications.py",
+      "src/decision_support/audit.py"
     ],
     "audit_date": "2026-10-04",
     "auditor": "Cluster 5 Leader"
   },
   "summary": {
-    "total_gaps": 42,
+    "total_gaps": 65,
     "critical": 12,
-    "high": 18,
-    "medium": 10,
-    "low": 2,
+    "high": 26,
+    "medium": 22,
+    "low": 5,
     "categories": {
-      "missing_ml_models": 8,
-      "missing_notification_channels": 6,
-      "missing_audit_trails": 7,
+      "missing_ml_models": 13,
+      "missing_notification_channels": 12,
+      "missing_audit_trails": 12,
       "missing_compliance_features": 8,
       "missing_multi_tenant_isolation": 9,
       "missing_security_hardening": 4
@@ -448,6 +451,236 @@
       "description": "Only flat role checking is supported. No role hierarchy (e.g., admin > operator > viewer) or fine-grained permissions.",
       "impact": "Cannot express complex authorization policies. Over-privileged users.",
       "recommendation": "Implement role inheritance and permission-based access control (PBAC). Support resource-level permissions (e.g., 'farm:read', 'farm:write')."
+    },
+    {
+      "id": "DS-043",
+      "category": "missing_ml_models",
+      "severity": "critical",
+      "module": "ml_models.py",
+      "title": "Only linear regression model implemented",
+      "description": "ml_models.py contains only LinearRegressionModel. No classification, clustering, time-series forecasting, or anomaly detection models. Agricultural decision support requires classification (disease/pest identification), forecasting (yield prediction, weather), and anomaly detection (sensor fault detection).",
+      "impact": "Cannot support critical agronomic use cases like disease classification, yield forecasting, or sensor anomaly detection.",
+      "recommendation": "Add DecisionTree/RandomForest for classification, ARIMA/Prophet for time-series forecasting, and IsolationForest for anomaly detection. Implement a model registry pattern."
+    },
+    {
+      "id": "DS-044",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "ml_models.py",
+      "title": "No model persistence or serialization",
+      "description": "Models cannot be saved to or loaded from disk. Every restart requires retraining from scratch. No support for pickle, joblib, ONNX, or other serialization formats.",
+      "impact": "Production deployments cannot maintain trained models across restarts. No model versioning or rollback capability.",
+      "recommendation": "Add save()/load() methods to SimpleMLModel ABC. Support pickle and joblib formats. Implement model versioning with metadata."
+    },
+    {
+      "id": "DS-045",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "ml_models.py",
+      "title": "No model evaluation metrics beyond R-squared",
+      "description": "Only R² is computed for regression. No accuracy, precision, recall, F1, AUC-ROC for classification. No MAE, RMSE, MAPE for regression. No cross-validation support.",
+      "impact": "Cannot properly evaluate model performance or compare models. No confidence in production predictions.",
+      "recommendation": "Add comprehensive metrics module. Implement k-fold cross-validation. Add classification and regression metric suites."
+    },
+    {
+      "id": "DS-046",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "ml_models.py",
+      "title": "No feature engineering pipeline",
+      "description": "No feature scaling, normalization, encoding, or selection. Raw features fed directly to models. No handling of missing values or outliers.",
+      "impact": "Model performance degraded. No reproducibility in feature preparation.",
+      "recommendation": "Add preprocessing pipeline with StandardScaler, MinMaxScaler, OneHotEncoder. Implement feature selection methods."
+    },
+    {
+      "id": "DS-047",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "ml_models.py",
+      "title": "No model registry or experiment tracking",
+      "description": "No centralized registry for trained models. No experiment tracking, hyperparameter logging, or model comparison.",
+      "impact": "Cannot manage multiple model versions or track experiments.",
+      "recommendation": "Implement ModelRegistry class with versioning, metadata storage, and model comparison capabilities."
+    },
+    {
+      "id": "DS-048",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "ml_models.py",
+      "title": "No hyperparameter tuning",
+      "description": "No grid search, random search, or Bayesian optimization for model hyperparameters.",
+      "impact": "Suboptimal model performance.",
+      "recommendation": "Add hyperparameter tuning module with grid search and random search."
+    },
+    {
+      "id": "DS-049",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "ml_models.py",
+      "title": "No ensemble methods",
+      "description": "No bagging, boosting, or stacking implementations. Only single models supported.",
+      "impact": "Limited predictive power for complex agronomic patterns.",
+      "recommendation": "Add RandomForest, GradientBoosting, and stacking ensemble implementations."
+    },
+    {
+      "id": "DS-050",
+      "category": "missing_ml_models",
+      "severity": "low",
+      "module": "ml_models.py",
+      "title": "No online/incremental learning support",
+      "description": "Models cannot be updated incrementally with new data. Only batch training supported.",
+      "impact": "Cannot adapt to changing conditions without full retraining.",
+      "recommendation": "Add partial_fit() method for online learning algorithms."
+    },
+    {
+      "id": "DS-051",
+      "category": "missing_notification_channels",
+      "severity": "critical",
+      "module": "notifications.py",
+      "title": "Missing push notification channels (FCM/APNs)",
+      "description": "No Firebase Cloud Messaging or Apple Push Notification support. Mobile app users cannot receive push notifications.",
+      "impact": "Mobile users miss critical alerts. No push notification delivery tracking.",
+      "recommendation": "Add FCMNotification and APNsNotification channels with token management."
+    },
+    {
+      "id": "DS-052",
+      "category": "missing_notification_channels",
+      "severity": "high",
+      "module": "notifications.py",
+      "title": "Missing chat platform integrations (Slack, Telegram, Discord)",
+      "description": "No Slack, Telegram, or Discord webhook/chat integrations. Teams cannot receive alerts in their collaboration tools.",
+      "impact": "Teams cannot monitor farm alerts from chat platforms.",
+      "recommendation": "Add SlackNotification, TelegramNotification, and DiscordNotification channels."
+    },
+    {
+      "id": "DS-053",
+      "category": "missing_notification_channels",
+      "severity": "high",
+      "module": "notifications.py",
+      "title": "No notification templates or localization",
+      "description": "No template engine for notifications. No i18n/l10n support. All messages are plain text.",
+      "impact": "Cannot provide rich, localized notifications for diverse user bases.",
+      "recommendation": "Add template engine with variable substitution and multi-language support."
+    },
+    {
+      "id": "DS-054",
+      "category": "missing_notification_channels",
+      "severity": "high",
+      "module": "notifications.py",
+      "title": "No priority-based routing or escalation",
+      "description": "All notifications treated equally. No escalation policies (e.g., if critical alert not acknowledged in 5 min, escalate to manager).",
+      "impact": "Critical alerts may be missed. No escalation path for unacknowledged alerts.",
+      "recommendation": "Add priority-based routing with escalation policies and on-call scheduling."
+    },
+    {
+      "id": "DS-055",
+      "category": "missing_notification_channels",
+      "severity": "medium",
+      "module": "notifications.py",
+      "title": "No delivery confirmation or read receipts",
+      "description": "No tracking of delivery status beyond sent/failed. No read receipts or acknowledgment tracking.",
+      "impact": "Cannot confirm critical alerts were received and read.",
+      "recommendation": "Add delivery confirmation callbacks and read receipt tracking."
+    },
+    {
+      "id": "DS-056",
+      "category": "missing_notification_channels",
+      "severity": "medium",
+      "module": "notifications.py",
+      "title": "No batch or digest notifications",
+      "description": "No support for batching multiple alerts into a single digest. Each alert sent individually.",
+      "impact": "Alert fatigue from too many individual notifications.",
+      "recommendation": "Add digest/batching mode with configurable intervals."
+    },
+    {
+      "id": "DS-057",
+      "category": "missing_notification_channels",
+      "severity": "medium",
+      "module": "notifications.py",
+      "title": "No notification scheduling or quiet hours",
+      "description": "No support for scheduled notifications or quiet hours (do-not-disturb periods).",
+      "impact": "Users receive notifications at inappropriate times.",
+      "recommendation": "Add scheduling with timezone support and quiet hours configuration."
+    },
+    {
+      "id": "DS-058",
+      "category": "missing_notification_channels",
+      "severity": "low",
+      "module": "notifications.py",
+      "title": "No SMS fallback for failed push notifications",
+      "description": "No automatic fallback from push to SMS when push delivery fails.",
+      "impact": "Critical alerts may be missed if push notifications fail.",
+      "recommendation": "Add fallback chain: push -> SMS -> email with configurable order."
+    },
+    {
+      "id": "DS-059",
+      "category": "missing_audit_trails",
+      "severity": "critical",
+      "module": "audit.py",
+      "title": "Audit logs stored only in memory",
+      "description": "AuditLogger stores events in a Python list. All audit data lost on restart. No persistence to disk, database, or external system.",
+      "impact": "No long-term audit trail for compliance. Data loss on crash or restart.",
+      "recommendation": "Add persistent storage backends: file-based (JSONL), PostgreSQL, Elasticsearch. Implement log rotation."
+    },
+    {
+      "id": "DS-060",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "audit.py",
+      "title": "No audit log export or reporting",
+      "description": "Only JSON export available. No CSV, PDF, or compliance report generation. No scheduled reports.",
+      "impact": "Cannot generate compliance reports for auditors.",
+      "recommendation": "Add export formats (CSV, PDF) and scheduled compliance report generation."
+    },
+    {
+      "id": "DS-061",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "audit.py",
+      "title": "No audit log search or filtering by date range",
+      "description": "get_events() supports filtering by type, tenant, actor but not by date range or full-text search.",
+      "impact": "Difficult to investigate incidents or generate time-bounded reports.",
+      "recommendation": "Add date range filtering and full-text search capabilities."
+    },
+    {
+      "id": "DS-062",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "audit.py",
+      "title": "No tamper detection alerts",
+      "description": "verify_chain() exists but is never called automatically. No alerts when tampering is detected.",
+      "impact": "Tampering may go undetected.",
+      "recommendation": "Add periodic chain verification with alerting on failure."
+    },
+    {
+      "id": "DS-063",
+      "category": "missing_audit_trails",
+      "severity": "medium",
+      "module": "audit.py",
+      "title": "No audit log archival",
+      "description": "No archival of old audit logs. All events kept in memory indefinitely.",
+      "impact": "Memory growth over time. No long-term retention.",
+      "recommendation": "Add archival policy with configurable retention periods."
+    },
+    {
+      "id": "DS-064",
+      "category": "missing_audit_trails",
+      "severity": "medium",
+      "module": "audit.py",
+      "title": "No audit log integrity verification scheduling",
+      "description": "No background task to periodically verify chain integrity.",
+      "impact": "Tampering detection is manual only.",
+      "recommendation": "Add scheduled integrity verification with configurable intervals."
+    },
+    {
+      "id": "DS-065",
+      "category": "missing_audit_trails",
+      "severity": "low",
+      "module": "audit.py",
+      "title": "No audit log compression",
+      "description": "No compression of audit log data for storage efficiency.",
+      "impact": "Increased storage costs.",
+      "recommendation": "Add compression for archived logs."
     }
   ],
   "recommendations_priority": [

@@ -1,0 +1,1274 @@
+{
+  "audit_metadata": {
+    "timestamp": "2026-10-04T10:15:00+03:00",
+    "auditor": "Wave 1 Cluster 2",
+    "modules_audited": [
+      "src/path_planning/coverage.py",
+      "src/path_planning/obstacles.py",
+      "src/multi_agent/swarm.py",
+      "src/multi_agent/consensus.py",
+      "src/multi_agent/task_allocation.py",
+      "src/multi_agent/fault_tolerance.py",
+      "src/multi_agent/collision_avoidance.py"
+    ],
+    "total_gaps_identified": 92,
+    "severity_distribution": {
+      "critical": 14,
+      "high": 30,
+      "medium": 32,
+      "low": 16
+    }
+  },
+  "modules": {
+    "path_planning": {
+      "coverage": {
+        "file": "src/path_planning/coverage.py",
+        "lines_of_code": 106,
+        "current_algorithms": ["boustrophedon"],
+        "gaps": [
+          {
+            "id": "PP-COV-001",
+            "category": "missing_algorithm",
+            "severity": "critical",
+            "title": "No A* pathfinding algorithm",
+            "description": "A* is the standard heuristic search for grid/graph pathfinding. Essential for obstacle avoidance in agricultural fields with trees, rocks, buildings. Current CoveragePlanner only supports boustrophedon on rectangular bounding boxes.",
+            "impact": "Cannot plan paths around obstacles; limited to simple rectangular fields",
+            "recommendation": "Implement A* with configurable heuristics (Manhattan, Euclidean, Chebyshev) for grid-based field representation"
+          },
+          {
+            "id": "PP-COV-002",
+            "category": "missing_algorithm",
+            "severity": "critical",
+            "title": "No RRT/RRT* algorithm",
+            "description": "Rapidly-exploring Random Trees are essential for high-dimensional path planning and non-holonomic vehicle constraints (e.g., minimum turning radius for tractors).",
+            "impact": "Cannot handle vehicle kinematic constraints or complex obstacle fields",
+            "recommendation": "Implement RRT and RRT* with steering models for agricultural vehicles"
+          },
+          {
+            "id": "PP-COV-003",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No Dijkstra's algorithm",
+            "description": "Dijkstra's is the baseline for shortest-path computation without heuristics. Needed as fallback when no heuristic is available.",
+            "impact": "No guaranteed optimal path without A* heuristic",
+            "recommendation": "Implement Dijkstra as baseline shortest-path algorithm"
+          },
+          {
+            "id": "PP-COV-004",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No D* (Dynamic A*) algorithm",
+            "description": "D* is essential for dynamic replanning when obstacles are discovered during execution (e.g., newly detected rocks, animals, or other drones).",
+            "impact": "Cannot replan paths when environment changes during execution",
+            "recommendation": "Implement D* Lite for efficient incremental replanning"
+          },
+          {
+            "id": "PP-COV-005",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No PRM (Probabilistic Roadmap)",
+            "description": "PRM is useful for pre-computing roadmaps in complex environments that can be reused for multiple queries.",
+            "impact": "Repeated planning in same field is inefficient",
+            "recommendation": "Implement PRM for multi-query path planning scenarios"
+          },
+          {
+            "id": "PP-COV-006",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No wavefront algorithm",
+            "description": "Wavefront (brushfire) algorithm is simple and effective for grid-based coverage with obstacles.",
+            "impact": "No alternative coverage pattern for obstacle-rich environments",
+            "recommendation": "Implement wavefront propagation for obstacle-aware coverage"
+          },
+          {
+            "id": "PP-COV-007",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No spiral coverage pattern",
+            "description": "Spiral pattern is useful for circular or irregular fields and for center-out or center-in coverage strategies.",
+            "impact": "Cannot efficiently cover circular/irregular fields",
+            "recommendation": "Implement spiral coverage for non-rectangular fields"
+          },
+          {
+            "id": "PP-COV-008",
+            "category": "missing_algorithm",
+            "severity": "low",
+            "title": "No zigzag/diagonal coverage pattern",
+            "description": "Diagonal patterns can reduce total path length for certain field shapes.",
+            "impact": "Suboptimal path length for some field geometries",
+            "recommendation": "Implement diagonal boustrophedon as alternative pattern"
+          },
+          {
+            "id": "PP-COV-009",
+            "category": "missing_edge_case",
+            "severity": "critical",
+            "title": "No obstacle avoidance in coverage planner",
+            "description": "Current implementation assumes rectangular fields with no obstacles. Real agricultural fields have trees, rocks, power lines, buildings, and other hazards. The boustrophedon pattern generates straight lines across the bounding box without checking obstacle intersections.",
+            "impact": "Paths may collide with obstacles; unsafe for real-world deployment",
+            "recommendation": "Add obstacle representation and integrate with A*/RRT for obstacle-aware planning"
+          },
+          {
+            "id": "PP-COV-010",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No non-convex field support",
+            "description": "Current implementation uses bounding box (lines 66-69) which over-covers for L-shaped, T-shaped, or irregular fields, leading to wasted time and resources. The coverage_ratio calculation (line 96-98) uses bounding box area, not actual polygon area.",
+            "impact": "Wasted coverage area and resources on non-convex fields",
+            "recommendation": "Implement polygon clipping and decomposition for non-convex fields"
+          },
+          {
+            "id": "PP-COV-011",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No multi-field support",
+            "description": "Agricultural operations often span multiple adjacent or separate fields. Current implementation handles one field at a time.",
+            "impact": "Cannot optimize routes across multiple fields",
+            "recommendation": "Add multi-field planning with inter-field transit optimization"
+          },
+          {
+            "id": "PP-COV-012",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No terrain/elevation consideration",
+            "description": "Agricultural fields have slopes and elevation changes that affect vehicle speed, energy consumption, and safety.",
+            "impact": "Inaccurate time/energy estimates; potential safety issues on steep slopes",
+            "recommendation": "Add DEM (Digital Elevation Model) integration for terrain-aware planning"
+          },
+          {
+            "id": "PP-COV-013",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No energy/battery constraints",
+            "description": "Drones and electric vehicles have limited battery life. Current implementation doesn't consider energy consumption or range limits.",
+            "impact": "Planned paths may exceed vehicle range; no recharge stop planning",
+            "recommendation": "Add energy model and recharge/refuel stop insertion"
+          },
+          {
+            "id": "PP-COV-014",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No wind/weather consideration",
+            "description": "Wind affects drone flight time, spray drift, and energy consumption. Current implementation ignores weather.",
+            "impact": "Inaccurate time estimates; unsafe operations in high wind",
+            "recommendation": "Add weather data integration for wind-aware planning"
+          },
+          {
+            "id": "PP-COV-015",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No dynamic replanning",
+            "description": "When obstacles are discovered or conditions change during execution, the path cannot be updated.",
+            "impact": "Cannot adapt to changing conditions during execution",
+            "recommendation": "Implement D* Lite or similar incremental replanning"
+          },
+          {
+            "id": "PP-COV-016",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No path smoothing",
+            "description": "Boustrophedon paths have sharp 180-degree turns at field edges. Smoothing reduces wear and energy consumption.",
+            "impact": "Increased vehicle wear and energy consumption",
+            "recommendation": "Add path smoothing with curvature constraints (e.g., Dubins paths)"
+          },
+          {
+            "id": "PP-COV-017",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No partial coverage support",
+            "description": "Sometimes only a portion of the field needs coverage (e.g., pest hotspots, nutrient-deficient zones).",
+            "impact": "Cannot perform targeted/precision coverage",
+            "recommendation": "Add support for partial field coverage with priority zones"
+          },
+          {
+            "id": "PP-COV-018",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No no-fly zone support",
+            "description": "Regulatory no-fly zones (airports, military bases, populated areas) must be avoided.",
+            "impact": "Potential regulatory violations",
+            "recommendation": "Add geofencing with no-fly zone polygons"
+          },
+          {
+            "id": "PP-COV-019",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No headland turn optimization",
+            "description": "Headland turns at field edges are time-consuming. Different turn patterns (loop, skip, U-turn) have different efficiencies.",
+            "impact": "Suboptimal turn patterns waste time",
+            "recommendation": "Add headland turn pattern selection and optimization"
+          },
+          {
+            "id": "PP-COV-020",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No variable rate application support",
+            "description": "Precision agriculture requires varying application rates based on soil/pest maps. Current implementation assumes uniform coverage.",
+            "impact": "Cannot support variable rate application",
+            "recommendation": "Add VRA (Variable Rate Application) map integration"
+          },
+          {
+            "id": "PP-COV-021",
+            "category": "missing_coordination_pattern",
+            "severity": "high",
+            "title": "No multi-drone coverage coordination",
+            "description": "Multiple drones covering the same field need coordinated paths to avoid collisions and ensure complete coverage.",
+            "impact": "Cannot scale to multi-drone operations",
+            "recommendation": "Add multi-agent coverage with collision avoidance and task decomposition"
+          },
+          {
+            "id": "PP-COV-022",
+            "category": "missing_fault_tolerance",
+            "severity": "high",
+            "title": "No path execution monitoring",
+            "description": "No mechanism to detect if the vehicle deviates from the planned path or if execution fails.",
+            "impact": "Cannot detect or recover from path execution failures",
+            "recommendation": "Add path tracking with deviation detection and recovery"
+          },
+          {
+            "id": "PP-COV-023",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No large field decomposition",
+            "description": "Very large fields may need to be decomposed into sub-fields for memory and computation efficiency.",
+            "impact": "Performance degradation on very large fields",
+            "recommendation": "Add field decomposition with hierarchical planning"
+          },
+          {
+            "id": "PP-COV-024",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No GPS waypoint export",
+            "description": "Paths need to be exported in standard formats (GPX, GeoJSON, KML) for drone flight controllers.",
+            "impact": "Cannot directly use paths with commercial drone systems",
+            "recommendation": "Add export to GPX, GeoJSON, and KML formats"
+          },
+          {
+            "id": "PP-COV-025",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No 3D terrain following",
+            "description": "Drones may need to follow terrain at constant altitude above ground level.",
+            "impact": "Cannot maintain constant AGL altitude over varying terrain",
+            "recommendation": "Add terrain-following altitude profile generation"
+          },
+          {
+            "id": "PP-COV-026",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "Coverage ratio calculation is inaccurate",
+            "description": "The coverage_ratio (line 96-98) uses bounding box area instead of actual polygon area. For non-rectangular fields, this overestimates coverage. Also, covered_area = num_passes * swath * (max_x - min_x) doesn't account for the actual field shape.",
+            "impact": "Misleading coverage metrics for non-rectangular fields",
+            "recommendation": "Use polygon area (shoelace formula) for accurate coverage ratio"
+          },
+          {
+            "id": "PP-COV-027",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "Start point not used in path generation",
+            "description": "The start_point field in CoverageInstance is validated but never used in _boustrophedon(). The path always starts at (min_x, min_y) regardless of start_point.",
+            "impact": "Cannot start coverage from a specific location (e.g., nearest to depot)",
+            "recommendation": "Use start_point to determine initial pass direction and starting corner"
+          },
+          {
+            "id": "PP-COV-028",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No path direction optimization",
+            "description": "The boustrophedon always starts in Y direction. For elongated fields, X-direction passes may be shorter.",
+            "impact": "Suboptimal path length for elongated fields",
+            "recommendation": "Auto-select pass direction based on field aspect ratio"
+          }
+        ]
+      },
+      "obstacles": {
+        "file": "src/path_planning/obstacles.py",
+        "lines_of_code": 38,
+        "current_algorithms": ["circular obstacle detection", "square detour"],
+        "gaps": [
+          {
+            "id": "PP-OBS-001",
+            "category": "missing_algorithm",
+            "severity": "critical",
+            "title": "No polygon obstacle support",
+            "description": "ObstacleField only supports circular obstacles (cx, cy, r). Real obstacles like buildings, ponds, tree lines, and rock formations are better represented as polygons.",
+            "impact": "Cannot represent most real-world obstacle shapes",
+            "recommendation": "Add polygon obstacle representation with point-in-polygon and line-polygon intersection tests"
+          },
+          {
+            "id": "PP-OBS-002",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No line-obstacle intersection test",
+            "description": "The module can check if a point is inside an obstacle but cannot check if a line segment intersects an obstacle. This is essential for path validation.",
+            "impact": "Cannot validate if a planned path crosses an obstacle",
+            "recommendation": "Add line_segment_intersects_obstacle() for path validation"
+          },
+          {
+            "id": "PP-OBS-003",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No tangent-based detour algorithm",
+            "description": "The avoid_path() method (line 22-31) generates a square detour around the obstacle, which is inefficient. Tangent-based detours produce shorter paths.",
+            "impact": "Suboptimal detour paths increase travel distance",
+            "recommendation": "Implement tangent-based detour waypoint generation"
+          },
+          {
+            "id": "PP-OBS-004",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No obstacle merging",
+            "description": "Overlapping obstacles are treated as separate entities. This can cause redundant detours and inefficient paths.",
+            "impact": "Redundant detours around overlapping obstacles",
+            "recommendation": "Add obstacle merging for overlapping circles"
+          },
+          {
+            "id": "PP-OBS-005",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No dynamic obstacle addition/removal",
+            "description": "Obstacles are set at initialization and cannot be modified during execution. Real scenarios require adding obstacles discovered during operation.",
+            "impact": "Cannot adapt to newly discovered obstacles",
+            "recommendation": "Add add_obstacle() and remove_obstacle() methods"
+          },
+          {
+            "id": "PP-OBS-006",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No safety buffer configuration",
+            "description": "The safety buffer is hardcoded to 1.0 (line 30: b = r + 1.0). Different vehicles and scenarios need different safety margins.",
+            "impact": "Cannot configure safety margins for different vehicle types",
+            "recommendation": "Make safety buffer configurable per obstacle or per field"
+          },
+          {
+            "id": "PP-OBS-007",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No obstacle field serialization",
+            "description": "No way to save/load obstacle fields to/from disk. Fields need to be redefined each time.",
+            "impact": "Cannot persist obstacle configurations",
+            "recommendation": "Add JSON/GeoJSON serialization for obstacle fields"
+          },
+          {
+            "id": "PP-OBS-008",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No spatial indexing for obstacles",
+            "description": "is_obstacle() iterates through all obstacles (O(n)). For large obstacle fields, this is slow.",
+            "impact": "Performance degradation with many obstacles",
+            "recommendation": "Add spatial indexing (quadtree, R-tree, or grid-based) for efficient obstacle lookup"
+          },
+          {
+            "id": "PP-OBS-009",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No obstacle validation",
+            "description": "No validation for negative radius, NaN coordinates, or degenerate obstacles.",
+            "impact": "Invalid obstacles can cause incorrect behavior",
+            "recommendation": "Add obstacle validation in constructor and add_obstacle()"
+          }
+        ]
+      }
+    },
+    "multi_agent": {
+      "swarm": {
+        "file": "src/multi_agent/swarm.py",
+        "lines_of_code": 246,
+        "current_algorithms": ["greedy capability matching", "heartbeat-based failure detection"],
+        "gaps": [
+          {
+            "id": "MA-SW-001",
+            "category": "missing_fault_tolerance",
+            "severity": "critical",
+            "title": "No task reassignment on agent failure",
+            "description": "When an agent is marked as FAILED (line 139), its assigned tasks remain in ASSIGNED state forever. No mechanism reassigns those tasks to other agents. The check_health() method only marks agents as failed but does not trigger task recovery.",
+            "impact": "Tasks assigned to failed agents are lost; swarm cannot recover from agent failures",
+            "recommendation": "Add task reassignment logic in check_health() that detects failed agents and reassigns their tasks to active agents"
+          },
+          {
+            "id": "MA-SW-002",
+            "category": "missing_coordination_pattern",
+            "severity": "critical",
+            "title": "No leader election integration",
+            "description": "SwarmCoordinator has no mechanism to elect a leader agent for coordination decisions. All agents are peers with no hierarchy. The LeaderElection class exists in fault_tolerance.py but is not integrated.",
+            "impact": "No single point of coordination; potential for conflicting decisions",
+            "recommendation": "Integrate LeaderElection into SwarmCoordinator for coordinated decision-making"
+          },
+          {
+            "id": "MA-SW-003",
+            "category": "missing_coordination_pattern",
+            "severity": "high",
+            "title": "No collision avoidance integration",
+            "description": "SwarmCoordinator does not integrate with CollisionAvoidance. Agents can be assigned overlapping tasks without spatial separation checks.",
+            "impact": "Physical collisions between agents possible",
+            "recommendation": "Integrate CollisionAvoidance into task assignment to prevent spatial conflicts"
+          },
+          {
+            "id": "MA-SW-004",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No formation flying",
+            "description": "No support for agents maintaining specific geometric formations during movement.",
+            "impact": "Cannot execute formation-based operations (e.g., coordinated spraying)",
+            "recommendation": "Add formation control with configurable patterns"
+          },
+          {
+            "id": "MA-SW-005",
+            "category": "missing_coordination_pattern",
+            "severity": "high",
+            "title": "No task preemption",
+            "description": "No mechanism to preempt lower-priority tasks when higher-priority tasks arrive. Tasks have no priority field.",
+            "impact": "Cannot respond to urgent tasks promptly",
+            "recommendation": "Add priority-based task preemption"
+          },
+          {
+            "id": "MA-SW-006",
+            "category": "missing_coordination_pattern",
+            "severity": "high",
+            "title": "No priority-based task scheduling",
+            "description": "Tasks have no priority field. All tasks are treated equally regardless of urgency.",
+            "impact": "Cannot prioritize critical tasks (e.g., pest outbreak response)",
+            "recommendation": "Add task priority field and priority-aware scheduling"
+          },
+          {
+            "id": "MA-SW-007",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No deadline-aware scheduling",
+            "description": "Tasks have no deadlines. Cannot ensure time-critical tasks complete on time.",
+            "impact": "Cannot guarantee task completion within time constraints",
+            "recommendation": "Add task deadlines and deadline-aware scheduling"
+          },
+          {
+            "id": "MA-SW-008",
+            "category": "missing_coordination_pattern",
+            "severity": "high",
+            "title": "No resource constraints",
+            "description": "Agents have no resource limits (battery, payload, fuel). Tasks have no resource requirements. The _find_best_agent method (line 208-234) only considers task count for load balancing.",
+            "impact": "Can over-assign tasks beyond agent capacity",
+            "recommendation": "Add resource model with capacity constraints"
+          },
+          {
+            "id": "MA-SW-009",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No communication constraints",
+            "description": "No model of communication range or bandwidth limitations between agents.",
+            "impact": "Cannot plan for communication-limited environments",
+            "recommendation": "Add communication range model and constraint-aware task assignment"
+          },
+          {
+            "id": "MA-SW-010",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No task dependencies",
+            "description": "Tasks cannot depend on other tasks. Cannot model workflows where task B requires task A to complete first.",
+            "impact": "Cannot model complex multi-step operations",
+            "recommendation": "Add task dependency graph with topological ordering"
+          },
+          {
+            "id": "MA-SW-011",
+            "category": "missing_coordination_pattern",
+            "severity": "low",
+            "title": "No task decomposition",
+            "description": "No mechanism to decompose complex tasks into subtasks.",
+            "impact": "Cannot handle complex multi-step tasks",
+            "recommendation": "Add task decomposition with subtask management"
+          },
+          {
+            "id": "MA-SW-012",
+            "category": "missing_fault_tolerance",
+            "severity": "high",
+            "title": "No agent recovery mechanism",
+            "description": "Failed agents are permanently marked as FAILED (line 139). No mechanism to recover or restart agents. Once failed, an agent can never return to service.",
+            "impact": "Cannot recover from transient failures",
+            "recommendation": "Add agent recovery with state reset and task reassignment"
+          },
+          {
+            "id": "MA-SW-013",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No task retry mechanism",
+            "description": "Failed tasks cannot be retried. No retry count or backoff strategy. Tasks have no retry counter.",
+            "impact": "Transient task failures are permanent",
+            "recommendation": "Add task retry with configurable max retries and exponential backoff"
+          },
+          {
+            "id": "MA-SW-014",
+            "category": "missing_scalability",
+            "severity": "high",
+            "title": "No distributed coordination",
+            "description": "All coordination is centralized in a single SwarmCoordinator instance. No support for distributed coordination across multiple coordinators. All state is in Python dicts (line 67-68).",
+            "impact": "Single point of failure; cannot scale to large swarms",
+            "recommendation": "Add distributed coordination with coordinator replication"
+          },
+          {
+            "id": "MA-SW-015",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No agent capacity limits",
+            "description": "No limit on how many tasks can be assigned to a single agent. The load balancing in _find_best_agent (line 228-233) only considers current assignment count, not a maximum capacity.",
+            "impact": "Can overload agents with too many tasks",
+            "recommendation": "Add max tasks per agent limit"
+          },
+          {
+            "id": "MA-SW-016",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No consensus integration",
+            "description": "SwarmCoordinator does not integrate with ByzantineConsensus for coordinated decision-making. The consensus module exists but is completely independent.",
+            "impact": "Cannot make Byzantine-fault-tolerant collective decisions",
+            "recommendation": "Integrate consensus module for collective decision-making"
+          },
+          {
+            "id": "MA-SW-017",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No task allocation integration",
+            "description": "SwarmCoordinator does not integrate with TaskAllocator for optimal task assignment. Uses simple greedy matching (_find_best_agent) instead of optimal allocation.",
+            "impact": "Uses simple greedy matching instead of optimal allocation",
+            "recommendation": "Integrate TaskAllocator for optimal task-to-agent assignment"
+          },
+          {
+            "id": "MA-SW-018",
+            "category": "missing_coordination_pattern",
+            "severity": "medium",
+            "title": "No path planning integration",
+            "description": "SwarmCoordinator does not integrate with CoveragePlanner for path planning. Agents are assigned tasks but have no planned routes.",
+            "impact": "Cannot plan paths for agents to reach task locations",
+            "recommendation": "Integrate path planning for agent routing"
+          },
+          {
+            "id": "MA-SW-019",
+            "category": "missing_fault_tolerance",
+            "severity": "low",
+            "title": "No heartbeat authentication",
+            "description": "Heartbeats are not authenticated. Any process can send heartbeats for any agent (line 114-126). No verification that the heartbeat comes from the claimed agent.",
+            "impact": "Security vulnerability; potential for spoofed heartbeats",
+            "recommendation": "Add heartbeat authentication with agent credentials"
+          },
+          {
+            "id": "MA-SW-020",
+            "category": "missing_scalability",
+            "severity": "low",
+            "title": "No metrics collection",
+            "description": "No metrics on task completion time, agent utilization, swarm throughput, etc. Only logging is present.",
+            "impact": "Cannot monitor or optimize swarm performance",
+            "recommendation": "Add metrics collection and reporting"
+          },
+          {
+            "id": "MA-SW-021",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No task completion reporting",
+            "description": "Tasks can be assigned but there is no method to mark a task as completed. The TaskStatus enum has COMPLETED but no code path sets it.",
+            "impact": "Cannot track task progress or completion",
+            "recommendation": "Add complete_task() method and task progress tracking"
+          },
+          {
+            "id": "MA-SW-022",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No task failure reporting",
+            "description": "Tasks can be assigned but there is no method to mark a task as failed. The TaskStatus enum has FAILED but no code path sets it.",
+            "impact": "Cannot track task failures or trigger retries",
+            "recommendation": "Add fail_task() method with automatic retry logic"
+          },
+          {
+            "id": "MA-SW-023",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No agent status recovery",
+            "description": "AgentStatus enum has ACTIVE, FAILED, BUSY but no method to transition from FAILED back to ACTIVE or from BUSY to ACTIVE.",
+            "impact": "Cannot recover agents or track busy state transitions",
+            "recommendation": "Add set_agent_status() method with valid state transitions"
+          },
+          {
+            "id": "MA-SW-024",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No swarm topology awareness",
+            "description": "No concept of agent positions or spatial relationships. Agents are abstract IDs with capabilities but no locations.",
+            "impact": "Cannot make spatially-aware task assignments",
+            "recommendation": "Add agent position tracking and spatial assignment constraints"
+          }
+        ]
+      },
+      "consensus": {
+        "file": "src/multi_agent/consensus.py",
+        "lines_of_code": 147,
+        "current_algorithms": ["PBFT-style vote tallying (simulated)"],
+        "gaps": [
+          {
+            "id": "MA-CS-001",
+            "category": "missing_algorithm",
+            "severity": "critical",
+            "title": "No actual PBFT implementation",
+            "description": "The consensus module is a simulation, not a real PBFT implementation. The propose() method (line 72-101) only returns PENDING for multi-node systems without any actual message exchange. No pre-prepare, prepare, or commit phases exist.",
+            "impact": "Cannot be used for real distributed consensus; only useful for testing",
+            "recommendation": "Implement full PBFT with pre-prepare, prepare, and commit phases"
+          },
+          {
+            "id": "MA-CS-002",
+            "category": "missing_algorithm",
+            "severity": "critical",
+            "title": "No message passing layer",
+            "description": "No network layer for sending and receiving consensus messages between nodes. The module is entirely local with no I/O.",
+            "impact": "Cannot communicate with other nodes in a real deployment",
+            "recommendation": "Add network layer with message serialization and transport"
+          },
+          {
+            "id": "MA-CS-003",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No view change protocol",
+            "description": "PBFT requires a view change protocol to handle primary node failure. Not implemented. No concept of views or view numbers.",
+            "impact": "Cannot recover from primary node failure",
+            "recommendation": "Implement view change protocol for primary failure recovery"
+          },
+          {
+            "id": "MA-CS-004",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No checkpointing",
+            "description": "No checkpointing mechanism for log compaction and state transfer. No concept of stable checkpoints.",
+            "impact": "Log grows unboundedly; new nodes cannot catch up efficiently",
+            "recommendation": "Add checkpointing with state transfer for new nodes"
+          },
+          {
+            "id": "MA-CS-005",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No log replication",
+            "description": "No replicated log for consensus decisions. Only single-value voting is supported. No log entries or sequencing.",
+            "impact": "Cannot maintain consistent state across nodes",
+            "recommendation": "Add replicated log with log entry sequencing"
+          },
+          {
+            "id": "MA-CS-006",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No leader election",
+            "description": "No mechanism to elect or change the primary/leader node. The node_id is fixed at initialization.",
+            "impact": "Cannot handle leader failure or dynamic membership",
+            "recommendation": "Implement leader election integrated with view change"
+          },
+          {
+            "id": "MA-CS-007",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No client request handling",
+            "description": "No mechanism for clients to submit requests to the consensus system. The propose() method is called directly with no request queuing.",
+            "impact": "Cannot accept external requests for consensus",
+            "recommendation": "Add client request API with request queuing"
+          },
+          {
+            "id": "MA-CS-008",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No state machine replication",
+            "description": "No replicated state machine for executing consensus decisions. Consensus results are returned but not applied to any state machine.",
+            "impact": "Cannot maintain consistent application state across nodes",
+            "recommendation": "Add state machine replication layer"
+          },
+          {
+            "id": "MA-CS-009",
+            "category": "missing_fault_tolerance",
+            "severity": "high",
+            "title": "No cryptographic signatures",
+            "description": "No message authentication or integrity verification. Votes and proposals are not signed. Any node can forge votes.",
+            "impact": "Vulnerable to message tampering and spoofing",
+            "recommendation": "Add cryptographic signatures for all consensus messages"
+          },
+          {
+            "id": "MA-CS-010",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No timeout handling",
+            "description": "No timeout for consensus rounds. If nodes don't respond, consensus hangs indefinitely. The propose() method returns PENDING with no timeout.",
+            "impact": "Consensus can stall indefinitely",
+            "recommendation": "Add consensus timeouts with automatic retry or view change"
+          },
+          {
+            "id": "MA-CS-011",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No recovery mechanism",
+            "description": "No mechanism for nodes to recover and rejoin the consensus after failure. No state catch-up protocol.",
+            "impact": "Failed nodes cannot rejoin; system degrades over time",
+            "recommendation": "Add node recovery with state catch-up"
+          },
+          {
+            "id": "MA-CS-012",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No dynamic membership",
+            "description": "Total node count is fixed at initialization (line 51). Cannot add or remove nodes at runtime. No reconfiguration protocol.",
+            "impact": "Cannot scale swarm membership dynamically",
+            "recommendation": "Add dynamic membership with reconfiguration protocol"
+          },
+          {
+            "id": "MA-CS-013",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No vote deduplication",
+            "description": "tally_votes() (line 103-147) counts duplicate votes from the same node. No deduplication by node ID. A single node can vote multiple times to reach quorum.",
+            "impact": "A single node can vote multiple times to reach quorum",
+            "recommendation": "Add vote deduplication by node ID"
+          },
+          {
+            "id": "MA-CS-014",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No tie-breaking",
+            "description": "When two values have the same vote count, max() picks arbitrarily (line 129). No deterministic tie-breaking.",
+            "impact": "Non-deterministic consensus results",
+            "recommendation": "Add deterministic tie-breaking (e.g., lexicographic order)"
+          },
+          {
+            "id": "MA-CS-015",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No vote validation",
+            "description": "tally_votes() accepts any string as a valid vote. No validation that votes come from registered nodes or are well-formed.",
+            "impact": "Invalid or spoofed votes can affect consensus",
+            "recommendation": "Add vote validation with node authentication"
+          },
+          {
+            "id": "MA-CS-016",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No consensus round tracking",
+            "description": "No concept of consensus rounds or sequence numbers. Cannot detect stale or out-of-order votes.",
+            "impact": "Cannot detect replay attacks or stale votes",
+            "recommendation": "Add consensus round tracking with sequence numbers"
+          }
+        ]
+      },
+      "task_allocation": {
+        "file": "src/multi_agent/task_allocation.py",
+        "lines_of_code": 152,
+        "current_algorithms": ["greedy", "hungarian"],
+        "gaps": [
+          {
+            "id": "MA-TA-001",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No auction-based allocation",
+            "description": "Auction-based algorithms (e.g., Vickrey auction) are effective for distributed task allocation with self-interested agents. Not implemented.",
+            "impact": "Cannot use market-based allocation strategies",
+            "recommendation": "Implement auction-based task allocation"
+          },
+          {
+            "id": "MA-TA-002",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No contract net protocol",
+            "description": "Contract Net Protocol (CNP) is a standard multi-agent task allocation protocol where agents bid on tasks. Not implemented.",
+            "impact": "Cannot use CNP for distributed task allocation",
+            "recommendation": "Implement Contract Net Protocol with bidding and awarding"
+          },
+          {
+            "id": "MA-TA-003",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No Hungarian for rectangular matrices",
+            "description": "Hungarian algorithm falls back to greedy for non-square matrices (line 91-93). Rectangular assignment is common (more tasks than agents or vice versa).",
+            "impact": "Suboptimal allocation for rectangular cost matrices",
+            "recommendation": "Implement rectangular Hungarian algorithm"
+          },
+          {
+            "id": "MA-TA-004",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No market-based allocation",
+            "description": "Market-based mechanisms (e.g., task markets with pricing) can achieve efficient allocation. Not implemented.",
+            "impact": "Cannot use market-based allocation strategies",
+            "recommendation": "Add market-based task allocation with pricing"
+          },
+          {
+            "id": "MA-TA-005",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No task dependencies",
+            "description": "Tasks cannot depend on other tasks. Cannot model precedence constraints. No dependency graph.",
+            "impact": "Cannot model workflows with ordering constraints",
+            "recommendation": "Add task dependency graph with topological ordering"
+          },
+          {
+            "id": "MA-TA-006",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No task priorities",
+            "description": "Tasks have no priority. All tasks are treated equally. No priority field in AllocationInstance.",
+            "impact": "Cannot prioritize critical tasks",
+            "recommendation": "Add task priority field and priority-aware allocation"
+          },
+          {
+            "id": "MA-TA-007",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No task deadlines",
+            "description": "Tasks have no deadlines. Cannot ensure time-critical tasks are assigned to agents that can complete them in time.",
+            "impact": "Cannot guarantee task completion within time constraints",
+            "recommendation": "Add task deadlines and deadline-aware allocation"
+          },
+          {
+            "id": "MA-TA-008",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No resource constraints",
+            "description": "Agents have no resource limits (battery, payload, fuel). Tasks have no resource requirements. Cost matrix only captures a single scalar cost.",
+            "impact": "Can over-assign tasks beyond agent capacity",
+            "recommendation": "Add resource model with capacity constraints"
+          },
+          {
+            "id": "MA-TA-009",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No time windows",
+            "description": "Tasks cannot have time windows (earliest start, latest completion). No temporal constraints.",
+            "impact": "Cannot model time-constrained operations",
+            "recommendation": "Add time window constraints to tasks"
+          },
+          {
+            "id": "MA-TA-010",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No multi-objective optimization",
+            "description": "Only minimizes total cost. Cannot optimize for multiple objectives (cost, time, energy, fairness).",
+            "impact": "Cannot balance competing objectives",
+            "recommendation": "Add multi-objective optimization (e.g., weighted sum, Pareto frontier)"
+          },
+          {
+            "id": "MA-TA-011",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No dynamic allocation",
+            "description": "Allocation is static. Cannot reallocate when new tasks arrive or agents fail. No incremental update mechanism.",
+            "impact": "Cannot adapt to changing conditions",
+            "recommendation": "Add dynamic reallocation with incremental updates"
+          },
+          {
+            "id": "MA-TA-012",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No online allocation",
+            "description": "No support for online allocation where tasks arrive over time. All tasks must be known upfront.",
+            "impact": "Cannot handle streaming task arrivals",
+            "recommendation": "Add online allocation with competitive ratio guarantees"
+          },
+          {
+            "id": "MA-TA-013",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No fault tolerance",
+            "description": "No mechanism to handle agent failures during allocation. If an agent fails after allocation, tasks are lost. No reassignment logic.",
+            "impact": "Cannot recover from agent failures during execution",
+            "recommendation": "Add fault-tolerant allocation with task reassignment"
+          },
+          {
+            "id": "MA-TA-014",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No scalability limits",
+            "description": "Hungarian algorithm is O(n^3). No approximation algorithms for large-scale problems. No performance benchmarks.",
+            "impact": "Performance degradation for large numbers of agents/tasks",
+            "recommendation": "Add approximation algorithms for large-scale allocation"
+          },
+          {
+            "id": "MA-TA-015",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No unassigned task reporting",
+            "description": "AllocationResult has unassigned_tasks field (line 37) but it's never populated. Greedy always assigns all tasks to some agent even if no agent is suitable.",
+            "impact": "Cannot identify tasks that couldn't be assigned",
+            "recommendation": "Populate unassigned_tasks when no suitable agent exists"
+          },
+          {
+            "id": "MA-TA-016",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No cost matrix validation",
+            "description": "No validation for negative costs, NaN, or infinite values in cost matrix. The __post_init__ (line 20-27) only checks dimensions.",
+            "impact": "Invalid cost values can produce incorrect allocations",
+            "recommendation": "Add cost matrix validation for negative, NaN, and infinite values"
+          },
+          {
+            "id": "MA-TA-017",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No agent capability constraints",
+            "description": "The allocator only considers cost, not agent capabilities. An agent can be assigned a task it cannot perform if the cost is low. No capability matching.",
+            "impact": "Can assign tasks to incapable agents",
+            "recommendation": "Add agent capability constraints to the allocation problem"
+          },
+          {
+            "id": "MA-TA-018",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No allocation fairness metric",
+            "description": "No measure of allocation fairness. The greedy algorithm can produce highly unbalanced allocations where one agent gets most tasks.",
+            "impact": "Cannot evaluate or optimize for fair task distribution",
+            "recommendation": "Add fairness metrics (e.g., Jain's fairness index, max-min fairness)"
+          }
+        ]
+      },
+      "fault_tolerance": {
+        "file": "src/multi_agent/fault_tolerance.py",
+        "lines_of_code": 171,
+        "current_algorithms": ["greedy replacement", "first-candidate leader election"],
+        "gaps": [
+          {
+            "id": "MA-FT-001",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No Bully algorithm for leader election",
+            "description": "LeaderElection uses a simple first-candidate approach (line 165: self._leader = self._candidates[0]). This is not a real leader election algorithm. No failure detection or automatic re-election.",
+            "impact": "Cannot handle leader failure automatically; no distributed election",
+            "recommendation": "Implement Bully algorithm or Raft-based election for proper leader election"
+          },
+          {
+            "id": "MA-FT-002",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No Raft consensus for leader election",
+            "description": "Raft is a well-known consensus algorithm for leader election and log replication. Not implemented.",
+            "impact": "Cannot use proven leader election protocol",
+            "recommendation": "Implement Raft for leader election and log replication"
+          },
+          {
+            "id": "MA-FT-003",
+            "category": "missing_fault_tolerance",
+            "severity": "high",
+            "title": "No heartbeat integration",
+            "description": "LeaderElection has no heartbeat mechanism. The leader is elected once and never checked for liveness. If the leader fails, no re-election is triggered automatically.",
+            "impact": "Cannot detect leader failure or trigger automatic re-election",
+            "recommendation": "Add heartbeat monitoring for leader liveness with automatic re-election"
+          },
+          {
+            "id": "MA-FT-004",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No split-brain prevention",
+            "description": "No mechanism to prevent split-brain scenarios where two leaders are elected simultaneously. No fencing tokens or epoch numbers.",
+            "impact": "Potential for dual leaders in network partition scenarios",
+            "recommendation": "Add fencing tokens and epoch numbers to prevent split-brain"
+          },
+          {
+            "id": "MA-FT-005",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No task reassignment validation",
+            "description": "reassign_failed_agent() (line 69-94) reassigns tasks but does not validate that the new agent is still active or capable. The _find_replacement() checks capabilities but not current load or health.",
+            "impact": "Can reassign tasks to overloaded or failing agents",
+            "recommendation": "Add validation for replacement agent health and capacity"
+          },
+          {
+            "id": "MA-FT-006",
+            "category": "missing_fault_tolerance",
+            "severity": "medium",
+            "title": "No reassignment rollback",
+            "description": "If a reassignment fails (e.g., new agent also fails), there is no rollback mechanism. Tasks are left in an inconsistent state.",
+            "impact": "Cannot recover from cascading failures during reassignment",
+            "recommendation": "Add reassignment transaction with rollback capability"
+          },
+          {
+            "id": "MA-FT-007",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No agent health tracking",
+            "description": "AgentInfo has is_active boolean but no health score, error count, or degradation tracking. Binary active/failed is insufficient.",
+            "impact": "Cannot detect gradual agent degradation",
+            "recommendation": "Add health scoring with error tracking and degradation detection"
+          },
+          {
+            "id": "MA-FT-008",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No leader election timeout",
+            "description": "elect_leader() returns immediately with no timeout or retry. If the election process fails, there is no recovery.",
+            "impact": "Election can fail silently with no recovery",
+            "recommendation": "Add election timeout with automatic retry"
+          },
+          {
+            "id": "MA-FT-009",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No candidate priority",
+            "description": "All candidates have equal priority. No way to prefer certain agents as leaders (e.g., more capable agents).",
+            "impact": "Cannot elect the most suitable leader",
+            "recommendation": "Add candidate priority or weight for leader election"
+          },
+          {
+            "id": "MA-FT-010",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No distributed fault tolerance",
+            "description": "All fault tolerance state is in-memory in Python dicts. No distributed state sharing. Cannot handle coordinator failure.",
+            "impact": "Single point of failure; cannot survive coordinator crash",
+            "recommendation": "Add distributed state sharing with coordinator replication"
+          }
+        ]
+      },
+      "collision_avoidance": {
+        "file": "src/multi_agent/collision_avoidance.py",
+        "lines_of_code": 154,
+        "current_algorithms": ["repulsive force avoidance", "pairwise collision detection"],
+        "gaps": [
+          {
+            "id": "MA-CA-001",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No ORCA (Optimal Reciprocal Collision Avoidance)",
+            "description": "ORCA is the standard algorithm for multi-agent collision avoidance with reciprocal velocity obstacles. Current implementation uses simple repulsive forces which can cause oscillations.",
+            "impact": "Suboptimal avoidance maneuvers; potential for oscillations",
+            "recommendation": "Implement ORCA for optimal reciprocal collision avoidance"
+          },
+          {
+            "id": "MA-CA-002",
+            "category": "missing_algorithm",
+            "severity": "high",
+            "title": "No velocity obstacles",
+            "description": "No velocity obstacle concept. The current implementation only considers positions, not velocities. Cannot predict future collisions.",
+            "impact": "Cannot predict or prevent future collisions based on velocity",
+            "recommendation": "Add velocity obstacle computation for predictive collision avoidance"
+          },
+          {
+            "id": "MA-CA-003",
+            "category": "missing_algorithm",
+            "severity": "medium",
+            "title": "No potential fields method",
+            "description": "Potential fields are a common method for collision avoidance with attractive and repulsive forces. Not implemented.",
+            "impact": "Cannot use potential field-based navigation",
+            "recommendation": "Add potential fields method for goal-directed collision avoidance"
+          },
+          {
+            "id": "MA-CA-004",
+            "category": "missing_edge_case",
+            "severity": "high",
+            "title": "No static obstacle avoidance",
+            "description": "CollisionAvoidance only handles agent-agent collisions. No support for avoiding static obstacles (trees, buildings, rocks).",
+            "impact": "Cannot avoid static obstacles in the environment",
+            "recommendation": "Add static obstacle avoidance with obstacle representation"
+          },
+          {
+            "id": "MA-CA-005",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No deadlock detection",
+            "description": "No mechanism to detect or resolve deadlocks where agents block each other in a cycle. The repulsive force approach can cause deadlocks in narrow passages.",
+            "impact": "Agents can deadlock in confined spaces",
+            "recommendation": "Add deadlock detection with random perturbation or priority-based resolution"
+          },
+          {
+            "id": "MA-CA-006",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No agent size/radius modeling",
+            "description": "All agents are treated as points with a single safety radius. No modeling of different agent sizes or shapes.",
+            "impact": "Cannot handle heterogeneous agent sizes",
+            "recommendation": "Add per-agent safety radius and size modeling"
+          },
+          {
+            "id": "MA-CA-007",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No 3D collision avoidance",
+            "description": "Only 2D positions are supported. Drones operate in 3D space and need altitude separation.",
+            "impact": "Cannot prevent collisions in 3D space",
+            "recommendation": "Add 3D position and collision avoidance for aerial agents"
+          },
+          {
+            "id": "MA-CA-008",
+            "category": "missing_edge_case",
+            "severity": "medium",
+            "title": "No collision prediction horizon",
+            "description": "Collision detection is instantaneous. No prediction of future collisions based on current velocities. The compute_avoidance_velocity() only considers current positions.",
+            "impact": "Cannot prevent collisions before they happen",
+            "recommendation": "Add time-to-collision prediction with configurable prediction horizon"
+          },
+          {
+            "id": "MA-CA-009",
+            "category": "missing_scalability",
+            "severity": "medium",
+            "title": "No spatial partitioning for collision detection",
+            "description": "detect_collisions() (line 101-119) uses O(n²) pairwise comparison. For large swarms, this is slow. No spatial indexing.",
+            "impact": "Performance degradation with many agents",
+            "recommendation": "Add spatial partitioning (grid, quadtree) for efficient collision detection"
+          },
+          {
+            "id": "MA-CA-010",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No avoidance velocity clamping",
+            "description": "The avoidance velocity is not clamped to max_avoidance_speed when multiple agents are nearby. The sum of avoidance velocities can exceed the maximum speed.",
+            "impact": "Agents can exceed maximum speed when avoiding multiple agents",
+            "recommendation": "Add velocity clamping to ensure max_avoidance_speed is not exceeded"
+          },
+          {
+            "id": "MA-CA-011",
+            "category": "missing_edge_case",
+            "severity": "low",
+            "title": "No agent acceleration limits",
+            "description": "No modeling of agent acceleration or deceleration limits. Avoidance velocities are applied instantaneously.",
+            "impact": "Unrealistic instantaneous velocity changes",
+            "recommendation": "Add acceleration limits for realistic agent dynamics"
+          }
+        ]
+      }
+    }
+  },
+  "cross_cutting_gaps": [
+    {
+      "id": "CC-001",
+      "category": "missing_integration",
+      "severity": "critical",
+      "title": "No integration between modules",
+      "description": "The seven modules (coverage, obstacles, swarm, consensus, task_allocation, fault_tolerance, collision_avoidance) are completely independent. No module imports or uses any other module. There is no top-level orchestrator.",
+      "impact": "Cannot build a complete multi-agent agricultural planning system",
+      "recommendation": "Create a top-level orchestrator that integrates all modules into a cohesive planning pipeline"
+    },
+    {
+      "id": "CC-002",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "No common data model",
+      "description": "Each module has its own data classes with no shared abstractions. Agent, Task, Position, etc. are defined differently in each module. No common representation of agents, tasks, fields, or paths.",
+      "impact": "Cannot pass data between modules without adaptation",
+      "recommendation": "Create shared data model with common types for Agent, Task, Position, Field, etc."
+    },
+    {
+      "id": "CC-003",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "No configuration management",
+      "description": "No centralized configuration for module parameters. Each module has hardcoded defaults (e.g., heartbeat_timeout=30.0, safety_radius=2.0, max_avoidance_speed=1.0).",
+      "impact": "Cannot configure modules for different scenarios",
+      "recommendation": "Add centralized configuration with per-module settings"
+    },
+    {
+      "id": "CC-004",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "No logging standardization",
+      "description": "Each module uses its own logging format. No correlation IDs or request tracing across modules. All use Python's logging module with different formats.",
+      "impact": "Difficult to debug cross-module issues",
+      "recommendation": "Add standardized logging with correlation IDs"
+    },
+    {
+      "id": "CC-005",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "No error handling strategy",
+      "description": "Each module has its own error handling. No common error types or recovery strategies. Some modules raise ValueError, others return None.",
+      "impact": "Inconsistent error handling across modules",
+      "recommendation": "Add common error types and recovery strategies"
+    },
+    {
+      "id": "CC-006",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "No testing integration",
+      "description": "Tests are per-module with no integration tests. No end-to-end test of the full pipeline. No test that verifies modules work together.",
+      "impact": "Cannot verify cross-module correctness",
+      "recommendation": "Add integration tests for the full planning pipeline"
+    },
+    {
+      "id": "CC-007",
+      "category": "missing_integration",
+      "severity": "low",
+      "title": "No API/interface definition",
+      "description": "No public API or interface definition for the modules. Each module is used directly. No abstract base classes or protocols.",
+      "impact": "Cannot swap implementations or add new algorithms easily",
+      "recommendation": "Define abstract interfaces for each module"
+    },
+    {
+      "id": "CC-008",
+      "category": "missing_integration",
+      "severity": "low",
+      "title": "No documentation",
+      "description": "No documentation on how to use the modules together or how they relate to each other. No architecture diagrams or module interaction documentation.",
+      "impact": "Difficult for developers to understand the system",
+      "recommendation": "Add architecture documentation with module interaction diagrams"
+    },
+    {
+      "id": "CC-009",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "No shared agent identity",
+      "description": "Agent identity is represented differently across modules: Agent dataclass in swarm.py, AgentInfo in fault_tolerance.py, string IDs in task_allocation.py, string IDs in collision_avoidance.py. No unified agent identity.",
+      "impact": "Cannot track an agent across modules",
+      "recommendation": "Create shared Agent identity that is used consistently across all modules"
+    },
+    {
+      "id": "CC-010",
+      "category": "missing_integration",
+      "severity": "high",
+      "title": "No shared task identity",
+      "description": "Task identity is represented differently: Task dataclass in swarm.py, TaskInfo in fault_tolerance.py, string IDs in task_allocation.py. No unified task identity or state machine.",
+      "impact": "Cannot track task state across modules",
+      "recommendation": "Create shared Task identity with unified state machine"
+    },
+    {
+      "id": "CC-011",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "No event bus integration",
+      "description": "The event_bus module exists in src/integration/ but is not used by any multi-agent or path planning module. No event-driven communication between modules.",
+      "impact": "Cannot build reactive, event-driven behaviors",
+      "recommendation": "Integrate event bus for inter-module communication"
+    },
+    {
+      "id": "CC-012",
+      "category": "missing_integration",
+      "severity": "medium",
+      "title": "No simulation environment",
+      "description": "No simulation environment to test the full multi-agent system. No way to simulate agent movements, task execution, and failures in a controlled environment.",
+      "impact": "Cannot validate system behavior before deployment",
+      "recommendation": "Add simulation environment for end-to-end testing"
+    }
+  ],
+  "summary": {
+    "total_gaps": 92,
+    "by_category": {
+      "missing_algorithm": 22,
+      "missing_edge_case": 35,
+      "missing_coordination_pattern": 14,
+      "missing_fault_tolerance": 12,
+      "missing_scalability": 9,
+      "missing_integration": 12
+    },
+    "by_severity": {
+      "critical": 14,
+      "high": 30,
+      "medium": 32,
+      "low": 16
+    },
+    "by_module": {
+      "coverage": 28,
+      "obstacles": 9,
+      "swarm": 24,
+      "consensus": 16,
+      "task_allocation": 18,
+      "fault_tolerance": 10,
+      "collision_avoidance": 11,
+      "cross_cutting": 12
+    },
+    "top_priorities": [
+      "PP-COV-001: Implement A* for obstacle-aware pathfinding",
+      "PP-COV-002: Implement RRT/RRT* for vehicle kinematic constraints",
+      "PP-COV-009: Add obstacle avoidance to coverage planner",
+      "PP-OBS-001: Add polygon obstacle support",
+      "MA-SW-001: Add task reassignment on agent failure",
+      "MA-SW-002: Integrate leader election into swarm coordinator",
+      "MA-CS-001: Implement actual PBFT protocol",
+      "MA-CS-002: Add message passing layer",
+      "MA-FT-001: Implement Bully algorithm for leader election",
+      "MA-CA-001: Implement ORCA for multi-agent collision avoidance",
+      "CC-001: Create module integration orchestrator",
+      "CC-002: Define common data model",
+      "CC-009: Create shared agent identity",
+      "CC-010: Create shared task identity"
+    ]
+  }
+}

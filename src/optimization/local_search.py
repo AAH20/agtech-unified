@@ -17,6 +17,21 @@ class TwoOpt:
             return tour[:]
 
         n = len(tour)
+        # Validate: no duplicate cities
+        if len(set(tour)) != n:
+            raise ValueError("Tour contains duplicate cities")
+        # Validate: all indices within range
+        for idx in tour:
+            if idx < 0 or idx >= len(distance_matrix):
+                raise ValueError(
+                    f"Tour index {idx} exceeds distance matrix size {len(distance_matrix)}"
+                )
+        # Validate: distance matrix is large enough
+        if len(distance_matrix) < n:
+            raise ValueError(
+                f"Distance matrix size {len(distance_matrix)} does not match tour length {n}"
+            )
+
         improved = True
         iterations = 0
         current = tour[:]

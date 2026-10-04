@@ -40,6 +40,6 @@ def test_deployment_doc_exists():
     assert (ROOT / "docs" / "deployment.md").is_file()
 
 
-def test_deployment_doc_under_50_lines():
+def test_deployment_doc_over_100_lines():
     lines = (ROOT / "docs" / "deployment.md").read_text().splitlines()
-    assert len(lines) < 50
+    assert len(lines) > 100

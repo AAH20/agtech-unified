@@ -1,5 +1,4 @@
 """Crop vision pipeline: disease detection, weed classification, yield prediction.
-
 Orchestrates three ONNX models through :class:`EdgeAIInference`:
 
 * **Disease detection** — multi-class classifier over crop leaf conditions.
@@ -120,13 +119,15 @@ class CropVisionPipeline:
         """Classify each image into a crop disease category."""
         if self._disease is None:
             raise RuntimeError("Disease model not configured")
+        if not images:
+            raise ValueError("detect_disease requires at least one image")
         results = self._disease.predict(images, batch_size=self.batch_size)
         detections: List[DiseaseDetection] = []
         for res in results:
             logits = self._primary_output(res)  # (B, C) — one row per image
             if logits.ndim != 2 or logits.shape[1] != len(DISEASE_CLASSES):
                 raise ValueError(
-                    f"Disease model must output (B, {len(DISEASE_CLASSES)}), " f"got {logits.shape}"
+                    f"Disease model must output (B, {len(DISEASE_CLASSES)}), got {logits.shape}"
                 )
             for row in logits:
                 probs = _softmax(row)
@@ -150,13 +151,15 @@ class CropVisionPipeline:
         """Classify each image into a weed category."""
         if self._weed is None:
             raise RuntimeError("Weed model not configured")
+        if not images:
+            raise ValueError("classify_weeds requires at least one image")
         results = self._weed.predict(images, batch_size=self.batch_size)
         classifications: List[WeedClassification] = []
         for res in results:
             logits = self._primary_output(res)  # (B, C) — one row per image
             if logits.ndim != 2 or logits.shape[1] != len(WEED_CLASSES):
                 raise ValueError(
-                    f"Weed model must output (B, {len(WEED_CLASSES)}), " f"got {logits.shape}"
+                    f"Weed model must output (B, {len(WEED_CLASSES)}), got {logits.shape}"
                 )
             for row in logits:
                 probs = _softmax(row)
@@ -184,15 +187,16 @@ class CropVisionPipeline:
         """
         if self._yield is None:
             raise RuntimeError("Yield model not configured")
+        if not images:
+            raise ValueError("predict_yield requires at least one image")
         results = self._yield.predict(images, batch_size=self.batch_size)
         per_image: List[float] = []
         for res in results:
             out = self._primary_output(res).ravel()  # (B,) — one value per image
-            if out.size not in (1, self.batch_size, len(images)):
-                raise ValueError(
-                    f"Yield model must output one scalar per image, "
-                    f"got {out.size} values for {len(images)} images"
-                )
+            # Validate against actual chunk size, not self.batch_size
+            # The last chunk may be smaller than batch_size
+            if out.size == 0 or out.size > len(images):
+                raise ValueError(f"Yield model returned {out.size} values for {len(images)} images")
             per_image.extend(float(v) for v in out)
         arr = np.asarray(per_image, dtype=np.float64)
         mean = float(arr.mean())
@@ -215,12 +219,13 @@ class CropVisionPipeline:
             raise ValueError("analyze_field requires at least one image")
 
         if self._disease is not None:
-            disease = self.detect_disease(images)[0]
+            detections = self.detect_disease(images)
+            disease = max(detections, key=lambda d: d.severity)
         else:
             disease = DiseaseDetection("unavailable", 0.0, 0.0)
 
         if self._weed is not None:
-            weed = self.classify_weeds(images)[0]
+            weed = self._aggregate_weed(self.classify_weeds(images))
         else:
             weed = WeedClassification("unavailable", 0.0, 0.0)
 
@@ -249,6 +254,70 @@ class CropVisionPipeline:
         return next(iter(result.outputs.values()))
 
     @staticmethod
+    def _aggregate_disease(detections: List[DiseaseDetection]) -> DiseaseDetection:
+        """Aggregate disease detections across all images using majority vote."""
+        if not detections:
+            return DiseaseDetection("unavailable", 0.0, 0.0)
+        if len(detections) == 1:
+            return detections[0]
+
+        # Majority vote on label
+        labels = [d.label for d in detections]
+        label_counts: Dict[str, int] = {}
+        for lbl in labels:
+            label_counts[lbl] = label_counts.get(lbl, 0) + 1
+        best_label = max(label_counts, key=lambda k: label_counts[k])
+
+        # Mean severity and confidence
+        mean_severity = float(np.mean([d.severity for d in detections]))
+        mean_confidence = float(np.mean([d.confidence for d in detections]))
+
+        # Average probabilities
+        avg_probs: Dict[str, float] = {}
+        for cls in DISEASE_CLASSES:
+            avg_probs[cls] = float(np.mean([d.probabilities.get(cls, 0.0) for d in detections]))
+
+        return DiseaseDetection(
+            label=best_label,
+            confidence=mean_confidence,
+            severity=mean_severity,
+            probabilities=avg_probs,
+        )
+
+    @staticmethod
+    def _aggregate_weed(classifications: List[WeedClassification]) -> WeedClassification:
+        """Aggregate weed classifications across all images using majority vote."""
+        if not classifications:
+            return WeedClassification("unavailable", 0.0, 0.0)
+        if len(classifications) == 1:
+            return classifications[0]
+
+        # Majority vote on label
+        labels = [w.label for w in classifications]
+        label_counts: Dict[str, int] = {}
+        for lbl in labels:
+            label_counts[lbl] = label_counts.get(lbl, 0) + 1
+        best_label = max(label_counts, key=lambda k: label_counts[k])
+
+        # Mean coverage and confidence
+        mean_coverage = float(np.mean([w.coverage_ratio for w in classifications]))
+        mean_confidence = float(np.mean([w.confidence for w in classifications]))
+
+        # Average probabilities
+        avg_probs: Dict[str, float] = {}
+        for cls in WEED_CLASSES:
+            avg_probs[cls] = float(
+                np.mean([w.probabilities.get(cls, 0.0) for w in classifications])
+            )
+
+        return WeedClassification(
+            label=best_label,
+            confidence=mean_confidence,
+            coverage_ratio=mean_coverage,
+            probabilities=avg_probs,
+        )
+
+    @staticmethod
     def _health_score(disease: DiseaseDetection, weed: WeedClassification) -> float:
         """Composite 0..1 health score: 1 = pristine crop."""
         return float(np.clip(1.0 - 0.6 * disease.severity - 0.4 * weed.coverage_ratio, 0.0, 1.0))
@@ -264,7 +333,7 @@ class CropVisionPipeline:
                 f"(confidence {disease.confidence:.0%})"
             )
         if weed.label not in ("none", "unavailable") and weed.coverage_ratio > 0.2:
-            recs.append(f"Spot-spray {weed.label} weeds " f"(coverage {weed.coverage_ratio:.0%})")
+            recs.append(f"Spot-spray {weed.label} weeds (coverage {weed.coverage_ratio:.0%})")
         if yield_t_per_ha < 3.0:
             recs.append("Low yield forecast — review irrigation and fertilization")
         return recs

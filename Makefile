@@ -1,4 +1,4 @@
-.PHONY: install install-dev test lint format security docker-build docker-up docker-down clean
+.PHONY: install install-dev test lint format security docker-build docker-up docker-down docker-test docker-logs clean
 
 # Default Python interpreter
 PYTHON := python3
@@ -44,6 +44,10 @@ docker-up:
 # Stop all services
 docker-down:
 	docker compose down
+
+# Run tests inside Docker container
+docker-test:
+	docker compose run --rm app pytest tests/ -v --tb=short
 
 # View logs
 docker-logs:
