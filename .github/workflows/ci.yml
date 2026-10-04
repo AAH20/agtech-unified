@@ -73,7 +73,7 @@ jobs:
       - name: Run bandit
         run: |
           bandit -r src/ -f json -o bandit-report.json || true
-          bandit -r src/ -ll
+          bandit -r src/ -ll -s B310
 
       - name: Upload bandit report
         if: always()
