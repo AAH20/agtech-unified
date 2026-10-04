@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from src.decision_support.recommender import DecisionEngine, FarmState
@@ -208,10 +208,11 @@ def create_app(registry: Optional[TenantRegistry] = None) -> FastAPI:
     def list_tenants() -> List[Dict[str, object]]:
         return reg.list_tenants()
 
-    @app.delete("/api/v1/tenants/{tenant_id}", status_code=204)
-    def delete_tenant(tenant_id: str) -> None:
+    @app.delete("/api/v1/tenants/{tenant_id}")
+    def delete_tenant(tenant_id: str):
         if not reg.delete_tenant(tenant_id):
-            raise HTTPException(404, "Tenant not found")
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        return Response(status_code=204)
 
     @app.post("/api/v1/tenants/{tenant_id}/farms", response_model=FarmResponse, status_code=201)
     def create_farm(tenant_id: str, req: CreateFarmRequest) -> FarmResponse:

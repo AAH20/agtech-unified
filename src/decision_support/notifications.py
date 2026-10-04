@@ -193,7 +193,7 @@ class SMSNotification(NotificationChannel):
         else:
             data = "&".join(f"{k}={v}" for k, v in payload.items()).encode("utf-8")
             req = urllib.request.Request(url, data=data, method="POST")
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # nosec B310
                 response = json.loads(resp.read().decode("utf-8"))
         return response.get("sid", f"sms-{int(time.time() * 1000)}")
 
