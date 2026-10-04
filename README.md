@@ -180,9 +180,9 @@ sequenceDiagram
     F->>DS: View farm status / Set goals
     DS->>MA: Task requirements
     MA->>OPT: Resource allocation request
-    OPT->>PP: Route optimization
-    PP-->>OPT: Optimized paths
     OPT-->>MA: Allocation plan
+    MA->>PP: Route optimization request
+    PP-->>MA: Optimized paths
     MA->>D: Swarm commands (coverage paths)
     MA->>R: Task assignments (weeding/harvest)
     D-->>MA: Status / telemetry
