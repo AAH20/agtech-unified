@@ -1,0 +1,497 @@
+{
+  "audit_metadata": {
+    "cluster": "Wave 1 Cluster 5",
+    "scope": "decision_support modules",
+    "modules_audited": [
+      "src/decision_support/recommender.py",
+      "src/decision_support/dashboard.py",
+      "src/decision_support/alerts.py",
+      "src/decision_support/api_gateway.py",
+      "src/decision_support/security.py",
+      "src/decision_support/gps_antispoof.py"
+    ],
+    "audit_date": "2026-10-04",
+    "auditor": "Cluster 5 Leader"
+  },
+  "summary": {
+    "total_gaps": 42,
+    "critical": 12,
+    "high": 18,
+    "medium": 10,
+    "low": 2,
+    "categories": {
+      "missing_ml_models": 8,
+      "missing_notification_channels": 6,
+      "missing_audit_trails": 7,
+      "missing_compliance_features": 8,
+      "missing_multi_tenant_isolation": 9,
+      "missing_security_hardening": 4
+    }
+  },
+  "gaps": [
+    {
+      "id": "DS-001",
+      "category": "missing_ml_models",
+      "severity": "critical",
+      "module": "recommender.py",
+      "title": "No ML-based recommendation models",
+      "description": "DecisionEngine only supports rule_based algorithm. No regression, classification, time-series forecasting, or neural network models are implemented. The system cannot learn from historical data or adapt to changing conditions.",
+      "impact": "Recommendations are static and cannot improve over time. No predictive capabilities for crop yield, disease outbreak, or resource optimization.",
+      "recommendation": "Implement a model registry with pluggable ML models (e.g., RandomForest for yield prediction, LSTM for time-series forecasting, XGBoost for pest risk). Add model training pipeline, A/B testing framework, and model versioning."
+    },
+    {
+      "id": "DS-002",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "recommender.py",
+      "title": "No model explainability",
+      "description": "Recommendations include no confidence scores, feature importance, or explanation of why a particular action is recommended.",
+      "impact": "Users cannot trust or validate recommendations. No ability to debug why the system suggested a specific action.",
+      "recommendation": "Integrate SHAP or LIME for local explainability. Add confidence intervals to predictions. Include top contributing factors in RecommendationResult."
+    },
+    {
+      "id": "DS-003",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "recommender.py",
+      "title": "No feature engineering or feature store",
+      "description": "FarmState uses raw sensor values only. No derived features (e.g., growing degree days, soil moisture trend, VPD) are computed. No feature store for reuse across models.",
+      "impact": "ML models would lack agronomically meaningful features. No consistency between training and serving features.",
+      "recommendation": "Create a FeatureEngine class that computes derived agronomic features. Implement a feature store (e.g., Feast) for training/serving consistency."
+    },
+    {
+      "id": "DS-004",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "recommender.py",
+      "title": "No model training or retraining pipeline",
+      "description": "No infrastructure for training models on historical data, evaluating performance, or deploying updated models.",
+      "impact": "Models cannot be updated as new data becomes available. No continuous improvement loop.",
+      "recommendation": "Add a training pipeline with automated retraining triggers (scheduled or drift-based). Implement model validation gates before deployment."
+    },
+    {
+      "id": "DS-005",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "recommender.py",
+      "title": "No A/B testing or model comparison framework",
+      "description": "No ability to compare multiple models or algorithms side-by-side in production.",
+      "impact": "Cannot validate that a new model outperforms the current one before full rollout.",
+      "recommendation": "Implement an experimentation framework with traffic splitting, metric collection, and statistical significance testing."
+    },
+    {
+      "id": "DS-006",
+      "category": "missing_ml_models",
+      "severity": "high",
+      "module": "gps_antispoof.py",
+      "title": "No ML-based spoofing detection",
+      "description": "GPSSpoofingDetector uses only rule-based heuristics (speed thresholds, position jumps, null island check). No ML models for pattern recognition or behavioral analysis.",
+      "impact": "Sophisticated spoofing attacks that mimic normal patterns will not be detected. High false-positive rate for legitimate edge cases.",
+      "recommendation": "Implement ML models (e.g., Isolation Forest, Autoencoder) trained on normal GPS patterns. Add behavioral profiling per device. Use ensemble methods combining rule-based and ML approaches."
+    },
+    {
+      "id": "DS-007",
+      "category": "missing_ml_models",
+      "severity": "medium",
+      "module": "gps_antispoof.py",
+      "title": "No sensor fusion for spoofing detection",
+      "description": "Only GPS data is analyzed. No integration with IMU, barometer, or other sensors that could corroborate or contradict GPS readings.",
+      "impact": "Single-point failure. Spoofed GPS cannot be cross-validated against other sensor data.",
+      "recommendation": "Implement sensor fusion algorithms (Kalman filter, particle filter) combining GPS with IMU, wheel odometry, and barometric altitude."
+    },
+    {
+      "id": "DS-008",
+      "category": "missing_ml_models",
+      "severity": "low",
+      "module": "gps_antispoof.py",
+      "title": "No historical pattern learning",
+      "description": "Detector does not learn normal patterns per device or per route. Thresholds are static.",
+      "impact": "Cannot adapt to different vehicle types, terrains, or operational patterns.",
+      "recommendation": "Implement per-device behavioral profiling with online learning. Adjust thresholds based on historical normal behavior."
+    },
+    {
+      "id": "DS-009",
+      "category": "missing_notification_channels",
+      "severity": "critical",
+      "module": "alerts.py",
+      "title": "No actual notification channel implementations",
+      "description": "NotificationChannel is a configuration dataclass only. The notify() method only logs messages — no email, SMS, push notification, webhook, or Slack/Teams integration is implemented.",
+      "impact": "Alerts are never actually delivered to users. The notification system is non-functional.",
+      "recommendation": "Implement concrete channel classes: EmailChannel (SMTP), SMSChannel (Twilio), PushChannel (FCM/APNs), WebhookChannel (HTTP POST), SlackChannel (Slack API). Use a strategy pattern for extensibility."
+    },
+    {
+      "id": "DS-010",
+      "category": "missing_notification_channels",
+      "severity": "high",
+      "module": "alerts.py",
+      "title": "No alert deduplication or grouping",
+      "description": "Every threshold violation creates a new alert. No deduplication for repeated violations of the same metric, no grouping of related alerts.",
+      "impact": "Alert fatigue. Users receive hundreds of duplicate notifications for a single ongoing issue.",
+      "recommendation": "Implement alert deduplication with configurable windows. Add alert grouping by farm, metric, or severity. Support alert aggregation (e.g., '5 soil moisture alerts in last hour')."
+    },
+    {
+      "id": "DS-011",
+      "category": "missing_notification_channels",
+      "severity": "high",
+      "module": "alerts.py",
+      "title": "No alert escalation policies",
+      "description": "No escalation path if critical alerts are not acknowledged within a timeout. No on-call rotation integration.",
+      "impact": "Critical alerts may be missed if the primary recipient is unavailable.",
+      "recommendation": "Implement escalation policies with timeouts and recipient chains. Integrate with PagerDuty, Opsgenie, or similar incident management tools."
+    },
+    {
+      "id": "DS-012",
+      "category": "missing_notification_channels",
+      "severity": "medium",
+      "module": "alerts.py",
+      "title": "No customizable alert templates",
+      "description": "Alert messages are hardcoded strings. No support for custom templates, localization, or user-defined message formats.",
+      "impact": "Cannot adapt messaging for different audiences (agronomist vs. farm manager vs. regulator).",
+      "recommendation": "Implement a template engine (Jinja2) for alert messages. Support per-channel templates and i18n."
+    },
+    {
+      "id": "DS-013",
+      "category": "missing_notification_channels",
+      "severity": "medium",
+      "module": "alerts.py",
+      "title": "No notification delivery confirmation or retry",
+      "description": "No tracking of whether notifications were successfully delivered. No retry mechanism for failed deliveries.",
+      "impact": "Silent notification failures. No way to audit whether critical alerts reached their recipients.",
+      "recommendation": "Add delivery status tracking with retry logic (exponential backoff). Implement dead-letter queue for permanently failed notifications."
+    },
+    {
+      "id": "DS-014",
+      "category": "missing_notification_channels",
+      "severity": "low",
+      "module": "alerts.py",
+      "title": "No quiet hours or notification scheduling",
+      "description": "All alerts are sent immediately regardless of time of day or user preferences.",
+      "impact": "User fatigue from non-critical alerts at night. No way to suppress low-priority notifications during off-hours.",
+      "recommendation": "Implement quiet hours per channel per user. Add severity-based scheduling (critical = immediate, warning = business hours only)."
+    },
+    {
+      "id": "DS-015",
+      "category": "missing_audit_trails",
+      "severity": "critical",
+      "module": "api_gateway.py",
+      "title": "No API request audit logging",
+      "description": "No logging of who accessed what endpoint, when, with what parameters, and what response was returned. No request correlation IDs.",
+      "impact": "Cannot investigate security incidents, debug issues, or demonstrate compliance. No traceability of data access.",
+      "recommendation": "Implement structured audit logging for all API requests. Include timestamp, tenant_id, user_id, endpoint, method, request_id, response status, and latency. Use correlation IDs for distributed tracing."
+    },
+    {
+      "id": "DS-016",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "api_gateway.py",
+      "title": "No actuator command audit trail",
+      "description": "Actuator commands (irrigation valves, machinery) are stored but not audited. No record of who issued the command, from where, or whether it was authorized.",
+      "impact": "Cannot trace unauthorized or erroneous actuator operations. No accountability for physical actions taken by the system.",
+      "recommendation": "Add comprehensive audit logging for all actuator commands. Include issuer identity, authorization check result, command parameters, and execution status."
+    },
+    {
+      "id": "DS-017",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "alerts.py",
+      "title": "No alert lifecycle audit trail",
+      "description": "Alert state changes (created, acknowledged, resolved) are not logged with timestamps and actor identity.",
+      "impact": "Cannot determine who acknowledged an alert or when it was resolved. No accountability for alert handling.",
+      "recommendation": "Log all alert state transitions with timestamp, actor, and reason. Implement an immutable audit log for compliance."
+    },
+    {
+      "id": "DS-018",
+      "category": "missing_audit_trails",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No authentication event audit logging",
+      "description": "Login attempts (successful and failed), token generation, and authorization decisions are not logged.",
+      "impact": "Cannot detect brute-force attacks, investigate breaches, or demonstrate compliance with access control policies.",
+      "recommendation": "Log all authentication and authentication events with timestamp, source IP, user agent, and outcome. Implement real-time alerting for suspicious patterns."
+    },
+    {
+      "id": "DS-019",
+      "category": "missing_audit_trails",
+      "severity": "medium",
+      "module": "dashboard.py",
+      "title": "No user action audit trail",
+      "description": "Dashboard state updates via WebSocket are not logged. No record of who changed what setting or when.",
+      "impact": "Cannot trace configuration changes or investigate incidents caused by manual overrides.",
+      "recommendation": "Log all state-changing operations with user identity, timestamp, before/after values, and source (WebSocket vs. API)."
+    },
+    {
+      "id": "DS-020",
+      "category": "missing_audit_trails",
+      "severity": "medium",
+      "module": "gps_antispoof.py",
+      "title": "No spoofing event audit trail",
+      "description": "Detected spoofing events are not logged or stored. No historical record of attacks or anomalies.",
+      "impact": "Cannot analyze attack patterns, improve detection, or provide evidence for law enforcement.",
+      "recommendation": "Log all spoofing detections with full context (reading, history, confidence, indicators). Implement a tamper-evident audit log."
+    },
+    {
+      "id": "DS-021",
+      "category": "missing_audit_trails",
+      "severity": "medium",
+      "module": "recommender.py",
+      "title": "No recommendation audit trail",
+      "description": "Recommendations are not logged with the input state, output, and context. No way to replay or analyze past recommendations.",
+      "impact": "Cannot analyze recommendation quality, debug issues, or demonstrate due diligence.",
+      "recommendation": "Log all recommendations with input state, output, model version, and context. Implement a recommendation history API."
+    },
+    {
+      "id": "DS-022",
+      "category": "missing_compliance_features",
+      "severity": "critical",
+      "module": "api_gateway.py",
+      "title": "No data retention policies",
+      "description": "No mechanism to automatically delete or archive old sensor readings, alerts, or audit logs. No retention period configuration.",
+      "impact": "Unbounded data growth. Non-compliance with GDPR, CCPA, or agricultural data regulations.",
+      "recommendation": "Implement configurable data retention policies per data type. Add automated data purging with audit trail of deletions."
+    },
+    {
+      "id": "DS-023",
+      "category": "missing_compliance_features",
+      "severity": "high",
+      "module": "api_gateway.py",
+      "title": "No GDPR/data privacy compliance features",
+      "description": "No data anonymization, right-to-erasure support, consent management, or data export functionality.",
+      "impact": "Non-compliance with GDPR and similar regulations. Cannot fulfill data subject access requests.",
+      "recommendation": "Implement data anonymization utilities, right-to-erasure endpoints, consent tracking, and data export (portability) functionality."
+    },
+    {
+      "id": "DS-024",
+      "category": "missing_compliance_features",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No password policy or credential management",
+      "description": "No password complexity requirements, rotation policies, or secure credential storage. No integration with external identity providers.",
+      "impact": "Weak credential security. No support for enterprise SSO requirements.",
+      "recommendation": "Implement password policies, integrate with LDAP/Active Directory, support SAML/OIDC for enterprise SSO."
+    },
+    {
+      "id": "DS-025",
+      "category": "missing_compliance_features",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No MFA/TOTP support",
+      "description": "Authentication is single-factor (JWT only). No multi-factor authentication support.",
+      "impact": "Insufficient security for agricultural infrastructure. Single point of compromise if token is stolen.",
+      "recommendation": "Implement TOTP-based MFA. Support hardware security keys (FIDO2/WebAuthn). Add MFA enforcement policies per tenant."
+    },
+    {
+      "id": "DS-026",
+      "category": "missing_compliance_features",
+      "severity": "medium",
+      "module": "api_gateway.py",
+      "title": "No rate limiting or DDoS protection",
+      "description": "No rate limiting on API endpoints. No protection against denial-of-service attacks.",
+      "impact": "System vulnerable to DDoS. No fair usage enforcement across tenants.",
+      "recommendation": "Implement per-tenant and per-endpoint rate limiting. Add DDoS protection (e.g., Cloudflare integration, request throttling)."
+    },
+    {
+      "id": "DS-027",
+      "category": "missing_compliance_features",
+      "severity": "medium",
+      "module": "alerts.py",
+      "title": "No regulatory reporting or compliance dashboards",
+      "description": "No pre-built reports for regulatory compliance (e.g., pesticide usage, water consumption, environmental impact).",
+      "impact": "Cannot easily demonstrate compliance with agricultural regulations. Manual report generation required.",
+      "recommendation": "Implement configurable compliance report templates. Add scheduled report generation and distribution."
+    },
+    {
+      "id": "DS-028",
+      "category": "missing_compliance_features",
+      "severity": "medium",
+      "module": "gps_antispoof.py",
+      "title": "No geofencing or regulatory boundary compliance",
+      "description": "No support for geofencing to ensure equipment stays within authorized areas. No integration with aviation or maritime regulations for autonomous vehicles.",
+      "impact": "Cannot enforce operational boundaries. Potential regulatory violations for autonomous agricultural vehicles.",
+      "recommendation": "Implement geofencing with configurable polygons. Add boundary violation alerts and automatic vehicle stop commands."
+    },
+    {
+      "id": "DS-029",
+      "category": "missing_compliance_features",
+      "severity": "medium",
+      "module": "dashboard.py",
+      "title": "No data export for compliance or analysis",
+      "description": "No ability to export sensor data, alerts, or recommendations in standard formats (CSV, JSON, PDF).",
+      "impact": "Cannot provide data to regulators, auditors, or external analysis tools.",
+      "recommendation": "Implement data export endpoints with filtering by date range, metric, and format. Add scheduled export jobs."
+    },
+    {
+      "id": "DS-030",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "critical",
+      "module": "dashboard.py",
+      "title": "No multi-tenant isolation in dashboard",
+      "description": "FarmDashboard has a single global state with no tenant_id. All WebSocket clients see the same farm state. No per-tenant dashboards.",
+      "impact": "All tenants see each other's data. Complete data isolation failure.",
+      "recommendation": "Add tenant_id to DashboardConfig. Create per-tenant dashboard instances. Enforce tenant isolation in WebSocket connections via JWT claims."
+    },
+    {
+      "id": "DS-031",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "critical",
+      "module": "alerts.py",
+      "title": "No multi-tenant isolation in alerts",
+      "description": "AlertManager has no tenant_id on alerts, thresholds, or channels. All alerts are global.",
+      "impact": "Alerts from one tenant visible to another. Cross-tenant data leakage.",
+      "recommendation": "Add tenant_id to Alert, Threshold, and NotificationChannel. Scope all alert queries by tenant. Enforce tenant isolation in alert APIs."
+    },
+    {
+      "id": "DS-032",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "critical",
+      "module": "recommender.py",
+      "title": "No multi-tenant awareness in recommender",
+      "description": "FarmState and RecommendationResult have no tenant_id. DecisionEngine cannot differentiate between tenants.",
+      "impact": "Recommendations cannot be personalized per tenant. No tenant-specific model training or configuration.",
+      "recommendation": "Add tenant_id to FarmState and RecommendationResult. Support per-tenant model configuration and training data isolation."
+    },
+    {
+      "id": "DS-033",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "high",
+      "module": "api_gateway.py",
+      "title": "No tenant deletion cascade",
+      "description": "Deleting a tenant does not delete associated farms, sensor readings, or actuator commands. Orphaned data remains.",
+      "impact": "Data leakage after tenant deletion. Storage bloat from orphaned records.",
+      "recommendation": "Implement cascade deletion when a tenant is deleted. Add data retention policy for deleted tenants."
+    },
+    {
+      "id": "DS-034",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "high",
+      "module": "api_gateway.py",
+      "title": "No tenant-level rate limiting or quotas",
+      "description": "No per-tenant rate limiting, storage quotas, or compute resource limits.",
+      "impact": "One tenant can monopolize resources. No fair usage enforcement.",
+      "recommendation": "Implement per-tenant rate limiting, storage quotas, and resource limits. Add tenant tier management (free, pro, enterprise)."
+    },
+    {
+      "id": "DS-035",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No tenant context in authentication tokens",
+      "description": "JWT tokens contain subject and roles but no tenant_id. Cannot enforce tenant-specific access control.",
+      "impact": "A user with valid token can access any tenant's data. No tenant-level authorization.",
+      "recommendation": "Add tenant_id to JWT claims. Implement tenant-aware authorization middleware. Support user membership in multiple tenants."
+    },
+    {
+      "id": "DS-036",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "high",
+      "module": "gps_antispoof.py",
+      "title": "No multi-tenant awareness in GPS anti-spoofing",
+      "description": "GPSSpoofingDetector has no tenant_id. Spoofing detection cannot be customized per tenant or per device fleet.",
+      "impact": "Cannot apply different spoofing thresholds per tenant. No per-tenant spoofing history.",
+      "recommendation": "Add tenant_id to GPSReading and spoofing detection results. Support per-tenant configuration of detection thresholds."
+    },
+    {
+      "id": "DS-037",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "medium",
+      "module": "api_gateway.py",
+      "title": "No tenant-specific configuration or customization",
+      "description": "No support for tenant-specific thresholds, notification preferences, dashboard themes, or feature flags.",
+      "impact": "All tenants get identical experience. No ability to customize per customer requirements.",
+      "recommendation": "Implement a tenant configuration system with per-tenant settings. Support feature flags and gradual rollouts per tenant."
+    },
+    {
+      "id": "DS-038",
+      "category": "missing_multi_tenant_isolation",
+      "severity": "medium",
+      "module": "api_gateway.py",
+      "title": "No cross-tenant data sharing controls",
+      "description": "No mechanism for tenants to share data with each other (e.g., cooperative farms sharing weather data). No data sharing agreements or audit trail.",
+      "impact": "Cannot support cooperative or consortium use cases. No controlled data sharing.",
+      "recommendation": "Implement a data sharing framework with explicit consent, audit trail, and revocable permissions."
+    },
+    {
+      "id": "DS-039",
+      "category": "missing_security_hardening",
+      "severity": "critical",
+      "module": "api_gateway.py",
+      "title": "No authentication on API endpoints",
+      "description": "None of the REST endpoints require authentication. No JWT validation, API key checking, or session management is integrated.",
+      "impact": "Complete open access to all farm data and actuator commands. Critical security vulnerability.",
+      "recommendation": "Integrate ZeroTrustAuth into all API endpoints. Require JWT tokens with appropriate roles. Implement API key authentication for device-to-device communication."
+    },
+    {
+      "id": "DS-040",
+      "category": "missing_security_hardening",
+      "severity": "critical",
+      "module": "dashboard.py",
+      "title": "No authentication on WebSocket or REST endpoints",
+      "description": "Dashboard WebSocket and REST endpoints have no authentication. Anyone can connect and view/modify farm state.",
+      "impact": "Unauthorized access to real-time farm data and ability to send commands. Critical security vulnerability.",
+      "recommendation": "Add JWT authentication to WebSocket handshake. Require authentication on all REST endpoints. Implement role-based access control."
+    },
+    {
+      "id": "DS-041",
+      "category": "missing_security_hardening",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No token revocation or blacklist mechanism",
+      "description": "JWT tokens cannot be revoked before expiration. No blacklist for compromised tokens.",
+      "impact": "Stolen tokens remain valid until expiration. No way to quickly revoke access.",
+      "recommendation": "Implement a token blacklist (Redis-backed) for revoked tokens. Add refresh token rotation. Support emergency token revocation."
+    },
+    {
+      "id": "DS-042",
+      "category": "missing_security_hardening",
+      "severity": "high",
+      "module": "security.py",
+      "title": "No role hierarchy or permission-based access control",
+      "description": "Only flat role checking is supported. No role hierarchy (e.g., admin > operator > viewer) or fine-grained permissions.",
+      "impact": "Cannot express complex authorization policies. Over-privileged users.",
+      "recommendation": "Implement role inheritance and permission-based access control (PBAC). Support resource-level permissions (e.g., 'farm:read', 'farm:write')."
+    }
+  ],
+  "recommendations_priority": [
+    {
+      "priority": 1,
+      "action": "Implement authentication and authorization on all API and dashboard endpoints",
+      "gaps_addressed": ["DS-039", "DS-040"],
+      "estimated_effort": "2-3 weeks"
+    },
+    {
+      "priority": 2,
+      "action": "Add multi-tenant isolation across all modules",
+      "gaps_addressed": ["DS-030", "DS-031", "DS-032", "DS-033", "DS-034", "DS-035", "DS-036"],
+      "estimated_effort": "3-4 weeks"
+    },
+    {
+      "priority": 3,
+      "action": "Implement actual notification channel integrations",
+      "gaps_addressed": ["DS-009", "DS-010", "DS-011"],
+      "estimated_effort": "2-3 weeks"
+    },
+    {
+      "priority": 4,
+      "action": "Add comprehensive audit logging across all modules",
+      "gaps_addressed": ["DS-015", "DS-016", "DS-017", "DS-018", "DS-019", "DS-020", "DS-021"],
+      "estimated_effort": "2-3 weeks"
+    },
+    {
+      "priority": 5,
+      "action": "Implement ML model framework for recommendations and spoofing detection",
+      "gaps_addressed": ["DS-001", "DS-002", "DS-003", "DS-004", "DS-005", "DS-006", "DS-007"],
+      "estimated_effort": "4-6 weeks"
+    },
+    {
+      "priority": 6,
+      "action": "Add compliance features (data retention, GDPR, regulatory reporting)",
+      "gaps_addressed": ["DS-022", "DS-023", "DS-024", "DS-025", "DS-026", "DS-027", "DS-028", "DS-029"],
+      "estimated_effort": "3-4 weeks"
+    },
+    {
+      "priority": 7,
+      "action": "Harden security (token revocation, MFA, RBAC hierarchy)",
+      "gaps_addressed": ["DS-041", "DS-042"],
+      "estimated_effort": "2-3 weeks"
+    }
+  ]
+}

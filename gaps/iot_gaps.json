@@ -1,0 +1,469 @@
+{
+  "audit_metadata": {
+    "timestamp": "2026-10-04T09:13:00+03:00",
+    "auditor": "Wave 1 Cluster 3",
+    "scope": "src/iot/",
+    "modules_audited": [
+      "sensor_placement.py",
+      "context_broker.py",
+      "smart_models.py",
+      "data_pipeline.py"
+    ]
+  },
+  "summary": {
+    "total_gaps": 42,
+    "critical": 8,
+    "high": 14,
+    "medium": 12,
+    "low": 8
+  },
+  "gaps": [
+    {
+      "id": "IOT-001",
+      "category": "missing_protocol",
+      "severity": "critical",
+      "module": "context_broker.py",
+      "title": "No CoAP protocol support",
+      "description": "The context broker only supports HTTP/NGSI-LD. Constrained IoT devices typically use CoAP (RFC 7252) for communication. Without CoAP support, low-power sensors cannot interact with the broker directly.",
+      "impact": "Cannot deploy on constrained devices (Class 0/1 per RFC 7228). Forces all devices through HTTP gateways, adding latency and cost.",
+      "recommendation": "Add a CoAP client adapter (e.g., using aiocoap or libcoap) that maps CoAP resources to NGSI-LD entities. Support CoAP observe for subscriptions."
+    },
+    {
+      "id": "IOT-002",
+      "category": "missing_protocol",
+      "severity": "critical",
+      "module": "context_broker.py",
+      "title": "No LwM2M protocol support",
+      "description": "LwM2M (OMA Lightweight M2M) is the standard device management protocol for IoT. The broker has no LwM2M client/server, preventing device registration, firmware management, and remote configuration.",
+      "impact": "Cannot manage IoT devices using the standard LwM2M protocol. No device bootstrap, no remote configuration, no firmware update capability.",
+      "recommendation": "Implement an LwM2M client (e.g., using wakaama or leshan) that bridges LwM2M objects to NGSI-LD entities. Map LwM2M Object 3 (Device) to NGSI-LD Device model."
+    },
+    {
+      "id": "IOT-003",
+      "category": "missing_protocol",
+      "severity": "high",
+      "module": "context_broker.py",
+      "title": "No MQTT protocol support in broker",
+      "description": "While data_pipeline.py has an MQTT client, the context broker itself cannot accept MQTT-based entity updates. Many IoT platforms use MQTT as the primary ingestion protocol.",
+      "impact": "Cannot ingest sensor data via MQTT directly into the context broker. Requires an external MQTT-to-NGSI-LD bridge.",
+      "recommendation": "Add MQTT ingestion support to the broker (e.g., using paho-mqtt) that maps MQTT topics to NGSI-LD entity updates. Support MQTT 5.0 features."
+    },
+    {
+      "id": "IOT-004",
+      "category": "missing_device_management",
+      "severity": "critical",
+      "module": "context_broker.py",
+      "title": "No device registration and provisioning",
+      "description": "The broker has no device management API. There is no way to register new devices, provision credentials, or manage device lifecycle (activate/deactivate/retire).",
+      "impact": "Cannot onboard new IoT devices programmatically. No device identity management. No device grouping or tagging.",
+      "recommendation": "Add device management endpoints: POST /devices (register), GET /devices/{id} (get), PATCH /devices/{id} (update), DELETE /devices/{id} (deregister). Support device groups and tags."
+    },
+    {
+      "id": "IOT-005",
+      "category": "missing_device_management",
+      "severity": "critical",
+      "module": "context_broker.py",
+      "title": "No OTA firmware update support",
+      "description": "No Over-The-Air (OTA) update mechanism. Cannot push firmware updates to devices, track update status, or roll back failed updates.",
+      "impact": "Cannot remotely update device firmware. Physical access required for updates. No update scheduling or canary deployments.",
+      "recommendation": "Implement OTA update service: POST /devices/{id}/firmware (upload), POST /devices/{id}/update (trigger), GET /devices/{id}/update-status (track). Support delta updates and A/B partitioning."
+    },
+    {
+      "id": "IOT-006",
+      "category": "missing_device_management",
+      "severity": "high",
+      "module": "context_broker.py",
+      "title": "No device configuration management",
+      "description": "Cannot remotely configure device parameters (sampling rate, thresholds, reporting interval). No configuration versioning or rollback.",
+      "impact": "Cannot optimize device behavior remotely. Configuration changes require physical access or custom protocols.",
+      "recommendation": "Add configuration management: GET/PUT /devices/{id}/config. Support configuration templates, versioning, and rollback."
+    },
+    {
+      "id": "IOT-007",
+      "category": "missing_device_management",
+      "severity": "high",
+      "module": "context_broker.py",
+      "title": "No device health monitoring",
+      "description": "No heartbeat, health check, or device status monitoring. Cannot detect offline devices or anomalous behavior.",
+      "impact": "Cannot detect device failures proactively. No alerting on device health issues.",
+      "recommendation": "Add health monitoring: POST /devices/{id}/heartbeat, GET /devices/{id}/health. Implement device status tracking (online/offline/error) and alerting."
+    },
+    {
+      "id": "IOT-008",
+      "category": "missing_data_validation",
+      "severity": "critical",
+      "module": "data_pipeline.py",
+      "title": "No sensor data validation",
+      "description": "Sensor readings are stored without any validation. No range checks, type validation, schema validation, or anomaly detection. Invalid or corrupted data is persisted silently.",
+      "impact": "Data quality issues propagate downstream. Analytics and ML models receive invalid data. No data quality metrics.",
+      "recommendation": "Add validation layer: schema validation (JSON Schema), range checks (min/max per sensor type), rate-of-change checks, and anomaly detection (z-score, IQR). Reject or flag invalid readings."
+    },
+    {
+      "id": "IOT-009",
+      "category": "missing_data_validation",
+      "severity": "high",
+      "module": "data_pipeline.py",
+      "title": "No data quality metrics",
+      "description": "No tracking of data quality metrics: completeness, accuracy, timeliness, consistency. No data quality dashboard or reporting.",
+      "impact": "Cannot assess data reliability. No SLA monitoring for data quality.",
+      "recommendation": "Implement data quality metrics: % complete readings, % within expected range, latency distribution, missing data intervals. Expose via API."
+    },
+    {
+      "id": "IOT-010",
+      "category": "missing_data_validation",
+      "severity": "high",
+      "module": "smart_models.py",
+      "title": "No model validation",
+      "description": "Smart data models are created without validation. No schema validation, no property type checking, no required field enforcement, no value range validation.",
+      "impact": "Invalid entities can be created. No guarantee of data model compliance. Downstream consumers may fail.",
+      "recommendation": "Add model validation: validate against FIWARE Smart Data Models schemas, check required fields, validate property types and ranges, enforce NGSI-LD compliance."
+    },
+    {
+      "id": "IOT-011",
+      "category": "missing_scalability",
+      "severity": "critical",
+      "module": "data_pipeline.py",
+      "title": "No horizontal scaling support",
+      "description": "All components (MQTT, Kafka, TimescaleDB) are in-memory singletons. No clustering, partitioning, or load balancing. Cannot scale horizontally.",
+      "impact": "Single point of failure. Cannot handle high throughput. No fault tolerance.",
+      "recommendation": "Add clustering support: Kafka consumer groups, TimescaleDB multi-node, MQTT broker clustering. Implement partitioning by sensor_id or tenant."
+    },
+    {
+      "id": "IOT-012",
+      "category": "missing_scalability",
+      "severity": "high",
+      "module": "data_pipeline.py",
+      "title": "No backpressure handling",
+      "description": "No backpressure mechanism when consumers are slow or storage is full. Messages are queued in memory without bounds, risking OOM.",
+      "impact": "System crashes under load. No graceful degradation. Data loss when queues overflow.",
+      "recommendation": "Implement backpressure: bounded queues, flow control, load shedding, and circuit breakers. Add monitoring of queue depths."
+    },
+    {
+      "id": "IOT-013",
+      "category": "missing_scalability",
+      "severity": "high",
+      "module": "data_pipeline.py",
+      "title": "No data retention policy",
+      "description": "Only manual delete_old_data exists. No automatic retention policy, tiered storage, or data lifecycle management.",
+      "impact": "Storage grows unboundedly. No compliance with data retention regulations. High storage costs.",
+      "recommendation": "Implement retention policies: automatic deletion after N days, tiered storage (hot/warm/cold), compression of old data, archival to object storage."
+    },
+    {
+      "id": "IOT-014",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No data downsampling",
+      "description": "No automatic downsampling of old data. Raw high-frequency data is stored forever, wasting storage and slowing queries.",
+      "impact": "Storage inefficiency. Slow queries over long time ranges. No trade-off between resolution and retention.",
+      "recommendation": "Implement downsampling: store raw data for recent period, downsampled aggregates for older data. Use TimescaleDB continuous aggregates."
+    },
+    {
+      "id": "IOT-015",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "sensor_placement.py",
+      "title": "No support for large-scale placement",
+      "description": "Greedy Set Cover is O(n_sensors * n_targets) per iteration. For large deployments (10k+ sensors, 100k+ targets), this is too slow.",
+      "impact": "Cannot optimize placement for large farms or regional deployments. Timeout or excessive memory usage.",
+      "recommendation": "Add spatial indexing (R-tree, k-d tree) for faster coverage queries. Implement parallel greedy or distributed Set Cover. Add approximation guarantees."
+    },
+    {
+      "id": "IOT-016",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "context_broker.py",
+      "title": "No pagination support",
+      "description": "list_entities has a limit parameter but no offset/cursor. Cannot paginate through large result sets.",
+      "impact": "Cannot retrieve large entity sets. Memory exhaustion on large responses. Poor API usability.",
+      "recommendation": "Add pagination: offset/limit or cursor-based pagination. Support streaming for large result sets."
+    },
+    {
+      "id": "IOT-017",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "context_broker.py",
+      "title": "No batch operations",
+      "description": "No bulk create/update/delete operations. Each entity operation is a separate HTTP request. Inefficient for large-scale updates.",
+      "impact": "Slow bulk operations. High API call volume. No atomicity guarantees.",
+      "recommendation": "Add batch operations: POST /entities/bulk (create), PATCH /entities/bulk (update), DELETE /entities/bulk (delete). Support NGSI-LD batch operations."
+    },
+    {
+      "id": "IOT-018",
+      "category": "missing_protocol",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No MQTT QoS 1/2 support",
+      "description": "MQTT client only supports QoS 0 (fire-and-forget). No delivery guarantees, no exactly-once semantics.",
+      "impact": "Data loss when network is unreliable. No delivery guarantees for critical sensor data.",
+      "recommendation": "Implement QoS 1 (at least once) and QoS 2 (exactly once). Add message deduplication for QoS 2."
+    },
+    {
+      "id": "IOT-019",
+      "category": "missing_protocol",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No MQTT retained messages",
+      "description": "No support for MQTT retained messages. New subscribers cannot get the last known value immediately.",
+      "impact": "New consumers must wait for next reading. No last-known-value for dashboards or alerts.",
+      "recommendation": "Add retained message support: publish with retain=True, store last value per topic, deliver to new subscribers."
+    },
+    {
+      "id": "IOT-020",
+      "category": "missing_protocol",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No MQTT Last Will and Testament",
+      "description": "No LWT support. Cannot detect device disconnections gracefully or publish offline notifications.",
+      "impact": "Cannot detect device failures. No automatic offline alerting.",
+      "recommendation": "Add LWT support: register will message on connect, broker publishes on unexpected disconnect."
+    },
+    {
+      "id": "IOT-021",
+      "category": "missing_protocol",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No MQTT TLS/SSL support",
+      "description": "No TLS/SSL support for MQTT connections. Credentials and data transmitted in plaintext.",
+      "impact": "Security vulnerability. No encryption in transit. No mutual TLS authentication.",
+      "recommendation": "Add TLS/SSL support: CA certificates, client certificates, mutual TLS. Support TLS 1.3."
+    },
+    {
+      "id": "IOT-022",
+      "category": "missing_protocol",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No MQTT authentication",
+      "description": "No username/password or token-based authentication for MQTT connections.",
+      "impact": "Unauthorized access to MQTT broker. No device authentication.",
+      "recommendation": "Add authentication: username/password, token-based (JWT), mutual TLS. Support ACLs per device."
+    },
+    {
+      "id": "IOT-023",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No Kafka consumer groups",
+      "description": "No consumer group support. Cannot scale consumers horizontally or load-balance message processing.",
+      "impact": "Cannot scale message processing. No fault tolerance for consumers.",
+      "recommendation": "Add consumer group support: group membership, partition assignment, rebalancing, offset management."
+    },
+    {
+      "id": "IOT-024",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No Kafka schema registry integration",
+      "description": "No schema registry integration. Messages are JSON without schema enforcement or evolution.",
+      "impact": "Schema evolution issues. No compatibility checks. No Avro/Protobuf support.",
+      "recommendation": "Add schema registry integration: Confluent Schema Registry or Apicurio. Support Avro, Protobuf, JSON Schema."
+    },
+    {
+      "id": "IOT-025",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No Kafka exactly-once semantics",
+      "description": "No exactly-once processing semantics. Risk of duplicate processing on consumer failure.",
+      "impact": "Data duplication. Inaccurate aggregations. No transactional guarantees.",
+      "recommendation": "Implement exactly-once semantics: idempotent producers, transactional consumers, deduplication."
+    },
+    {
+      "id": "IOT-026",
+      "category": "missing_scalability",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No Kafka stream processing",
+      "description": "No stream processing capabilities: windowing, joins, aggregations, pattern detection. Only simple pub/sub.",
+      "impact": "Cannot do real-time analytics. No complex event processing. No stream-table joins.",
+      "recommendation": "Add stream processing: Kafka Streams or ksqlDB integration. Support windowing, joins, aggregations, CEP."
+    },
+    {
+      "id": "IOT-027",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No data anomaly detection",
+      "description": "No anomaly detection on sensor readings. Cannot detect sensor drift, stuck values, or outliers automatically.",
+      "impact": "Undetected sensor failures. No data quality monitoring. No proactive maintenance.",
+      "recommendation": "Add anomaly detection: z-score, IQR, isolation forest, or autoencoders. Support configurable thresholds per sensor type."
+    },
+    {
+      "id": "IOT-028",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No data gap detection",
+      "description": "No detection of missing data gaps. Cannot identify when sensors stop reporting or data is lost.",
+      "impact": "Silent data loss. No alerting on missing data. Incomplete analytics.",
+      "recommendation": "Add gap detection: expected reading intervals, gap identification, alerting on missing data."
+    },
+    {
+      "id": "IOT-029",
+      "category": "missing_data_validation",
+      "severity": "medium",
+      "module": "data_pipeline.py",
+      "title": "No data interpolation",
+      "description": "No interpolation of missing data points. Gaps in time-series data are not filled.",
+      "impact": "Incomplete analytics. No smooth visualizations. Missing data affects ML models.",
+      "recommendation": "Add interpolation: linear, spline, or Kalman filter. Support configurable interpolation methods."
+    },
+    {
+      "id": "IOT-030",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "context_broker.py",
+      "title": "No device shadow support",
+      "description": "No device shadow (digital twin) support. Cannot store desired vs reported state for devices.",
+      "impact": "Cannot manage device state asynchronously. No offline device management. No state reconciliation.",
+      "recommendation": "Add device shadow: GET/PUT /devices/{id}/shadow. Support desired/reported state, version tracking, and delta computation."
+    },
+    {
+      "id": "IOT-031",
+      "category": "missing_device_management",
+      "severity": "medium",
+      "module": "context_broker.py",
+      "title": "No device command dispatch",
+      "description": "No command dispatch mechanism. Cannot send commands to devices (e.g., start/stop sampling, change mode).",
+      "impact": "Cannot control devices remotely. No actuator support. No device automation.",
+      "recommendation": "Add command dispatch: POST /devices/{id}/commands. Support command queuing, status tracking, and timeout handling."
+    },
+    {
+      "id": "IOT-032",
+      "category": "missing_protocol",
+      "severity": "low",
+      "module": "context_broker.py",
+      "title": "No NGSI-LD temporal API support",
+      "description": "No support for NGSI-LD temporal queries (GET /temporal/entities). Cannot query entity history or time-series data.",
+      "impact": "Cannot retrieve historical entity state. No temporal analytics. No time-travel queries.",
+      "recommendation": "Add temporal API support: GET /temporal/entities, GET /temporal/entities/{id}/attrs. Support time-range queries and temporal aggregation."
+    },
+    {
+      "id": "IOT-033",
+      "category": "missing_protocol",
+      "severity": "low",
+      "module": "context_broker.py",
+      "title": "No NGSI-LD geo API support",
+      "description": "No support for NGSI-LD geo queries (near, within, intersects, etc.). Cannot query entities by location.",
+      "impact": "Cannot do spatial queries. No proximity-based analytics. No geo-fencing.",
+      "recommendation": "Add geo API support: GET /entities?georel=near&geometry=point. Support geo-fencing and spatial indexing."
+    },
+    {
+      "id": "IOT-034",
+      "category": "missing_protocol",
+      "severity": "low",
+      "module": "context_broker.py",
+      "title": "No NGSI-LD subscription update support",
+      "description": "Subscriptions can only be created and deleted, not updated. Cannot modify subscription criteria or notification endpoint.",
+      "impact": "Must delete and recreate subscriptions to change them. No subscription versioning.",
+      "recommendation": "Add subscription update: PATCH /subscriptions/{id}. Support partial updates and subscription versioning."
+    },
+    {
+      "id": "IOT-035",
+      "category": "missing_protocol",
+      "severity": "low",
+      "module": "context_broker.py",
+      "title": "No NGSI-LD @context resolution",
+      "description": "No JSON-LD @context resolution. Cannot compact or expand NGSI-LD entities. No linked data support.",
+      "impact": "Cannot integrate with linked data sources. No JSON-LD interoperability. No context management.",
+      "recommendation": "Add @context resolution: support JSON-LD compaction/expansion, context management, and linked data integration."
+    },
+    {
+      "id": "IOT-036",
+      "category": "missing_scalability",
+      "severity": "low",
+      "module": "sensor_placement.py",
+      "title": "No multi-objective optimization",
+      "description": "Only optimizes for coverage. No support for cost, energy, or reliability objectives. No Pareto frontier.",
+      "impact": "Cannot balance coverage with cost or energy. No trade-off analysis.",
+      "recommendation": "Add multi-objective optimization: weighted sum, epsilon-constraint, or NSGA-II. Support Pareto frontier visualization."
+    },
+    {
+      "id": "IOT-037",
+      "category": "missing_scalability",
+      "severity": "low",
+      "module": "sensor_placement.py",
+      "title": "No sensor failure modeling",
+      "description": "No modeling of sensor failures or redundancy. Cannot ensure coverage when sensors fail.",
+      "impact": "No fault tolerance. Single points of failure. No redundancy planning.",
+      "recommendation": "Add failure modeling: k-coverage, redundant placement, failure probability. Support reliability constraints."
+    },
+    {
+      "id": "IOT-038",
+      "category": "missing_scalability",
+      "severity": "low",
+      "module": "sensor_placement.py",
+      "title": "No dynamic reconfiguration",
+      "description": "Placement is static. Cannot adapt to changing conditions (new targets, moved sensors, changing priorities).",
+      "impact": "Cannot adapt to changing farm conditions. No real-time optimization. No incremental updates.",
+      "recommendation": "Add dynamic reconfiguration: incremental updates, real-time adaptation, event-driven re-optimization."
+    },
+    {
+      "id": "IOT-039",
+      "category": "missing_data_validation",
+      "severity": "low",
+      "module": "data_pipeline.py",
+      "title": "No data lineage tracking",
+      "description": "No tracking of data lineage: source, transformations, processing history. Cannot trace data from sensor to analytics.",
+      "impact": "Cannot debug data issues. No audit trail. No compliance with data governance.",
+      "recommendation": "Add lineage tracking: source sensor, timestamps, transformations, processing steps. Support lineage visualization."
+    },
+    {
+      "id": "IOT-040",
+      "category": "missing_data_validation",
+      "severity": "low",
+      "module": "data_pipeline.py",
+      "title": "No data versioning",
+      "description": "No versioning of sensor data. Cannot track changes or rollback to previous values.",
+      "impact": "Cannot audit data changes. No rollback capability. No data history.",
+      "recommendation": "Add data versioning: versioned records, change tracking, rollback support."
+    },
+    {
+      "id": "IOT-041",
+      "category": "missing_scalability",
+      "severity": "low",
+      "module": "data_pipeline.py",
+      "title": "No multi-tenancy support",
+      "description": "No multi-tenancy support. All data is shared. Cannot isolate data by tenant or organization.",
+      "impact": "Cannot serve multiple customers. No data isolation. No tenant-specific configurations.",
+      "recommendation": "Add multi-tenancy: tenant isolation, tenant-specific configurations, tenant-aware queries."
+    },
+    {
+      "id": "IOT-042",
+      "category": "missing_scalability",
+      "severity": "low",
+      "module": "data_pipeline.py",
+      "title": "No data encryption at rest",
+      "description": "No encryption of data at rest. Sensor data stored in plaintext.",
+      "impact": "Security vulnerability. No compliance with data protection regulations.",
+      "recommendation": "Add encryption at rest: AES-256 encryption, key management, envelope encryption."
+    }
+  ],
+  "recommendations": {
+    "immediate_priorities": [
+      "Implement CoAP and LwM2M protocol support for device communication",
+      "Add device management API (registration, provisioning, lifecycle)",
+      "Implement OTA firmware update mechanism",
+      "Add sensor data validation layer (schema, range, anomaly detection)",
+      "Implement horizontal scaling (clustering, partitioning, load balancing)",
+      "Add backpressure handling and flow control"
+    ],
+    "architecture_suggestions": [
+      "Adopt a microservices architecture: separate services for device management, data ingestion, data storage, and analytics",
+      "Use a message bus (Kafka or MQTT) for inter-service communication",
+      "Implement a device registry with LwM2M object mapping",
+      "Add a data quality service with validation, anomaly detection, and gap filling",
+      "Use TimescaleDB continuous aggregates for downsampling and retention",
+      "Implement a multi-tenant data isolation layer"
+    ],
+    "technology_recommendations": [
+      "CoAP: aiocoap (Python) or libcoap (C)",
+      "LwM2M: wakaama (C) or leshan (Java)",
+      "MQTT: paho-mqtt (Python) or Eclipse Mosquitto (broker)",
+      "Schema Registry: Confluent Schema Registry or Apicurio",
+      "Stream Processing: Kafka Streams or ksqlDB",
+      "Anomaly Detection: PyOD or isolation forest",
+      "Data Validation: JSON Schema or Pydantic"
+    ]
+  }
+}

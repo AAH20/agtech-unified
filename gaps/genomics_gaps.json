@@ -1,0 +1,234 @@
+{
+  "module": "genomics",
+  "audit_date": "2026-10-04",
+  "files_audited": [
+    "src/genomics/crispr.py",
+    "src/genomics/protein.py",
+    "src/genomics/__init__.py"
+  ],
+  "summary": {
+    "total_gaps": 18,
+    "critical": 5,
+    "high": 7,
+    "medium": 4,
+    "low": 2
+  },
+  "gaps": [
+    {
+      "id": "GEN-001",
+      "category": "algorithm",
+      "severity": "critical",
+      "title": "No real off-target prediction algorithm",
+      "description": "crispr.py uses a heuristic GC-content + k-mer complexity score. No genome-wide search, no alignment algorithm (Bowtie, BLAST, or seed-and-extend), no mismatch tolerance model, no off-target database integration.",
+      "current_state": "_off_target_score() computes a 0-1 score from GC deviation and 3-mer uniqueness. No actual sequence alignment against a reference genome.",
+      "expected": "Seed-and-extend or Burrows-Wheeler Transform (BWT) based search against a reference genome with configurable mismatch count (typically 0-4). Should return genomic coordinates, mismatch counts, and CFD (Cutting Frequency Determination) scores.",
+      "file": "src/genomics/crispr.py",
+      "lines": "76-86"
+    },
+    {
+      "id": "GEN-002",
+      "category": "algorithm",
+      "severity": "critical",
+      "title": "No validated efficiency scoring model",
+      "description": "Efficiency score is a simple heuristic (GC content + poly-T penalty + G bonus). No published scoring model implemented.",
+      "current_state": "_efficiency_score() uses GC content deviation, poly-T penalty, and a G-at-position-20 bonus.",
+      "expected": "Implement at least one published model: Doench 2016 (Rule Set 2), Horlbeck 2016, or Wang 2019. These use position-specific nucleotide features and machine learning models trained on experimental data.",
+      "file": "src/genomics/crispr.py",
+      "lines": "88-100"
+    },
+    {
+      "id": "GEN-003",
+      "category": "algorithm",
+      "severity": "high",
+      "title": "No sgRNA secondary structure prediction",
+      "description": "Guide RNA secondary structure affects Cas9 binding and cutting efficiency. No structure prediction is performed.",
+      "current_state": "Not implemented.",
+      "expected": "Minimum free energy (MFE) calculation using Nussinov or Zuker algorithm, or integration with ViennaRNA. Should flag guides with strong secondary structure in the seed region.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-004",
+      "category": "algorithm",
+      "severity": "high",
+      "title": "No multi-PAM support",
+      "description": "Only NGG PAM is supported. SpCas9 variants (e.g., NAG, NGA), Cas12a (TTTV), and other CRISPR systems are not handled.",
+      "current_state": "CRISPRDesigner hardcodes PAM detection for 'GG' dinucleotide only.",
+      "expected": "Configurable PAM patterns with IUPAC ambiguity codes. Support for major systems: SpCas9 (NGG), SpCas9-NG (NG), Cas12a (TTTV), Cas13 (no PAM, protospacer flanking site).",
+      "file": "src/genomics/crispr.py",
+      "lines": "26, 38-40"
+    },
+    {
+      "id": "GEN-005",
+      "category": "algorithm",
+      "severity": "high",
+      "title": "No protein secondary structure prediction",
+      "description": "protein.py has no secondary structure prediction (alpha-helix, beta-sheet, coil).",
+      "current_state": "Not implemented.",
+      "expected": "Chou-Fasman or GOR method for secondary structure prediction. Should output per-residue structure assignments and confidence scores.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-006",
+      "category": "algorithm",
+      "severity": "high",
+      "title": "No protein domain identification",
+      "description": "No domain or motif identification (e.g., Pfam, PROSITE patterns).",
+      "current_state": "Not implemented.",
+      "expected": "Integration with InterProScan or HMMER for domain identification. At minimum, pattern-based motif scanning for known agricultural protein families.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-007",
+      "category": "algorithm",
+      "severity": "medium",
+      "title": "No signal peptide or transmembrane region prediction",
+      "description": "Subcellular localization signals are not predicted. Important for agricultural biotechnology (e.g., targeting proteins to chloroplasts).",
+      "current_state": "Not implemented.",
+      "expected": "SignalP-style signal peptide prediction and TMHMM-style transmembrane helix prediction for agricultural protein engineering.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-008",
+      "category": "algorithm",
+      "severity": "medium",
+      "title": "No sequence alignment or homology search",
+      "description": "No pairwise or multiple sequence alignment. No BLAST integration for finding homologous sequences.",
+      "current_state": "Not implemented.",
+      "expected": "Smith-Waterman local alignment for pairwise comparison. BLAST API integration for database searches against nr/nt/Swiss-Prot.",
+      "file": "src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-009",
+      "category": "data_format",
+      "severity": "critical",
+      "title": "No FASTA file format support",
+      "description": "Neither module can read or write FASTA files. Users must pass raw strings.",
+      "current_state": "No FASTA parsing or serialization. design_guide() and analyze() accept only raw strings.",
+      "expected": "FASTA reader that handles multi-sequence files, headers, and line wrapping. FASTA writer for exporting results. Support for both nucleotide and protein FASTA.",
+      "file": "src/genomics/crispr.py, src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-010",
+      "category": "data_format",
+      "severity": "high",
+      "title": "No VCF (Variant Call Format) support",
+      "description": "No ability to read or write VCF files for variant data. Cannot integrate with variant calling pipelines.",
+      "current_state": "Not implemented.",
+      "expected": "VCF parser for reading variant calls (SNPs, indels). VCF writer for outputting designed guides with off-target annotations. Support for VCF 4.x specification.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-011",
+      "category": "data_format",
+      "severity": "medium",
+      "title": "No GenBank/EMBL format support",
+      "description": "No support for annotated sequence formats with features, qualifiers, and references.",
+      "current_state": "Not implemented.",
+      "expected": "GenBank flat-file parser for reading annotated sequences with CDS, gene, and regulatory feature annotations.",
+      "file": "src/genomics/crispr.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-012",
+      "category": "visualization",
+      "severity": "high",
+      "title": "No visualization or plotting",
+      "description": "No sequence maps, no guide RNA position plots, no protein property charts, no genome browser tracks.",
+      "current_state": "No visualization code. Results are returned as dataclass instances only.",
+      "expected": "Matplotlib/Plotly integration for: (1) guide RNA position maps on target sequence, (2) off-target score distribution plots, (3) protein property radar charts, (4) sequence logo for PAM sites, (5) genome browser-style track views.",
+      "file": "src/genomics/crispr.py, src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-013",
+      "category": "visualization",
+      "severity": "medium",
+      "title": "No HTML report generation",
+      "description": "No exportable analysis reports for sharing with collaborators or regulators.",
+      "current_state": "Not implemented.",
+      "expected": "HTML report template with embedded visualizations, summary tables, and downloadable results. Important for regulatory submissions in agricultural biotechnology.",
+      "file": "src/genomics/",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-014",
+      "category": "integration",
+      "severity": "critical",
+      "title": "No knowledge graph integration",
+      "description": "Genomics modules do not interact with AgriKnowledgeGraph. Designed guides and protein analyses are not stored as entities, and no trait-gene relationships are tracked.",
+      "current_state": "AgriKnowledgeGraph exists at src/digital_twin/knowledge_graph.py with full CRUD, but genomics modules have zero imports or references to it.",
+      "expected": "Store GuideRNA and ProteinResult as knowledge graph entities. Create relationships: GuideRNA -> targets -> Gene, Protein -> expressed_in -> Crop, GuideRNA -> designed_for -> Trait. Enable graph queries like 'find all guides targeting drought-resistance genes'.",
+      "file": "src/genomics/crispr.py, src/genomics/protein.py",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-015",
+      "category": "integration",
+      "severity": "high",
+      "title": "No platform API or dashboard integration",
+      "description": "Genomics results are not exposed through the decision support API or dashboard. No REST endpoints for guide design or protein analysis.",
+      "current_state": "No imports from src/decision_support/. No API routes registered.",
+      "expected": "REST endpoints: POST /api/v1/genomics/crispr/design, POST /api/v1/genomics/protein/analyze. Dashboard widgets for genomics results. Integration with the existing api_gateway.py.",
+      "file": "src/genomics/",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-016",
+      "category": "integration",
+      "severity": "high",
+      "title": "No external tool integration",
+      "description": "No integration with standard bioinformatics tools: Bowtie/Bowtie2 for alignment, BLAST for homology, ViennaRNA for structure, InterProScan for domains.",
+      "current_state": "Pure Python implementations only. No subprocess calls or API clients for external tools.",
+      "expected": "Adapter pattern for external tools with graceful fallback to built-in implementations. At minimum: Bowtie2 for off-target search, BLAST for homology, ViennaRNA for secondary structure.",
+      "file": "src/genomics/",
+      "lines": "N/A"
+    },
+    {
+      "id": "GEN-017",
+      "category": "algorithm",
+      "severity": "low",
+      "title": "No batch processing or parallelization",
+      "description": "design_guide() processes one sequence at a time. No batch API for designing guides across multiple targets.",
+      "current_state": "Single-sequence input only.",
+      "expected": "batch_design() accepting list of sequences with multiprocessing. Progress callbacks for long-running batch jobs.",
+      "file": "src/genomics/crispr.py",
+      "lines": "30-67"
+    },
+    {
+      "id": "GEN-018",
+      "category": "data_format",
+      "severity": "low",
+      "title": "No result serialization (JSON/CSV)",
+      "description": "Results cannot be exported to standard formats for downstream analysis.",
+      "current_state": "Results returned as dataclass instances only. No to_dict() or to_json() methods.",
+      "expected": "to_dict(), to_json(), to_csv() methods on GuideRNA and ProteinResult. Compatible with pandas DataFrame conversion.",
+      "file": "src/genomics/crispr.py, src/genomics/protein.py",
+      "lines": "N/A"
+    }
+  ],
+  "cross_cutting_gaps": [
+    {
+      "title": "Empty __init__.py",
+      "description": "src/genomics/__init__.py is empty (0 bytes). No public API exports, no module-level documentation."
+    },
+    {
+      "title": "No async support",
+      "description": "All methods are synchronous. No async/await for I/O-bound operations like external tool calls or API requests."
+    },
+    {
+      "title": "No caching",
+      "description": "No memoization or result caching. Repeated analysis of the same sequence recomputes everything."
+    },
+    {
+      "title": "No configuration",
+      "description": "No config file support for scoring model selection, tool paths, or API keys."
+    }
+  ]
+}

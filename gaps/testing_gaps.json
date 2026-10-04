@@ -1,0 +1,895 @@
+{
+  "audit_metadata": {
+    "project": "agtech-unified",
+    "audit_date": "2026-10-04",
+    "total_test_files": 28,
+    "total_source_files": 33,
+    "total_tests_approx": 350,
+    "test_framework": "pytest",
+    "property_based_framework": null,
+    "mutation_framework": null
+  },
+  "summary": {
+    "missing_property_based_tests": "CRITICAL — 0 property-based tests across entire codebase",
+    "missing_mutation_tests": "CRITICAL — 0 mutation tests across entire codebase",
+    "missing_concurrency_tests": "HIGH — Only asyncio smoke tests; no race condition, thread-safety, or parallel execution tests",
+    "missing_regression_tests": "HIGH — No regression tests referencing specific bugs or fixes",
+    "missing_edge_cases": "HIGH — Systematic gaps across all modules"
+  },
+  "gaps": [
+    {
+      "id": "PBT-001",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "all",
+      "description": "No property-based tests exist anywhere in the codebase. The hypothesis library is not used at all. Property-based testing is completely absent.",
+      "affected_files": ["tests/"],
+      "recommendation": "Add hypothesis-based property tests for all pure functions and algorithms. Start with: TSP solver (tour cost invariant), VRP solver (capacity constraint invariant), task allocation (all tasks assigned), coverage planner (path continuity), sensor placement (coverage ratio bounds), consensus (quorum calculation), ontology search (score monotonicity), knowledge graph (path existence transitivity), protein analysis (composition sums to 1), CRISPR design (guide length constant)."
+    },
+    {
+      "id": "PBT-002",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/optimization/tsp.py",
+      "description": "TSP solver has no property-based tests for: tour cost equals sum of edge distances, tour visits each city exactly once, Christofides approximation ratio ≤ 1.5× optimal for metric instances, nearest-neighbor produces valid tours.",
+      "affected_files": ["tests/test_tsp.py"],
+      "recommendation": "Use hypothesis to generate random distance matrices and verify tour validity invariants."
+    },
+    {
+      "id": "PBT-003",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/optimization/vrp.py",
+      "description": "VRP solver has no property-based tests for: total demand per route ≤ capacity, all customers visited exactly once, route cost calculation correctness.",
+      "affected_files": ["tests/test_vrp.py"],
+      "recommendation": "Use hypothesis to generate random VRP instances and verify capacity and coverage invariants."
+    },
+    {
+      "id": "PBT-004",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/task_allocation.py",
+      "description": "Task allocation has no property-based tests for: all tasks assigned exactly once, total cost equals sum of assigned costs, Hungarian algorithm produces optimal assignment for square matrices.",
+      "affected_files": ["tests/test_task_allocation.py"],
+      "recommendation": "Use hypothesis to generate random cost matrices and verify assignment invariants."
+    },
+    {
+      "id": "PBT-005",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/consensus.py",
+      "description": "Consensus has no property-based tests for: quorum = 2f+1, n ≥ 3f+1 constraint, tally correctness for random vote distributions.",
+      "affected_files": ["tests/test_consensus.py"],
+      "recommendation": "Use hypothesis to generate random vote lists and verify consensus invariants."
+    },
+    {
+      "id": "PBT-006",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/genomics/protein.py",
+      "description": "Protein analysis has no property-based tests for: composition sums to 1.0, molecular weight > 0 for valid sequences, isoelectric point in [0, 14], stability score in [0, 1].",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Use hypothesis to generate random valid amino acid sequences and verify invariants."
+    },
+    {
+      "id": "PBT-007",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/genomics/crispr.py",
+      "description": "CRISPR design has no property-based tests for: guide length always 20, PAM always ends with GG, GC content in [0, 1], off-target score in [0, 1].",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Use hypothesis to generate random DNA sequences and verify guide invariants."
+    },
+    {
+      "id": "PBT-008",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/ontology.py",
+      "description": "Ontology has no property-based tests for: search scores sorted descending, concept count tracks add/remove, RDF roundtrip preserves all concepts.",
+      "affected_files": ["tests/test_ontology.py"],
+      "recommendation": "Use hypothesis to generate random concept sets and verify search invariants."
+    },
+    {
+      "id": "PBT-009",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/knowledge_graph.py",
+      "description": "Knowledge graph has no property-based tests for: path_exists transitivity, entity count consistency, relationship count consistency, serialization roundtrip.",
+      "affected_files": ["tests/test_knowledge_graph.py"],
+      "recommendation": "Use hypothesis to generate random graph structures and verify invariants."
+    },
+    {
+      "id": "PBT-010",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/iot/data_pipeline.py",
+      "description": "Data pipeline has no property-based tests for: MQTT topic matching with wildcards, Kafka FIFO ordering, TimescaleDB aggregation correctness.",
+      "affected_files": ["tests/test_data_pipeline.py", "tests/test_streaming.py"],
+      "recommendation": "Use hypothesis to generate random topic patterns and verify matching logic."
+    },
+    {
+      "id": "PBT-011",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/decision_support/recommender.py",
+      "description": "Decision engine has no property-based tests for: priority_score in [0, 1], actions match recommendations, monotonicity (worse state → higher priority).",
+      "affected_files": ["tests/test_decision_support.py"],
+      "recommendation": "Use hypothesis to generate random FarmState values and verify invariants."
+    },
+    {
+      "id": "PBT-012",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/decision_support/gps_antispoof.py",
+      "description": "GPS anti-spoofing has no property-based tests for: haversine distance symmetry, distance ≥ 0, anomaly detection correctness.",
+      "affected_files": ["tests/test_gps_antispoof.py"],
+      "recommendation": "Use hypothesis to generate random GPS coordinates and verify distance invariants."
+    },
+    {
+      "id": "PBT-013",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/path_planning/coverage.py",
+      "description": "Coverage planner has no property-based tests for: path starts at start_point, consecutive points are connected, coverage_ratio in [0, 1].",
+      "affected_files": ["tests/test_coverage.py"],
+      "recommendation": "Use hypothesis to generate random field boundaries and verify path invariants."
+    },
+    {
+      "id": "PBT-014",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/iot/sensor_placement.py",
+      "description": "Sensor placement has no property-based tests for: coverage_ratio in [0, 1], selected sensors are valid indices, greedy selects minimal set.",
+      "affected_files": ["tests/test_sensor_placement.py"],
+      "recommendation": "Use hypothesis to generate random sensor/target positions and verify coverage invariants."
+    },
+    {
+      "id": "PBT-015",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/simulator.py",
+      "description": "Digital twin has no property-based tests for: crop_height ≤ max_crop_height, soil_moisture ≥ 0, growth ≥ 0, history length equals days.",
+      "affected_files": ["tests/test_digital_twin.py"],
+      "recommendation": "Use hypothesis to generate random initial states and verify simulation invariants."
+    },
+    {
+      "id": "PBT-016",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/decision_support/security.py",
+      "description": "Security module has no property-based tests for: JWT roundtrip consistency, rate limit sliding window correctness, role checking.",
+      "affected_files": ["tests/test_security.py"],
+      "recommendation": "Use hypothesis to generate random tokens and verify security invariants."
+    },
+    {
+      "id": "PBT-017",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/decision_support/alerts.py",
+      "description": "Alert manager has no property-based tests for: alert count consistency, severity filtering, threshold triggering logic.",
+      "affected_files": ["tests/test_alerts.py"],
+      "recommendation": "Use hypothesis to generate random threshold configurations and verify alert invariants."
+    },
+    {
+      "id": "PBT-018",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/swarm.py",
+      "description": "Swarm coordinator has no property-based tests for: task distribution correctness, agent capability matching, heartbeat timeout detection.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Use hypothesis to generate random agent/task configurations and verify distribution invariants."
+    },
+    {
+      "id": "PBT-019",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/optimization/edge_ai.py",
+      "description": "Edge AI has no property-based tests for: preprocess output shape, inference output keys, benchmark stats consistency.",
+      "affected_files": ["tests/test_edge_ai.py"],
+      "recommendation": "Use hypothesis to generate random image shapes and verify preprocessing invariants."
+    },
+    {
+      "id": "PBT-020",
+      "category": "property_based_tests",
+      "severity": "critical",
+      "module": "src/optimization/crop_vision.py",
+      "description": "Crop vision has no property-based tests for: probability sums to 1, confidence in [0, 1], health_score in [0, 1].",
+      "affected_files": ["tests/test_crop_vision.py"],
+      "recommendation": "Use hypothesis to generate random image sets and verify output invariants."
+    },
+    {
+      "id": "MUT-001",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "all",
+      "description": "No mutation testing is performed. No mutmut, cosmic-ray, or mutpy configuration or results exist.",
+      "affected_files": ["tests/"],
+      "recommendation": "Set up mutmut or cosmic-ray and run mutation testing on all modules. Target ≥ 70% mutation score."
+    },
+    {
+      "id": "MUT-002",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/optimization/tsp.py",
+      "description": "TSP solver has no mutation testing. Critical mutations: off-by-one in tour cost, incorrect MST edge selection, wrong matching logic.",
+      "affected_files": ["tests/test_tsp.py"],
+      "recommendation": "Run mutation testing on _tour_cost, _prim_mst, _min_weight_matching, _eulerian_tour."
+    },
+    {
+      "id": "MUT-003",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/optimization/vrp.py",
+      "description": "VRP solver has no mutation testing. Critical mutations: savings calculation, route merging logic, capacity check.",
+      "affected_files": ["tests/test_vrp.py"],
+      "recommendation": "Run mutation testing on _savings method."
+    },
+    {
+      "id": "MUT-004",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/task_allocation.py",
+      "description": "Task allocation has no mutation testing. Critical mutations: Hungarian algorithm pivot logic, greedy selection.",
+      "affected_files": ["tests/test_task_allocation.py"],
+      "recommendation": "Run mutation testing on _hungarian and _greedy methods."
+    },
+    {
+      "id": "MUT-005",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/consensus.py",
+      "description": "Consensus has no mutation testing. Critical mutations: quorum calculation, vote tally logic.",
+      "affected_files": ["tests/test_consensus.py"],
+      "recommendation": "Run mutation testing on tally_votes and quorum calculation."
+    },
+    {
+      "id": "MUT-006",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/genomics/protein.py",
+      "description": "Protein analysis has no mutation testing. Critical mutations: molecular weight calculation, composition normalization, stability score.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Run mutation testing on all analysis methods."
+    },
+    {
+      "id": "MUT-007",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/genomics/crispr.py",
+      "description": "CRISPR design has no mutation testing. Critical mutations: PAM site detection, GC content calculation, efficiency score.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Run mutation testing on design_guide and scoring methods."
+    },
+    {
+      "id": "MUT-008",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/ontology.py",
+      "description": "Ontology has no mutation testing. Critical mutations: search scoring, hierarchy cleanup on remove.",
+      "affected_files": ["tests/test_ontology.py"],
+      "recommendation": "Run mutation testing on search, remove_concept, and RDF methods."
+    },
+    {
+      "id": "MUT-009",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/knowledge_graph.py",
+      "description": "Knowledge graph has no mutation testing. Critical mutations: BFS path finding, relationship cleanup on entity removal.",
+      "affected_files": ["tests/test_knowledge_graph.py"],
+      "recommendation": "Run mutation testing on path_exists, remove_entity, and query methods."
+    },
+    {
+      "id": "MUT-010",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/iot/data_pipeline.py",
+      "description": "Data pipeline has no mutation testing. Critical mutations: topic matching wildcard logic, aggregation calculations.",
+      "affected_files": ["tests/test_data_pipeline.py", "tests/test_streaming.py"],
+      "recommendation": "Run mutation testing on _topic_matches, aggregate, and query methods."
+    },
+    {
+      "id": "MUT-011",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/decision_support/recommender.py",
+      "description": "Decision engine has no mutation testing. Critical mutations: threshold comparisons, priority score capping.",
+      "affected_files": ["tests/test_decision_support.py"],
+      "recommendation": "Run mutation testing on recommend method."
+    },
+    {
+      "id": "MUT-012",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/decision_support/gps_antispoof.py",
+      "description": "GPS anti-spoofing has no mutation testing. Critical mutations: haversine formula, anomaly thresholds.",
+      "affected_files": ["tests/test_gps_antispoof.py"],
+      "recommendation": "Run mutation testing on haversine_distance and detect_anomaly."
+    },
+    {
+      "id": "MUT-013",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/path_planning/coverage.py",
+      "description": "Coverage planner has no mutation testing. Critical mutations: bounding box calculation, direction alternation.",
+      "affected_files": ["tests/test_coverage.py"],
+      "recommendation": "Run mutation testing on _boustrophedon method."
+    },
+    {
+      "id": "MUT-014",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/iot/sensor_placement.py",
+      "description": "Sensor placement has no mutation testing. Critical mutations: greedy selection, coverage calculation.",
+      "affected_files": ["tests/test_sensor_placement.py"],
+      "recommendation": "Run mutation testing on _greedy method."
+    },
+    {
+      "id": "MUT-015",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/digital_twin/simulator.py",
+      "description": "Digital twin has no mutation testing. Critical mutations: growth calculation, stress factors.",
+      "affected_files": ["tests/test_digital_twin.py"],
+      "recommendation": "Run mutation testing on _step, _temp_factor, _water_factor."
+    },
+    {
+      "id": "MUT-016",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/decision_support/security.py",
+      "description": "Security has no mutation testing. Critical mutations: JWT validation, rate limit window logic.",
+      "affected_files": ["tests/test_security.py"],
+      "recommendation": "Run mutation testing on validate_token, check_rate_limit, authenticate."
+    },
+    {
+      "id": "MUT-017",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/decision_support/alerts.py",
+      "description": "Alert manager has no mutation testing. Critical mutations: threshold triggering, severity filtering.",
+      "affected_files": ["tests/test_alerts.py"],
+      "recommendation": "Run mutation testing on check_value, get_active_alerts, notify."
+    },
+    {
+      "id": "MUT-018",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/multi_agent/swarm.py",
+      "description": "Swarm has no mutation testing. Critical mutations: task distribution, capability matching.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Run mutation testing on distribute_tasks, _find_best_agent, _can_handle."
+    },
+    {
+      "id": "MUT-019",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/optimization/edge_ai.py",
+      "description": "Edge AI has no mutation testing. Critical mutations: preprocessing normalization, batch chunking.",
+      "affected_files": ["tests/test_edge_ai.py"],
+      "recommendation": "Run mutation testing on preprocess, infer_batch, benchmark."
+    },
+    {
+      "id": "MUT-020",
+      "category": "mutation_tests",
+      "severity": "critical",
+      "module": "src/optimization/crop_vision.py",
+      "description": "Crop vision has no mutation testing. Critical mutations: softmax calculation, health score, recommendations.",
+      "affected_files": ["tests/test_crop_vision.py"],
+      "recommendation": "Run mutation testing on _softmax, _health_score, _recommendations."
+    },
+    {
+      "id": "CONC-001",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/decision_support/security.py",
+      "description": "ZeroTrustAuth uses threading.Lock for rate limiting but has no concurrent access tests. Race conditions in check_rate_limit are untested.",
+      "affected_files": ["tests/test_security.py"],
+      "recommendation": "Add multi-threaded tests that hammer check_rate_limit from many threads simultaneously and verify no race conditions."
+    },
+    {
+      "id": "CONC-002",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/iot/data_pipeline.py",
+      "description": "MQTTClient uses threading.Lock for subscriber management but has no concurrent publish/subscribe tests. KafkaStream has no concurrent produce/consume tests.",
+      "affected_files": ["tests/test_data_pipeline.py", "tests/test_streaming.py"],
+      "recommendation": "Add multi-threaded tests for concurrent MQTT publish/subscribe and Kafka produce/consume."
+    },
+    {
+      "id": "CONC-003",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/decision_support/alerts.py",
+      "description": "AlertManager.notify is async but only tested with asyncio.run in isolation. No concurrent notification tests.",
+      "affected_files": ["tests/test_alerts.py"],
+      "recommendation": "Add tests for concurrent alert notifications and handler execution."
+    },
+    {
+      "id": "CONC-004",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/decision_support/dashboard.py",
+      "description": "FarmDashboard has WebSocket support and broadcast logic but no concurrent client tests.",
+      "affected_files": ["tests/test_dashboard.py"],
+      "recommendation": "Add tests for concurrent WebSocket connections and broadcast to multiple clients."
+    },
+    {
+      "id": "CONC-005",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/multi_agent/swarm.py",
+      "description": "SwarmCoordinator has no concurrent task distribution or heartbeat tests.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Add tests for concurrent task submission and heartbeat updates."
+    },
+    {
+      "id": "CONC-006",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/optimization/edge_ai.py",
+      "description": "EdgeAIInference has no concurrent inference tests. Thread safety of ONNX Runtime sessions is untested.",
+      "affected_files": ["tests/test_edge_ai.py"],
+      "recommendation": "Add tests for concurrent infer calls from multiple threads."
+    },
+    {
+      "id": "CONC-007",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/decision_support/api_gateway.py",
+      "description": "API Gateway has no concurrent request tests. TenantRegistry is not thread-safe.",
+      "affected_files": ["tests/test_api_gateway.py"],
+      "recommendation": "Add tests for concurrent API requests and tenant/farm CRUD operations."
+    },
+    {
+      "id": "CONC-008",
+      "category": "concurrency_tests",
+      "severity": "high",
+      "module": "src/iot/context_broker.py",
+      "description": "NGSI-LD broker has no concurrent request tests.",
+      "affected_files": ["tests/test_context_broker.py"],
+      "recommendation": "Add tests for concurrent entity CRUD operations."
+    },
+    {
+      "id": "REG-001",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "all",
+      "description": "No regression tests exist. No tests reference specific bugs, issues, or fixes. There is no mechanism to prevent reintroduction of fixed bugs.",
+      "affected_files": ["tests/"],
+      "recommendation": "Add regression tests for every bug fix. Each test should reference the issue/bug it prevents."
+    },
+    {
+      "id": "REG-002",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/optimization/tsp.py",
+      "description": "No regression tests for TSP edge cases: empty cities, single city, two cities, non-metric warning.",
+      "affected_files": ["tests/test_tsp.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-003",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/optimization/vrp.py",
+      "description": "No regression tests for VRP edge cases: zero capacity, demand exceeding capacity, empty customers.",
+      "affected_files": ["tests/test_vrp.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-004",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/multi_agent/task_allocation.py",
+      "description": "No regression tests for allocation edge cases: non-square matrix, empty tasks, more tasks than agents.",
+      "affected_files": ["tests/test_task_allocation.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-005",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/multi_agent/consensus.py",
+      "description": "No regression tests for consensus edge cases: n < 3f+1, empty votes, conflicting votes.",
+      "affected_files": ["tests/test_consensus.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-006",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/genomics/protein.py",
+      "description": "No regression tests for protein analysis edge cases: empty sequence, invalid amino acid, single amino acid.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-007",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/genomics/crispr.py",
+      "description": "No regression tests for CRISPR edge cases: empty sequence, no PAM site, PAM at start of sequence.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-008",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/digital_twin/ontology.py",
+      "description": "No regression tests for ontology edge cases: duplicate ID, missing concept, empty search query.",
+      "affected_files": ["tests/test_ontology.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-009",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/digital_twin/knowledge_graph.py",
+      "description": "No regression tests for knowledge graph edge cases: duplicate entity, missing entity in relationship, self-path.",
+      "affected_files": ["tests/test_knowledge_graph.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-010",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/iot/data_pipeline.py",
+      "description": "No regression tests for data pipeline edge cases: unknown aggregation, empty topic consumption, binary payload handling.",
+      "affected_files": ["tests/test_data_pipeline.py", "tests/test_streaming.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-011",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/decision_support/recommender.py",
+      "description": "No regression tests for decision engine edge cases: all zeros, extreme values, boundary thresholds.",
+      "affected_files": ["tests/test_decision_support.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-012",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/decision_support/gps_antispoof.py",
+      "description": "No regression tests for GPS edge cases: null island (0,0), zero timestamp delta, single reading history.",
+      "affected_files": ["tests/test_gps_antispoof.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-013",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/path_planning/coverage.py",
+      "description": "No regression tests for coverage edge cases: zero swath width, small boundary, unknown algorithm.",
+      "affected_files": ["tests/test_coverage.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-014",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/iot/sensor_placement.py",
+      "description": "No regression tests for sensor placement edge cases: zero radius, empty inputs, uncoverable targets.",
+      "affected_files": ["tests/test_sensor_placement.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-015",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/digital_twin/simulator.py",
+      "description": "No regression tests for simulation edge cases: negative days, zero days, extreme temperature, zero moisture.",
+      "affected_files": ["tests/test_digital_twin.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-016",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/decision_support/security.py",
+      "description": "No regression tests for security edge cases: expired token, invalid signature, malformed token, empty roles.",
+      "affected_files": ["tests/test_security.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-017",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/decision_support/alerts.py",
+      "description": "No regression tests for alert edge cases: unknown alert ID, duplicate thresholds, empty channels.",
+      "affected_files": ["tests/test_alerts.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-018",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/multi_agent/swarm.py",
+      "description": "No regression tests for swarm edge cases: duplicate registration, unknown agent heartbeat, no matching agent.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-019",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/optimization/edge_ai.py",
+      "description": "No regression tests for edge AI edge cases: missing file, wrong extension, empty images, no model loaded.",
+      "affected_files": ["tests/test_edge_ai.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "REG-020",
+      "category": "regression_tests",
+      "severity": "high",
+      "module": "src/optimization/crop_vision.py",
+      "description": "No regression tests for crop vision edge cases: no model configured, empty images, partial models.",
+      "affected_files": ["tests/test_crop_vision.py"],
+      "recommendation": "Add regression tests for each discovered edge case."
+    },
+    {
+      "id": "EDGE-001",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/tsp.py",
+      "description": "Missing edge case tests: duplicate city names, negative distances, very large instances (n=100+), asymmetric distance matrix.",
+      "affected_files": ["tests/test_tsp.py"],
+      "recommendation": "Add tests for duplicate cities, negative distances, large instances."
+    },
+    {
+      "id": "EDGE-002",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/vrp.py",
+      "description": "Missing edge case tests: negative demands, zero demands, duplicate customer positions, very large capacity.",
+      "affected_files": ["tests/test_vrp.py"],
+      "recommendation": "Add tests for negative demands, zero demands, duplicate positions."
+    },
+    {
+      "id": "EDGE-003",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/multi_agent/task_allocation.py",
+      "description": "Missing edge case tests: negative costs, zero costs, duplicate agent names, single agent many tasks.",
+      "affected_files": ["tests/test_task_allocation.py"],
+      "recommendation": "Add tests for negative costs, zero costs, duplicate agents."
+    },
+    {
+      "id": "EDGE-004",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/multi_agent/consensus.py",
+      "description": "Missing edge case tests: max_faulty=0 with n>1, very large n, all votes same value, all votes different.",
+      "affected_files": ["tests/test_consensus.py"],
+      "recommendation": "Add tests for max_faulty=0 with n>1, large n, unanimous votes."
+    },
+    {
+      "id": "EDGE-005",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/genomics/protein.py",
+      "description": "Missing edge case tests: single amino acid, all same amino acid, very long sequence, lowercase input.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add tests for single AA, homopolymer, long sequence, lowercase."
+    },
+    {
+      "id": "EDGE-006",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/genomics/crispr.py",
+      "description": "Missing edge case tests: PAM at very start (position 0), PAM at very end, overlapping PAM sites, lowercase input.",
+      "affected_files": ["tests/test_genomics.py"],
+      "recommendation": "Add tests for PAM at boundaries, overlapping PAMs, lowercase."
+    },
+    {
+      "id": "EDGE-007",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/digital_twin/ontology.py",
+      "description": "Missing edge case tests: empty search query, whitespace-only query, very long query, special characters in labels.",
+      "affected_files": ["tests/test_ontology.py"],
+      "recommendation": "Add tests for empty/whitespace queries, special characters."
+    },
+    {
+      "id": "EDGE-008",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/digital_twin/knowledge_graph.py",
+      "description": "Missing edge case tests: self-loop relationship, duplicate relationships, very deep paths, cyclic graphs.",
+      "affected_files": ["tests/test_knowledge_graph.py"],
+      "recommendation": "Add tests for self-loops, duplicate rels, cycles, deep paths."
+    },
+    {
+      "id": "EDGE-009",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/iot/data_pipeline.py",
+      "description": "Missing edge case tests: unknown aggregation type, query with no filters, insert with missing time field, very large batch insert.",
+      "affected_files": ["tests/test_data_pipeline.py", "tests/test_streaming.py"],
+      "recommendation": "Add tests for unknown aggregation, no-filter query, large batch."
+    },
+    {
+      "id": "EDGE-010",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/recommender.py",
+      "description": "Missing edge case tests: boundary values (exactly 0.2, 0.4, 0.7, 38, 5), negative values, values > 1.0 for normalized fields.",
+      "affected_files": ["tests/test_decision_support.py"],
+      "recommendation": "Add tests for boundary values and out-of-range inputs."
+    },
+    {
+      "id": "EDGE-011",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/gps_antispoof.py",
+      "description": "Missing edge case tests: null island (0,0), identical consecutive readings, negative timestamps, very large coordinates.",
+      "affected_files": ["tests/test_gps_antispoof.py"],
+      "recommendation": "Add tests for null island, identical readings, negative timestamps."
+    },
+    {
+      "id": "EDGE-012",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/path_planning/coverage.py",
+      "description": "Missing edge case tests: triangular field, very large field, very small swath width, start point outside boundary.",
+      "affected_files": ["tests/test_coverage.py"],
+      "recommendation": "Add tests for triangular field, large field, small swath."
+    },
+    {
+      "id": "EDGE-013",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/iot/sensor_placement.py",
+      "description": "Missing edge case tests: negative coordinates, very large radius, single sensor single target, all sensors at same position.",
+      "affected_files": ["tests/test_sensor_placement.py"],
+      "recommendation": "Add tests for negative coords, large radius, coincident sensors."
+    },
+    {
+      "id": "EDGE-014",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/digital_twin/simulator.py",
+      "description": "Missing edge case tests: very large days (1000+), negative initial height, moisture > 1.0, temperature exactly at boundaries (0, 45).",
+      "affected_files": ["tests/test_digital_twin.py"],
+      "recommendation": "Add tests for large days, negative height, boundary temperatures."
+    },
+    {
+      "id": "EDGE-015",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/security.py",
+      "description": "Missing edge case tests: malformed JWT (not 3 parts), empty token, very long token, token with special characters.",
+      "affected_files": ["tests/test_security.py"],
+      "recommendation": "Add tests for malformed JWTs, empty tokens, special characters."
+    },
+    {
+      "id": "EDGE-016",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/alerts.py",
+      "description": "Missing edge case tests: acknowledge unknown alert, resolve unknown alert, duplicate thresholds for same metric, threshold with min > max.",
+      "affected_files": ["tests/test_alerts.py"],
+      "recommendation": "Add tests for unknown alert IDs, duplicate thresholds, invalid thresholds."
+    },
+    {
+      "id": "EDGE-017",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/multi_agent/swarm.py",
+      "description": "Missing edge case tests: unregister unknown agent, distribute with no agents, distribute with no tasks, agent with no capabilities.",
+      "affected_files": ["tests/test_swarm.py"],
+      "recommendation": "Add tests for unknown agent unregister, empty swarm, no-capability agent."
+    },
+    {
+      "id": "EDGE-018",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/edge_ai.py",
+      "description": "Missing edge case tests: batch_size > number of tensors, batch_size = 0, very large batch, mismatched input shape.",
+      "affected_files": ["tests/test_edge_ai.py"],
+      "recommendation": "Add tests for batch_size edge cases, shape mismatches."
+    },
+    {
+      "id": "EDGE-019",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/crop_vision.py",
+      "description": "Missing edge case tests: single image, very large batch, mismatched model output shape, all models None.",
+      "affected_files": ["tests/test_crop_vision.py"],
+      "recommendation": "Add tests for single image, large batch, shape mismatches."
+    },
+    {
+      "id": "EDGE-020",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/api_gateway.py",
+      "description": "Missing edge case tests: invalid tenant ID, invalid farm ID, missing required fields, very long names, special characters in names.",
+      "affected_files": ["tests/test_api_gateway.py"],
+      "recommendation": "Add tests for invalid IDs, missing fields, long names, special chars."
+    },
+    {
+      "id": "EDGE-021",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/iot/context_broker.py",
+      "description": "Missing edge case tests: network timeout, malformed JSON response, very large entity, special characters in entity ID.",
+      "affected_files": ["tests/test_context_broker.py"],
+      "recommendation": "Add tests for timeouts, malformed responses, large entities."
+    },
+    {
+      "id": "EDGE-022",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/iot/smart_models.py",
+      "description": "Missing edge case tests: empty entity ID, very long entity ID, special characters in ID, negative battery level.",
+      "affected_files": ["tests/test_smart_models.py"],
+      "recommendation": "Add tests for empty/long/special entity IDs, negative battery."
+    },
+    {
+      "id": "EDGE-023",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/decision_support/dashboard.py",
+      "description": "Missing edge case tests: negative update_interval, zero max_history, very large max_history, concurrent state updates.",
+      "affected_files": ["tests/test_dashboard.py"],
+      "recommendation": "Add tests for negative interval, zero history, large history."
+    },
+    {
+      "id": "EDGE-024",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/gpu_tsp.py",
+      "description": "Missing edge case tests: GPU TSP with invalid algorithm, empty cities, single city, very large instance.",
+      "affected_files": ["tests/test_gpu_tsp.py"],
+      "recommendation": "Add tests for invalid algorithm, empty/single/large instances."
+    },
+    {
+      "id": "EDGE-025",
+      "category": "edge_cases",
+      "severity": "high",
+      "module": "src/optimization/gpu_vrp.py",
+      "description": "Missing edge case tests: GPU VRP with invalid algorithm, empty customers, single customer, very large instance.",
+      "affected_files": ["tests/test_gpu_vrp.py"],
+      "recommendation": "Add tests for invalid algorithm, empty/single/large instances."
+    }
+  ],
+  "module_coverage": {
+    "src/optimization/tsp.py": {"tests": 9, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/optimization/vrp.py": {"tests": 11, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/optimization/gpu_tsp.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 3},
+    "src/optimization/gpu_vrp.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 3},
+    "src/optimization/edge_ai.py": {"tests": 14, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/optimization/crop_vision.py": {"tests": 14, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/multi_agent/task_allocation.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/multi_agent/consensus.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/multi_agent/swarm.py": {"tests": 11, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/recommender.py": {"tests": 9, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/gps_antispoof.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/security.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/alerts.py": {"tests": 12, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/dashboard.py": {"tests": 12, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/decision_support/api_gateway.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/digital_twin/simulator.py": {"tests": 10, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/digital_twin/ontology.py": {"tests": 17, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/digital_twin/knowledge_graph.py": {"tests": 22, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/genomics/crispr.py": {"tests": 8, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/genomics/protein.py": {"tests": 9, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/iot/data_pipeline.py": {"tests": 20, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/iot/sensor_placement.py": {"tests": 9, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/iot/context_broker.py": {"tests": 8, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/iot/smart_models.py": {"tests": 8, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4},
+    "src/path_planning/coverage.py": {"tests": 9, "property_based": 0, "mutation": 0, "concurrency": 0, "regression": 0, "edge_cases": 4}
+  },
+  "priority_recommendations": [
+    "1. CRITICAL: Add property-based tests using hypothesis for all pure functions and algorithms. Start with TSP, VRP, task allocation, consensus, and genomics modules.",
+    "2. CRITICAL: Set up mutation testing (mutmut or cosmic-ray) and achieve ≥ 70% mutation score on core algorithms.",
+    "3. HIGH: Add concurrency tests for all modules with shared state (security, data pipeline, alerts, dashboard, swarm).",
+    "4. HIGH: Add regression tests for every bug fix with issue references.",
+    "5. HIGH: Add systematic edge case tests for boundary values, invalid inputs, and extreme values across all modules.",
+    "6. MEDIUM: Add tests for GPU-specific edge cases (device fallback, large instances).",
+    "7. MEDIUM: Add tests for API gateway error handling and input validation.",
+    "8. MEDIUM: Add tests for context broker network error handling."
+  ]
+}

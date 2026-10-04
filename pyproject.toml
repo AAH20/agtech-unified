@@ -38,6 +38,8 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest==8.3.4",
+    "rdflib>=7.0,<8",
+    "tomli>=2.0; python_version < '3.11'",
     "httpx==0.28.1",
     "onnx==1.17.0",
     "hypothesis==6.168.3",

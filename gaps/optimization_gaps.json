@@ -1,0 +1,527 @@
+[
+  {
+    "module": "tsp",
+    "gap_type": "missing_algorithm",
+    "description": "No 2-opt or 3-opt local search improvement. Christofides + nearest neighbor produce tours that can be significantly improved by local search. 2-opt is the most basic and effective improvement heuristic.",
+    "severity": "high",
+    "recommended_fix": "Add a 2-opt improvement pass after Christofides or nearest neighbor. Iterate over all pairs of edges and reverse segments when it reduces tour cost. O(n^2) per iteration, typically converges in O(n) iterations."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_algorithm",
+    "description": "No exact solver for small instances. For n <= 15-20, Held-Karp dynamic programming (O(n^2 * 2^n)) gives optimal solutions. Useful for benchmarking heuristic quality.",
+    "severity": "medium",
+    "recommended_fix": "Implement Held-Karp DP algorithm. Use bitmask to represent subsets. Return optimal tour for small instances."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_algorithm",
+    "description": "No metaheuristic (simulated annealing, tabu search, genetic algorithm). For large instances (n > 100), these can find better solutions than pure construction heuristics.",
+    "severity": "medium",
+    "recommended_fix": "Implement simulated annealing with 2-opt moves. Temperature schedule: geometric cooling. Accept worse moves with probability exp(-delta/T)."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation for negative distances. Negative distances can cause incorrect MST, matching, and tour cost calculations.",
+    "severity": "high",
+    "recommended_fix": "Add validation in TSPInstance.__post_init__: check all distances >= 0. Raise ValueError if any negative distance found."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation for NaN or Inf in distance matrix. These can propagate silently and produce NaN costs.",
+    "severity": "high",
+    "recommended_fix": "Add validation in TSPInstance.__post_init__: check all distances are finite (not NaN, not Inf). Raise ValueError if any non-finite value found."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation that diagonal is zero. Non-zero self-distances indicate data errors and affect tour cost.",
+    "severity": "medium",
+    "recommended_fix": "Add validation in TSPInstance.__post_init__: check distance_matrix[i][i] == 0 for all i. Raise ValueError if violated."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No support for asymmetric TSP (ATSP). Real-world agricultural routing may have asymmetric distances (one-way fields, elevation changes).",
+    "severity": "medium",
+    "recommended_fix": "Add ATSP support: detect asymmetry, use Jonker-Volgenant algorithm or transform to symmetric TSP via doubling."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for duplicate city names. Duplicate names make tour interpretation ambiguous.",
+    "severity": "low",
+    "recommended_fix": "Add validation in TSPInstance.__post_init__: check for duplicate city names. Raise ValueError if duplicates found."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_performance_optimization",
+    "description": "No caching of computed distances. Repeated solves with same instance recompute everything.",
+    "severity": "low",
+    "recommended_fix": "Add LRU cache for tour results keyed by instance hash. Useful for repeated queries."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_integration",
+    "description": "No integration with GPU TSP solver. Users cannot transparently fall back to GPU acceleration.",
+    "severity": "medium",
+    "recommended_fix": "Add a unified solve() method that dispatches to GPU solver when CUDA is available, with CPU fallback."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_integration",
+    "description": "No integration with VRP solver. TSP is a special case of VRP (single vehicle, infinite capacity). Users must choose between modules.",
+    "severity": "low",
+    "recommended_fix": "Add a convenience method or factory that creates a VRP instance from TSP and solves it, or document the relationship."
+  },
+  {
+    "module": "tsp",
+    "gap_type": "missing_documentation",
+    "description": "No complexity analysis or algorithm references. Users cannot make informed choices about which algorithm to use.",
+    "severity": "low",
+    "recommended_fix": "Add docstrings with time/space complexity for each algorithm and references to original papers."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No 2-opt improvement for individual routes. Clarke-Wright savings produces routes that can be improved by local search.",
+    "severity": "high",
+    "recommended_fix": "Add intra-route 2-opt improvement after savings algorithm. For each route, iterate over edge pairs and reverse segments when beneficial."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No inter-route improvement (relocate, exchange, cross-exchange). Moving customers between routes can reduce total cost.",
+    "severity": "high",
+    "recommended_fix": "Add relocate and exchange operators. For each customer, try moving to best position in other routes. Accept if total cost decreases."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No metaheuristic (simulated annealing, tabu search, adaptive large neighborhood search). State-of-the-art VRP solvers use ALNS.",
+    "severity": "medium",
+    "recommended_fix": "Implement ALNS with destroy/repair operators. Destroy: remove q customers. Repair: greedy reinsertion. Accept with SA criterion."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No sweep algorithm. Sweep is a simple and effective construction heuristic for VRP, especially for circular depot layouts.",
+    "severity": "low",
+    "recommended_fix": "Implement sweep algorithm: sort customers by angle from depot, assign to routes in order respecting capacity."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation for negative demands. Negative demands are physically meaningless and can cause incorrect capacity checks.",
+    "severity": "high",
+    "recommended_fix": "Add validation in VRPInstance.__post_init__: check all demands >= 0. Raise ValueError if any negative demand found."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_edge_case",
+    "description": "No support for time windows (VRPTW). Agricultural operations often have time constraints (e.g., pesticide application windows).",
+    "severity": "medium",
+    "recommended_fix": "Add optional time_windows parameter to VRPInstance. Modify savings algorithm to respect time window constraints."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_edge_case",
+    "description": "No support for multiple depots. Large farms may have multiple depots (e.g., north and south storage).",
+    "severity": "medium",
+    "recommended_fix": "Add multi-depot VRP support: assign customers to nearest depot, solve separate VRP for each."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_edge_case",
+    "description": "No support for heterogeneous fleet. Farms may have vehicles with different capacities (e.g., small drones + large tractors).",
+    "severity": "medium",
+    "recommended_fix": "Add vehicle_types parameter with different capacities. Modify savings algorithm to consider vehicle type when merging routes."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_error_handling",
+    "description": "No validation for NaN or Inf in distance matrix or demands. These can propagate silently.",
+    "severity": "high",
+    "recommended_fix": "Add validation in VRPInstance.__post_init__: check all distances and demands are finite. Raise ValueError if any non-finite value found."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_error_handling",
+    "description": "No validation that distance matrix is symmetric. Asymmetric distances may indicate data errors.",
+    "severity": "low",
+    "recommended_fix": "Add warning in VRPInstance.__post_init__ if distance matrix is significantly asymmetric."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_performance_optimization",
+    "description": "No route improvement post-processing. Savings algorithm alone produces suboptimal routes.",
+    "severity": "high",
+    "recommended_fix": "Add post-processing: intra-route 2-opt, inter-route relocate, and exchange. Run until no improvement."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_integration",
+    "description": "No integration with GPU VRP solver. Users cannot transparently use GPU acceleration.",
+    "severity": "medium",
+    "recommended_fix": "Add a unified solve() method that dispatches to GPU solver when CUDA is available, with CPU fallback."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_integration",
+    "description": "No integration with sensor placement module. Depot location could be optimized based on sensor coverage.",
+    "severity": "low",
+    "recommended_fix": "Add a method to optimize depot location given customer positions and sensor coverage data."
+  },
+  {
+    "module": "vrp",
+    "gap_type": "missing_documentation",
+    "description": "No complexity analysis or algorithm references. Users cannot make informed choices.",
+    "severity": "low",
+    "recommended_fix": "Add docstrings with time/space complexity and references to Clarke-Wright (1964) and other algorithms."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_algorithm",
+    "description": "No Christofides algorithm on GPU. Christofides provides 1.5-approximation guarantee, which is stronger than nearest neighbor + 2-opt.",
+    "severity": "medium",
+    "recommended_fix": "Implement Christofides on GPU: MST via Prim's on GPU, matching on GPU, Eulerian tour on GPU."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_algorithm",
+    "description": "No 3-opt improvement. 3-opt can escape local optima that 2-opt cannot.",
+    "severity": "low",
+    "recommended_fix": "Add 3-opt improvement pass. More expensive (O(n^3) per iteration) but can find better solutions."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation of distance matrix dimensions. Non-square or empty matrices can cause CUDA errors.",
+    "severity": "high",
+    "recommended_fix": "Add validation in solve(): check distance_matrix is square and matches len(cities). Raise ValueError if invalid."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_edge_case",
+    "description": "No handling for NaN or Inf in distance matrix. These can cause CUDA kernel failures or NaN results.",
+    "severity": "high",
+    "recommended_fix": "Add validation in solve(): check all values are finite. Raise ValueError if any non-finite value found."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_error_handling",
+    "description": "No fallback to CPU on GPU failure. CUDA OOM or kernel errors crash the solver.",
+    "severity": "high",
+    "recommended_fix": "Wrap GPU operations in try/except. On RuntimeError (CUDA OOM, etc.), fall back to CPU implementation."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for CUDA unavailability. If torch.cuda.is_available() returns False but user requests CUDA, error is unclear.",
+    "severity": "medium",
+    "recommended_fix": "Add explicit check: if device == 'cuda' and not torch.cuda.is_available(), raise RuntimeError with clear message."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_performance_optimization",
+    "description": "No memory-efficient batching for large instances. Current batching loads all instances into GPU memory at once.",
+    "severity": "medium",
+    "recommended_fix": "Add chunked batch processing: process instances in chunks that fit in GPU memory."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_performance_optimization",
+    "description": "No mixed precision support. float32 may be insufficient for some applications, float16 may be faster.",
+    "severity": "low",
+    "recommended_fix": "Add dtype parameter to support float16, bfloat16, float64."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_integration",
+    "description": "No integration with CPU TSP solver. Users must choose between modules explicitly.",
+    "severity": "medium",
+    "recommended_fix": "Add a unified interface that dispatches to GPU when available, CPU otherwise."
+  },
+  {
+    "module": "gpu_tsp",
+    "gap_type": "missing_documentation",
+    "description": "No GPU memory requirements or performance characteristics documented.",
+    "severity": "low",
+    "recommended_fix": "Add docstrings with GPU memory requirements and expected speedup vs CPU."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No 2-opt improvement for routes. GPU savings computation is implemented but route improvement is CPU-only.",
+    "severity": "high",
+    "recommended_fix": "Add GPU-accelerated 2-opt improvement for individual routes."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_algorithm",
+    "description": "No inter-route improvement (relocate, exchange). These can significantly reduce total cost.",
+    "severity": "high",
+    "recommended_fix": "Add GPU-accelerated relocate and exchange operators."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_edge_case",
+    "description": "No validation of distance matrix or demands. Invalid inputs can cause CUDA errors.",
+    "severity": "high",
+    "recommended_fix": "Add validation in solve(): check dimensions, non-negative values, finite values."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_error_handling",
+    "description": "No fallback to CPU on GPU failure. CUDA OOM or kernel errors crash the solver.",
+    "severity": "high",
+    "recommended_fix": "Wrap GPU operations in try/except. On RuntimeError, fall back to CPU implementation."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_performance_optimization",
+    "description": "No memory-efficient batching for large instances.",
+    "severity": "medium",
+    "recommended_fix": "Add chunked batch processing for large VRP instances."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_integration",
+    "description": "No integration with CPU VRP solver. Users must choose between modules explicitly.",
+    "severity": "medium",
+    "recommended_fix": "Add a unified interface that dispatches to GPU when available, CPU otherwise."
+  },
+  {
+    "module": "gpu_vrp",
+    "gap_type": "missing_documentation",
+    "description": "No GPU memory requirements or performance characteristics documented.",
+    "severity": "low",
+    "recommended_fix": "Add docstrings with GPU memory requirements and expected speedup vs CPU."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_feature",
+    "description": "No model quantization support. Quantized models (INT8) are essential for edge deployment to reduce memory and latency.",
+    "severity": "high",
+    "recommended_fix": "Add quantization support: load quantized models, or quantize FP32 models on-the-fly using onnxruntime quantization tools."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_feature",
+    "description": "No dynamic batching. Fixed batch_size may be suboptimal for varying workloads.",
+    "severity": "medium",
+    "recommended_fix": "Add dynamic batching: accumulate requests and process in optimally-sized batches."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_feature",
+    "description": "No model caching. Reloading models for each inference session is expensive.",
+    "severity": "medium",
+    "recommended_fix": "Add model cache: store loaded sessions keyed by model path. LRU eviction for memory management."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_feature",
+    "description": "No async inference support. Synchronous inference blocks the calling thread.",
+    "severity": "medium",
+    "recommended_fix": "Add async inference using asyncio or threading. Return futures or use async/await pattern."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_edge_case",
+    "description": "No handling for different input dtypes (uint16, float64). Only uint8 and float32 are supported.",
+    "severity": "medium",
+    "recommended_fix": "Add support for uint16 (common in medical/agricultural imaging) and float64 inputs."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_edge_case",
+    "description": "No handling for BGR channel order. OpenCV default is BGR, but preprocessing assumes RGB.",
+    "severity": "medium",
+    "recommended_fix": "Add channel_order parameter to preprocess(). Support 'RGB' and 'BGR'."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for ONNX Runtime errors. Model inference failures crash without useful error messages.",
+    "severity": "high",
+    "recommended_fix": "Wrap session.run() in try/except. Catch ort.exceptions.Fail and raise RuntimeError with model context."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for provider unavailability. If requested provider (e.g., CUDA) is not available, error is unclear.",
+    "severity": "medium",
+    "recommended_fix": "Check provider availability before creating session. Raise RuntimeError with available providers list."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_performance_optimization",
+    "description": "No memory pooling. Repeated inference allocates and deallocates memory.",
+    "severity": "low",
+    "recommended_fix": "Add memory pool for input/output tensors. Reuse buffers across inference calls."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_performance_optimization",
+    "description": "No warmup on model load. First inference is slower due to lazy initialization.",
+    "severity": "low",
+    "recommended_fix": "Add optional warmup inference after model load to trigger lazy initialization."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_integration",
+    "description": "No integration with sensor data pipeline. Edge AI could process sensor data directly.",
+    "severity": "low",
+    "recommended_fix": "Add a method to process sensor data (e.g., soil moisture, temperature) through ONNX models."
+  },
+  {
+    "module": "edge_ai",
+    "gap_type": "missing_documentation",
+    "description": "No deployment guide or model format requirements documented.",
+    "severity": "medium",
+    "recommended_fix": "Add deployment guide: supported ONNX opsets, provider configuration, memory requirements, latency expectations."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_feature",
+    "description": "No object detection (bounding boxes). Current pipeline only does classification. Object detection is needed for localized disease/pest identification.",
+    "severity": "high",
+    "recommended_fix": "Add object detection stage: use YOLO or Faster R-CNN ONNX models to detect and localize diseases/pests."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_feature",
+    "description": "No segmentation support. Pixel-level segmentation is needed for precise disease area measurement.",
+    "severity": "medium",
+    "recommended_fix": "Add segmentation stage: use U-Net or DeepLab ONNX models for pixel-level disease segmentation."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_feature",
+    "description": "No temporal analysis. Current pipeline processes images independently. Temporal analysis can track disease progression.",
+    "severity": "medium",
+    "recommended_fix": "Add temporal analysis: compare current results with historical data to track disease progression."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_feature",
+    "description": "No growth stage detection. Different growth stages have different disease susceptibility and treatment options.",
+    "severity": "medium",
+    "recommended_fix": "Add growth stage classification: use ONNX model to classify crop growth stage (e.g., V6, R1, R2)."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_edge_case",
+    "description": "No handling for different image sizes. All images are resized to model input size, losing aspect ratio information.",
+    "severity": "medium",
+    "recommended_fix": "Add aspect ratio preservation: pad images to maintain aspect ratio before resizing."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_edge_case",
+    "description": "No handling for corrupted images. Invalid image data crashes the pipeline.",
+    "severity": "medium",
+    "recommended_fix": "Add image validation: check for corrupted data, unsupported formats, extreme aspect ratios."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for model output shape mismatch. If model outputs unexpected shape, error message is unclear.",
+    "severity": "high",
+    "recommended_fix": "Add detailed error messages: include expected shape, actual shape, and model info in ValueError."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_error_handling",
+    "description": "No handling for invalid probabilities. Softmax can produce NaN if all logits are -Inf.",
+    "severity": "medium",
+    "recommended_fix": "Add validation in _softmax: check for NaN/Inf output. Raise ValueError if invalid."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_performance_optimization",
+    "description": "No batching across stages. Each stage processes images independently, missing optimization opportunities.",
+    "severity": "medium",
+    "recommended_fix": "Add cross-stage batching: process all images through all stages in a single batch."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_performance_optimization",
+    "description": "No caching of results. Repeated analysis of same images recomputes everything.",
+    "severity": "low",
+    "recommended_fix": "Add result caching: cache analysis results keyed by image hash."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_integration",
+    "description": "No integration with decision support module. Recommendations are rule-based and not connected to DecisionEngine.",
+    "severity": "high",
+    "recommended_fix": "Integrate with DecisionEngine: feed disease/weed/yield results into FarmState for unified recommendations."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_integration",
+    "description": "No integration with digital twin. Crop vision results could inform simulation parameters.",
+    "severity": "medium",
+    "recommended_fix": "Add method to update SimulationState based on crop vision results (e.g., adjust growth rate based on disease severity)."
+  },
+  {
+    "module": "crop_vision",
+    "gap_type": "missing_documentation",
+    "description": "No model training guide or class definitions documented.",
+    "severity": "medium",
+    "recommended_fix": "Add documentation: class definitions, confidence thresholds, model training data requirements, expected accuracy."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No unified optimization interface. TSP, VRP, GPU TSP, GPU VRP have separate APIs with no common base class or factory.",
+    "severity": "high",
+    "recommended_fix": "Create a common OptimizationSolver base class with unified solve() interface. Use factory pattern to dispatch to appropriate solver."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No common result types. TSPResult, VRPResult, GPUTSPResult, GPUVRPResult are incompatible.",
+    "severity": "medium",
+    "recommended_fix": "Create common result base class or protocol. Allow conversion between result types."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No shared validation. Each module validates inputs independently with different rules.",
+    "severity": "medium",
+    "recommended_fix": "Create shared validation utilities: check_distance_matrix(), check_demands(), etc."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No integration between TSP and VRP. TSP is a special case of VRP but users must choose between modules.",
+    "severity": "medium",
+    "recommended_fix": "Add TSP-to-VRP conversion: create VRPInstance from TSPInstance with single vehicle and infinite capacity."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No integration between GPU and CPU solvers. Users must explicitly choose between modules.",
+    "severity": "medium",
+    "recommended_fix": "Add automatic dispatch: try GPU solver first, fall back to CPU on failure."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_integration",
+    "description": "No integration between edge AI and crop vision. Crop vision uses edge AI but there is no reverse integration or shared configuration.",
+    "severity": "low",
+    "recommended_fix": "Add shared configuration: allow crop vision to configure edge AI settings (e.g., providers, optimization level)."
+  },
+  {
+    "module": "cross_module",
+    "gap_type": "missing_documentation",
+    "description": "No cross-module architecture documentation. Users cannot understand how modules relate to each other.",
+    "severity": "medium",
+    "recommended_fix": "Add architecture documentation: module relationships, data flow, integration patterns, deployment scenarios."
+  }
+]

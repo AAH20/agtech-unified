@@ -1,0 +1,447 @@
+{
+  "audit_metadata": {
+    "project": "agtech-unified",
+    "audit_date": "2026-10-04",
+    "scope": "cross-module integration",
+    "modules_audited": [
+      "decision_support",
+      "digital_twin",
+      "genomics",
+      "iot",
+      "multi_agent",
+      "optimization",
+      "path_planning"
+    ],
+    "source_files_examined": 28,
+    "test_files_examined": 22
+  },
+  "summary": {
+    "total_gaps": 20,
+    "critical": 5,
+    "high": 8,
+    "medium": 5,
+    "low": 2,
+    "categories": {
+      "missing_inter_module_communication": 7,
+      "missing_event_driven_patterns": 3,
+      "missing_data_flow_validation": 5,
+      "missing_api_contracts": 5
+    }
+  },
+  "gaps": [
+    {
+      "id": "GAP-001",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "title": "IoT data pipeline has no consumer — sensor readings never reach decision support",
+      "description": "The iot.data_pipeline module (MQTTClient, KafkaStream, TimescaleDBStorage) produces and stores SensorReading objects, but no other module consumes them. There is no automated path from sensor data ingestion to FarmState construction or DecisionEngine invocation. The E2E tests manually construct FarmState from raw sensor data, but this wiring does not exist in production code.",
+      "affected_modules": ["iot.data_pipeline", "decision_support.recommender"],
+      "affected_files": [
+        "src/iot/data_pipeline.py",
+        "src/decision_support/recommender.py"
+      ],
+      "impact": "Sensor data collected via MQTT/Kafka/TimescaleDB is dead-end. No automated decision-making can occur based on real sensor input without manual wiring.",
+      "recommendation": "Create a SensorDataConsumer that subscribes to MQTT topics or polls TimescaleDB, maps SensorReading objects to FarmState, and invokes DecisionEngine. Alternatively, register a callback in MQTTClient that triggers decision support."
+    },
+    {
+      "id": "GAP-002",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "title": "Digital twin simulation results never flow to decision support",
+      "description": "digital_twin.simulator produces SimulationResult with final_state and history, but no module consumes these results. The E2E tests manually extract final_state and construct FarmState, but there is no production code path from simulation output to recommendation input.",
+      "affected_modules": ["digital_twin.simulator", "decision_support.recommender"],
+      "affected_files": [
+        "src/digital_twin/simulator.py",
+        "src/decision_support/recommender.py"
+      ],
+      "impact": "Digital twin projections cannot automatically trigger irrigation, fertilization, or pest control recommendations. The simulation is a dead-end computation.",
+      "recommendation": "Add a SimulationResultConsumer or callback hook in DigitalTwin.simulate() that maps SimulationState → FarmState and invokes DecisionEngine. Consider an event-driven pattern where simulation completion emits an event."
+    },
+    {
+      "id": "GAP-003",
+      "category": "missing_inter_module_communication",
+      "severity": "critical",
+      "title": "API gateway has zero authentication despite security module existing",
+      "description": "decision_support.security provides ZeroTrustAuth with JWT validation, RBAC, and rate limiting. However, decision_support.api_gateway creates FastAPI endpoints with NO authentication whatsoever. The security module is never imported or used by the API gateway.",
+      "affected_modules": ["decision_support.security", "decision_support.api_gateway"],
+      "affected_files": [
+        "src/decision_support/security.py",
+        "src/decision_support/api_gateway.py"
+      ],
+      "impact": "All REST endpoints (tenant CRUD, farm CRUD, sensor readings, actuator commands, recommendations) are completely unprotected. Any client can create tenants, send actuator commands, or access recommendations without authentication.",
+      "recommendation": "Integrate ZeroTrustAuth as FastAPI dependency. Add `Depends(auth.authenticate)` to all endpoints. Apply role-based access control (e.g., 'admin' for tenant CRUD, 'operator' for actuator commands, 'viewer' for reads). Add rate limiting middleware."
+    },
+    {
+      "id": "GAP-004",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "title": "Alert system is disconnected from dashboard and API gateway",
+      "description": "decision_support.alerts.AlertManager produces alerts and supports notification handlers, but these alerts never reach the FarmDashboard (which has its own _alert_handlers list) or the API gateway (which has no alert endpoints). The dashboard's alert handlers are never invoked by the AlertManager.",
+      "affected_modules": ["decision_support.alerts", "decision_support.dashboard", "decision_support.api_gateway"],
+      "affected_files": [
+        "src/decision_support/alerts.py",
+        "src/decision_support/dashboard.py",
+        "src/decision_support/api_gateway.py"
+      ],
+      "impact": "Critical alerts (e.g., soil moisture critical, pest outbreak) are logged but never pushed to the dashboard UI or exposed via API. Operators cannot see real-time alerts.",
+      "recommendation": "Wire AlertManager.notify() to broadcast alerts via FarmDashboard.broadcast(). Add REST endpoints for alert CRUD (GET /alerts, POST /alerts/{id}/acknowledge, POST /alerts/{id}/resolve). Register dashboard as an alert handler."
+    },
+    {
+      "id": "GAP-005",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "title": "IoT context broker never uses smart data models",
+      "description": "iot.context_broker.NGSILDBroker can create and manage NGSI-LD entities, and iot.smart_models.AgriculturalSmartModels builds NGSI-LD compliant entity payloads. However, the broker never uses the smart models factory — entities are created from raw dicts with no connection to the smart data model schemas.",
+      "affected_modules": ["iot.context_broker", "iot.smart_models"],
+      "affected_files": [
+        "src/iot/context_broker.py",
+        "src/iot/smart_models.py"
+      ],
+      "impact": "Entities created via the broker may not conform to FIWARE Smart Data Models. No validation that entity payloads match the expected schema for Crop, Soil, Weather, or Device types.",
+      "recommendation": "Add a method to NGSILDBroker that accepts smart model entities (built by AgriculturalSmartModels) and validates them against the model schema before POSTing. Or create a higher-level SmartEntityService that combines both."
+    },
+    {
+      "id": "GAP-006",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "title": "Multi-agent swarm and task allocation are fully disconnected",
+      "description": "multi_agent.swarm.SwarmCoordinator has its own task distribution logic (capability-based matching), and multi_agent.task_allocation.TaskAllocator has separate greedy/Hungarian algorithms. Neither module references the other. The swarm does not use optimal allocation, and the allocator does not consider agent capabilities or heartbeat status.",
+      "affected_modules": ["multi_agent.swarm", "multi_agent.task_allocation"],
+      "affected_files": [
+        "src/multi_agent/swarm.py",
+        "src/multi_agent/task_allocation.py"
+      ],
+      "impact": "Task allocation is not optimal (swarm uses naive matching, allocator ignores agent state). No single coordination path exists that considers capabilities, load, and optimality together.",
+      "recommendation": "Integrate TaskAllocator into SwarmCoordinator.distribute_tasks() — use the cost matrix from agent-task distances and the Hungarian algorithm for optimal assignment. Pass agent capabilities as constraints to the allocator."
+    },
+    {
+      "id": "GAP-007",
+      "category": "missing_inter_module_communication",
+      "severity": "high",
+      "title": "Byzantine consensus never integrated with swarm coordination",
+      "description": "multi_agent.consensus.ByzantineConsensus provides PBFT-style consensus for swarm decisions, but SwarmCoordinator never uses it. Task assignments are made unilaterally without consensus, meaning a single compromised node could assign tasks incorrectly.",
+      "affected_modules": ["multi_agent.consensus", "multi_agent.swarm"],
+      "affected_files": [
+        "src/multi_agent/consensus.py",
+        "src/multi_agent/swarm.py"
+      ],
+      "impact": "Swarm decisions (task assignments) have no fault tolerance. A single faulty or malicious agent can disrupt coordination. The consensus module is dead code.",
+      "recommendation": "Add a consensus phase to SwarmCoordinator.distribute_tasks() — before finalizing assignments, propose them to the swarm and use ByzantineConsensus.tally_votes() to confirm. Only commit assignments that reach quorum."
+    },
+    {
+      "id": "GAP-008",
+      "category": "missing_event_driven_patterns",
+      "severity": "critical",
+      "title": "No event bus or domain event system connecting modules",
+      "description": "The project has no central event bus, message broker, or domain event system. MQTTClient and KafkaStream exist in iot.data_pipeline but are never used to publish domain events (alert triggered, simulation completed, task assigned, etc.). Modules cannot react to each other's state changes.",
+      "affected_modules": ["iot.data_pipeline", "decision_support.alerts", "decision_support.dashboard", "digital_twin.simulator", "multi_agent.swarm"],
+      "affected_files": [
+        "src/iot/data_pipeline.py",
+        "src/decision_support/alerts.py",
+        "src/digital_twin/simulator.py",
+        "src/multi_agent/swarm.py"
+      ],
+      "impact": "Modules are tightly coupled to their own logic with no ability to react to external events. Cannot build reactive workflows (e.g., 'when soil moisture drops below threshold, trigger irrigation').",
+      "recommendation": "Create an EventBus abstraction (can use KafkaStream as backend). Define domain events: SensorReadingReceived, AlertTriggered, SimulationCompleted, TaskAssigned, TaskCompleted. Modules publish events; interested modules subscribe."
+    },
+    {
+      "id": "GAP-009",
+      "category": "missing_event_driven_patterns",
+      "severity": "high",
+      "title": "GPS anti-spoofing results never published as events or stored",
+      "description": "decision_support.gps_antispoof.GPSSpoofingDetector produces spoofing detection results (is_spoofed, confidence, indicators), but these results are never published to the IoT data pipeline, stored in TimescaleDB, or raised as alerts. Spoofed GPS readings are silently detected and discarded.",
+      "affected_modules": ["decision_support.gps_antispoof", "iot.data_pipeline", "decision_support.alerts"],
+      "affected_files": [
+        "src/decision_support/gps_antispoof.py",
+        "src/iot/data_pipeline.py",
+        "src/decision_support/alerts.py"
+      ],
+      "impact": "GPS spoofing detection is a dead-end computation. Spoofed readings are not flagged in the data pipeline, no alerts are raised, and operators are not notified.",
+      "recommendation": "Add a GPS validation stage in the IoT data pipeline that runs GPSSpoofingDetector on incoming GPS readings. If spoofed, raise an Alert via AlertManager and flag the reading in TimescaleDB metadata."
+    },
+    {
+      "id": "GAP-010",
+      "category": "missing_event_driven_patterns",
+      "severity": "medium",
+      "title": "Crop vision pipeline results never trigger events or reach decision support",
+      "description": "optimization.crop_vision.CropVisionPipeline produces FieldHealthReport with disease detection, weed classification, and yield prediction. These results never flow to DecisionEngine for automated recommendations, nor are they published as events or stored.",
+      "affected_modules": ["optimization.crop_vision", "decision_support.recommender", "iot.data_pipeline"],
+      "affected_files": [
+        "src/optimization/crop_vision.py",
+        "src/decision_support/recommender.py",
+        "src/iot/data_pipeline.py"
+      ],
+      "impact": "Disease detection and yield predictions are dead-end computations. Cannot automatically trigger treatment recommendations or store field health history.",
+      "recommendation": "Map FieldHealthReport → FarmState (disease severity → pest_pressure, yield → crop_height proxy) and invoke DecisionEngine. Store reports in TimescaleDB. Publish FieldHealthReport events."
+    },
+    {
+      "id": "GAP-011",
+      "category": "missing_data_flow_validation",
+      "severity": "critical",
+      "title": "FarmState fields have no validation — any float accepted",
+      "description": "decision_support.recommender.FarmState accepts any float values for soil_moisture, temperature, crop_height, nutrient_level, and pest_pressure. The comments indicate expected ranges (0.0-1.0 for soil_moisture, etc.) but there is no __post_init__ validation. Invalid values (e.g., soil_moisture=5.0, temperature=-100) flow through to DecisionEngine and produce nonsensical recommendations.",
+      "affected_modules": ["decision_support.recommender"],
+      "affected_files": [
+        "src/decision_support/recommender.py"
+      ],
+      "impact": "Invalid sensor data or simulation output can produce incorrect recommendations. No data quality gate at the decision support boundary.",
+      "recommendation": "Add __post_init__ to FarmState validating ranges: soil_moisture [0,1], temperature [-50,60], crop_height [0,10], nutrient_level [0,1], pest_pressure [0,1]. Raise ValueError on violation."
+    },
+    {
+      "id": "GAP-012",
+      "category": "missing_data_flow_validation",
+      "severity": "high",
+      "title": "SensorReading objects have no validation before storage",
+      "description": "iot.data_pipeline.SensorReading accepts any float value and any string for sensor_id, metric, and unit. No validation that the metric is a known agricultural metric, that the value is physically plausible, or that the sensor_id is registered. Invalid readings are stored in TimescaleDB without any quality check.",
+      "affected_modules": ["iot.data_pipeline"],
+      "affected_files": [
+        "src/iot/data_pipeline.py"
+      ],
+      "impact": "Corrupted or malicious sensor data enters the storage layer unchecked. Downstream consumers (decision support, alerts) may act on invalid data.",
+      "recommendation": "Add __post_init__ to SensorReading with validation: known metric whitelist, value range checks per metric, sensor_id format validation. Reject or flag invalid readings."
+    },
+    {
+      "id": "GAP-013",
+      "category": "missing_data_flow_validation",
+      "severity": "high",
+      "title": "No validation at digital twin → decision support boundary",
+      "description": "When SimulationState is mapped to FarmState (as done in E2E tests), there is no validation that the simulation output is physically meaningful. For example, soil_moisture could go negative (the _step method uses max(0.0, ...) but this is not enforced at the boundary), or crop_height could exceed realistic values.",
+      "affected_modules": ["digital_twin.simulator", "decision_support.recommender"],
+      "affected_files": [
+        "src/digital_twin/simulator.py",
+        "src/decision_support/recommender.py"
+      ],
+      "impact": "Simulation artifacts or edge cases can produce invalid FarmState values that lead to incorrect recommendations.",
+      "recommendation": "Add a validation layer when mapping SimulationState → FarmState. Clamp values to valid ranges and log warnings when clamping occurs."
+    },
+    {
+      "id": "GAP-014",
+      "category": "missing_data_flow_validation",
+      "severity": "medium",
+      "title": "API gateway request models don't validate metric names or value ranges",
+      "description": "decision_support.api_gateway.SensorReadingRequest accepts any string for 'metric' and any float for 'value'. There is no validation that the metric is a known agricultural metric (soil_moisture, temperature, etc.) or that the value is within plausible bounds for that metric.",
+      "affected_modules": ["decision_support.api_gateway"],
+      "affected_files": [
+        "src/decision_support/api_gateway.py"
+      ],
+      "impact": "Invalid sensor readings can be submitted via the API, polluting the data store and potentially triggering false alerts.",
+      "recommendation": "Add metric validation to SensorReadingRequest — use an Enum for known metrics and add per-metric value range validation in the endpoint handler."
+    },
+    {
+      "id": "GAP-015",
+      "category": "missing_data_flow_validation",
+      "severity": "medium",
+      "title": "Knowledge graph entity properties have no schema validation",
+      "description": "digital_twin.knowledge_graph.Entity accepts arbitrary properties dict with no schema validation. Entities of the same entity_type can have completely different property sets, making graph queries unreliable.",
+      "affected_modules": ["digital_twin.knowledge_graph"],
+      "affected_files": [
+        "src/digital_twin/knowledge_graph.py"
+      ],
+      "impact": "Inconsistent entity properties make graph queries and analytics unreliable. No data quality guarantee at the knowledge layer.",
+      "recommendation": "Add optional schema validation — define expected properties per entity_type and validate on add_entity(). Log warnings for missing expected properties."
+    },
+    {
+      "id": "GAP-016",
+      "category": "missing_api_contracts",
+      "severity": "high",
+      "title": "No shared data models — each module defines independent dataclasses",
+      "description": "FarmState is defined in decision_support.recommender, SimulationState in digital_twin.simulator, SensorReading in both iot.data_pipeline AND decision_support.api_gateway (two different definitions!), and Alert in decision_support.alerts. There is no shared schema or contract between modules.",
+      "affected_modules": ["decision_support.recommender", "digital_twin.simulator", "iot.data_pipeline", "decision_support.api_gateway"],
+      "affected_files": [
+        "src/decision_support/recommender.py",
+        "src/digital_twin/simulator.py",
+        "src/iot/data_pipeline.py",
+        "src/decision_support/api_gateway.py"
+      ],
+      "impact": "The same concept (sensor reading) has two incompatible definitions. Mapping between module data models is manual and error-prone. No contract testing possible.",
+      "recommendation": "Create a shared `src/schemas/` module with canonical data models (FarmState, SensorReading, Alert, etc.). All modules import from this shared module. Use Pydantic models for automatic validation."
+    },
+    {
+      "id": "GAP-017",
+      "category": "missing_api_contracts",
+      "severity": "high",
+      "title": "No formal interface between optimization solvers and consumers",
+      "description": "optimization.tsp.TSPSolver, optimization.vrp.VRPSolver, optimization.gpu_tsp.GPUTSPSolver, and optimization.gpu_vrp.GPUVRPSolver all solve routing problems but have completely different interfaces (TSPInstance vs raw cities+distance_matrix, TSPResult vs GPUTSPResult). No common interface or factory for solver selection.",
+      "affected_modules": ["optimization.tsp", "optimization.vrp", "optimization.gpu_tsp", "optimization.gpu_vrp"],
+      "affected_files": [
+        "src/optimization/tsp.py",
+        "src/optimization/vrp.py",
+        "src/optimization/gpu_tsp.py",
+        "src/optimization/gpu_vrp.py"
+      ],
+      "impact": "Cannot swap between CPU and GPU solvers. Cannot write generic routing code. Each consumer must know which specific solver to use.",
+      "recommendation": "Define a common Solver interface (solve(instance) → Result) and a SolverFactory that selects CPU vs GPU based on availability. Use a common Instance/Result base class."
+    },
+    {
+      "id": "GAP-018",
+      "category": "missing_api_contracts",
+      "severity": "medium",
+      "title": "Knowledge graph and ontology have no shared interface",
+      "description": "digital_twin.knowledge_graph.AgriKnowledgeGraph and digital_twin.ontology.AGROVOCOntology are both knowledge representation systems but have completely different interfaces (Entity/Relationship vs Concept/SearchResult). No mapping between AGROVOC concepts and knowledge graph entities.",
+      "affected_modules": ["digital_twin.knowledge_graph", "digital_twin.ontology"],
+      "affected_files": [
+        "src/digital_twin/knowledge_graph.py",
+        "src/digital_twin/ontology.py"
+      ],
+      "impact": "Cannot leverage AGROVOC semantic search to populate the knowledge graph. Cannot use graph queries to navigate ontology hierarchies. The two knowledge systems are siloed.",
+      "recommendation": "Create a bridge module that maps AGROVOC Concepts to KnowledgeGraph Entities. Use ontology labels as entity labels and broader/narrower as relationships. Enable semantic search → graph traversal workflows."
+    },
+    {
+      "id": "GAP-019",
+      "category": "missing_api_contracts",
+      "severity": "medium",
+      "title": "No contract between genomics modules and farm management",
+      "description": "genomics.protein.ProteinAnalyzer and genomics.crispr.CRISPRDesigner produce analysis results (ProteinResult, GuideRNA) that have no defined relationship to farm management decisions. There is no data contract connecting genomics output to DecisionEngine input.",
+      "affected_modules": ["genomics.protein", "genomics.crispr", "decision_support.recommender"],
+      "affected_files": [
+        "src/genomics/protein.py",
+        "src/genomics/crispr.py",
+        "src/decision_support/recommender.py"
+      ],
+      "impact": "Genomics analysis (protein stability, CRISPR guide efficiency) cannot inform breeding or crop management decisions automatically.",
+      "recommendation": "Define a BreedingDecision input that maps genomics results to decision parameters. Add a decision path in DecisionEngine that considers genomics data alongside field state."
+    },
+    {
+      "id": "GAP-020",
+      "category": "missing_api_contracts",
+      "severity": "low",
+      "title": "No contract between path planning and sensor placement",
+      "description": "path_planning.coverage.CoveragePlanner and iot.sensor_placement.SensorPlacement both deal with field coverage but have no shared interface. Coverage paths don't account for sensor coverage areas, and sensor placement doesn't consider coverage path efficiency.",
+      "affected_modules": ["path_planning.coverage", "iot.sensor_placement"],
+      "affected_files": [
+        "src/path_planning/coverage.py",
+        "src/iot/sensor_placement.py"
+      ],
+      "impact": "Suboptimal field monitoring — sensors may be placed without considering drone coverage paths, and coverage paths may not account for sensor blind spots.",
+      "recommendation": "Define a shared FieldGeometry contract. CoveragePlanner should accept sensor coverage areas as input. SensorPlacement should consider coverage path distances in its optimization objective."
+    }
+  ],
+  "cross_module_dependency_graph": {
+    "existing_dependencies": [
+      {
+        "from": "decision_support.alerts",
+        "to": "decision_support.recommender",
+        "via": "FarmState import",
+        "type": "data"
+      },
+      {
+        "from": "decision_support.api_gateway",
+        "to": "decision_support.recommender",
+        "via": "DecisionEngine, FarmState import",
+        "type": "data"
+      },
+      {
+        "from": "decision_support.dashboard",
+        "to": "decision_support.recommender",
+        "via": "FarmState import",
+        "type": "data"
+      },
+      {
+        "from": "optimization.crop_vision",
+        "to": "optimization.edge_ai",
+        "via": "EdgeAIInference, InferenceResult import",
+        "type": "data"
+      }
+    ],
+    "missing_dependencies": [
+      {
+        "from": "iot.data_pipeline",
+        "to": "decision_support.recommender",
+        "reason": "Sensor readings should flow to decision support"
+      },
+      {
+        "from": "digital_twin.simulator",
+        "to": "decision_support.recommender",
+        "reason": "Simulation results should trigger recommendations"
+      },
+      {
+        "from": "decision_support.security",
+        "to": "decision_support.api_gateway",
+        "reason": "API endpoints need authentication"
+      },
+      {
+        "from": "decision_support.alerts",
+        "to": "decision_support.dashboard",
+        "reason": "Alerts should reach the dashboard"
+      },
+      {
+        "from": "decision_support.alerts",
+        "to": "decision_support.api_gateway",
+        "reason": "Alerts should be queryable via REST"
+      },
+      {
+        "from": "iot.smart_models",
+        "to": "iot.context_broker",
+        "reason": "Smart models should validate entities before creation"
+      },
+      {
+        "from": "multi_agent.task_allocation",
+        "to": "multi_agent.swarm",
+        "reason": "Optimal allocation should be used by swarm"
+      },
+      {
+        "from": "multi_agent.consensus",
+        "to": "multi_agent.swarm",
+        "reason": "Swarm decisions need fault tolerance"
+      },
+      {
+        "from": "decision_support.gps_antispoof",
+        "to": "iot.data_pipeline",
+        "reason": "GPS readings need spoofing validation"
+      },
+      {
+        "from": "optimization.crop_vision",
+        "to": "decision_support.recommender",
+        "reason": "Field health should inform recommendations"
+      },
+      {
+        "from": "digital_twin.knowledge_graph",
+        "to": "digital_twin.ontology",
+        "reason": "Knowledge graph should leverage ontology"
+      },
+      {
+        "from": "genomics.protein",
+        "to": "decision_support.recommender",
+        "reason": "Protein stability should inform breeding decisions"
+      },
+      {
+        "from": "genomics.crispr",
+        "to": "decision_support.recommender",
+        "reason": "CRISPR efficiency should inform breeding decisions"
+      },
+      {
+        "from": "path_planning.coverage",
+        "to": "iot.sensor_placement",
+        "reason": "Coverage paths should account for sensor areas"
+      }
+    ]
+  },
+  "test_coverage_gaps": {
+    "integration_tests_exist": true,
+    "integration_test_file": "tests/test_integration_e2e.py",
+    "integration_tests_cover": [
+      "sensor → decision pipeline",
+      "digital twin → decision pipeline",
+      "sensor placement → coverage pipeline",
+      "task allocation → VRP pipeline",
+      "drought scenario E2E",
+      "pest outbreak scenario",
+      "multi-agent coordination pipeline",
+      "genomics → decision pipeline",
+      "CRISPR → protein pipeline",
+      "full farm management cycle"
+    ],
+    "integration_tests_miss": [
+      "IoT data pipeline → decision support (no automated consumer test)",
+      "Security → API gateway (no auth test)",
+      "Alerts → dashboard (no alert propagation test)",
+      "Context broker ↔ smart models (no entity validation test)",
+      "Swarm ↔ task allocation (no combined coordination test)",
+      "Consensus ↔ swarm (no fault-tolerant coordination test)",
+      "GPS anti-spoofing → data pipeline (no spoofing integration test)",
+      "Crop vision → decision support (no field health → recommendation test)",
+      "Knowledge graph ↔ ontology (no semantic search → graph test)",
+      "Event bus (no event-driven workflow test)"
+    ]
+  }
+}

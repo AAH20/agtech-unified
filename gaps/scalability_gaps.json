@@ -1,0 +1,636 @@
+{
+  "audit_metadata": {
+    "project": "AgTech Unified",
+    "audit_date": "2026-10-04",
+    "auditor": "Wave 1 Cluster 10",
+    "scope": "Scalability and deployment gap analysis",
+    "codebase_stats": {
+      "total_modules": 18,
+      "total_source_files": 35,
+      "total_test_files": 28,
+      "total_tests": 355,
+      "language": "Python",
+      "frameworks": ["FastAPI", "PyTorch", "ONNX Runtime", "Pydantic", "PyJWT"]
+    }
+  },
+  "executive_summary": {
+    "overall_maturity": "Pre-production / Research grade",
+    "critical_gaps": 15,
+    "high_gaps": 12,
+    "medium_gaps": 10,
+    "low_gaps": 5,
+    "total_gaps": 42,
+    "key_finding": "The codebase is a well-structured pure-Python library with comprehensive domain logic but has zero production deployment infrastructure. All state is in-memory, no containerization exists, no CI/CD pipeline, no monitoring, and no horizontal scaling capability. It cannot be deployed as-is to any production environment."
+  },
+  "gap_categories": {
+    "horizontal_scaling": {
+      "score": "0/10",
+      "status": "Critical - No horizontal scaling capability",
+      "gaps": [
+        {
+          "id": "HS-001",
+          "severity": "critical",
+          "title": "All state is in-memory with no shared state backend",
+          "description": "TenantRegistry, SwarmCoordinator, AlertManager, AgriKnowledgeGraph, AGROVOCOntology, and all other stateful components store data in Python dicts/lists. Multiple processes cannot share state.",
+          "affected_files": [
+            "src/decision_support/api_gateway.py",
+            "src/multi_agent/swarm.py",
+            "src/decision_support/alerts.py",
+            "src/digital_twin/knowledge_graph.py",
+            "src/digital_twin/ontology.py",
+            "src/iot/data_pipeline.py"
+          ],
+          "impact": "Cannot run multiple replicas. Any state is lost on restart. No horizontal scaling possible.",
+          "recommendation": "Introduce Redis for shared state, or refactor to use external databases (PostgreSQL for relational, Redis for cache/sessions, Neo4j for graph). Add repository pattern for data access abstraction."
+        },
+        {
+          "id": "HS-002",
+          "severity": "critical",
+          "title": "MQTT and Kafka clients are in-memory stubs",
+          "description": "MQTTClient and KafkaStream use Python queues instead of real message brokers. No actual pub/sub or event streaming capability.",
+          "affected_files": ["src/iot/data_pipeline.py"],
+          "impact": "No real-time data ingestion from IoT devices. No event-driven architecture. Cannot scale message processing.",
+          "recommendation": "Integrate paho-mqtt for MQTT and kafka-python or confluent-kafka for Kafka. Add connection pooling, retry logic, and dead-letter queues."
+        },
+        {
+          "id": "HS-003",
+          "severity": "critical",
+          "title": "TimescaleDB storage is in-memory stub",
+          "description": "TimescaleDBStorage uses Python dicts instead of actual TimescaleDB. No real time-series data persistence.",
+          "affected_files": ["src/iot/data_pipeline.py"],
+          "impact": "No time-series data persistence. No real analytics capability. Data lost on restart.",
+          "recommendation": "Integrate psycopg2 or asyncpg for real TimescaleDB connectivity. Add connection pooling and migration support."
+        },
+        {
+          "id": "HS-004",
+          "severity": "high",
+          "title": "No distributed locking mechanism",
+          "description": "SwarmCoordinator and other components use threading.Lock which only works within a single process.",
+          "affected_files": ["src/multi_agent/swarm.py", "src/decision_support/security.py"],
+          "impact": "Race conditions in multi-replica deployments. Task double-assignment possible.",
+          "recommendation": "Implement distributed locking with Redis (Redlock algorithm) or database-backed locks."
+        },
+        {
+          "id": "HS-005",
+          "severity": "high",
+          "title": "No load balancing or service discovery",
+          "description": "No configuration for load balancers, service mesh, or service discovery.",
+          "affected_files": [],
+          "impact": "Cannot distribute traffic across multiple instances.",
+          "recommendation": "Add Kubernetes Service manifests, consider Istio/Linkerd for service mesh, implement health-based load balancing."
+        },
+        {
+          "id": "HS-006",
+          "severity": "high",
+          "title": "No circuit breaker or bulkhead patterns",
+          "description": "External service calls (NGSI-LD broker, ONNX models) have no circuit breaker, timeout cascade protection, or bulkhead isolation.",
+          "affected_files": ["src/iot/context_broker.py", "src/optimization/edge_ai.py"],
+          "impact": "Cascading failures when external services degrade. No graceful degradation.",
+          "recommendation": "Implement circuit breaker pattern (e.g., pybreaker, tenacity). Add bulkhead isolation for different external service calls."
+        },
+        {
+          "id": "HS-007",
+          "severity": "medium",
+          "title": "No request rate limiting at API gateway level",
+          "description": "Rate limiting exists only in ZeroTrustAuth module but is not integrated into the FastAPI middleware stack.",
+          "affected_files": ["src/decision_support/api_gateway.py", "src/decision_support/security.py"],
+          "impact": "API can be overwhelmed by traffic spikes. No protection against abuse.",
+          "recommendation": "Add slowapi or custom FastAPI middleware for rate limiting. Integrate with ZeroTrustAuth."
+        },
+        {
+          "id": "HS-008",
+          "severity": "medium",
+          "title": "No caching layer",
+          "description": "No Redis/Memcached integration for caching frequent queries, model inferences, or computation results.",
+          "affected_files": [],
+          "impact": "Repeated expensive computations (TSP/VRP solving, ONNX inference) cannot be cached.",
+          "recommendation": "Add Redis caching for expensive operations. Implement cache-aside pattern for knowledge graph queries and optimization results."
+        },
+        {
+          "id": "HS-009",
+          "severity": "medium",
+          "title": "No async I/O for external service calls",
+          "description": "NGSI-LD broker uses synchronous requests library. ONNX inference is synchronous. Blocks the event loop.",
+          "affected_files": ["src/iot/context_broker.py", "src/optimization/edge_ai.py"],
+          "impact": "Poor throughput under concurrent load. Event loop blocking in FastAPI.",
+          "recommendation": "Use httpx.AsyncClient for NGSI-LD. Consider async ONNX Runtime or run inference in thread pool."
+        },
+        {
+          "id": "HS-010",
+          "severity": "medium",
+          "title": "No GPU resource management or scheduling",
+          "description": "GPU TSP/VRP solvers use PyTorch CUDA but have no GPU memory management, no multi-GPU support, and no GPU sharing.",
+          "affected_files": ["src/optimization/gpu_tsp.py", "src/optimization/gpu_vrp.py"],
+          "impact": "Cannot share GPU across multiple inference requests. Potential OOM errors.",
+          "recommendation": "Add GPU memory fraction limits, implement request queuing for GPU resources, consider CUDA streams for concurrent inference."
+        }
+      ]
+    },
+    "containerization": {
+      "score": "0/10",
+      "status": "Critical - No containerization exists",
+      "gaps": [
+        {
+          "id": "CON-001",
+          "severity": "critical",
+          "title": "No Dockerfile",
+          "description": "No container image build definition exists. Application cannot be containerized.",
+          "affected_files": [],
+          "impact": "Cannot deploy to any container orchestration platform.",
+          "recommendation": "Create multi-stage Dockerfile: builder stage (install deps) + runtime stage (copy artifacts). Use python:3.11-slim base. Pin all dependencies."
+        },
+        {
+          "id": "CON-002",
+          "severity": "critical",
+          "title": "No docker-compose.yml for local development",
+          "description": "No local development environment with dependencies (Redis, TimescaleDB, MQTT broker, etc.).",
+          "affected_files": [],
+          "impact": "Developers cannot run the full stack locally. High barrier to contribution.",
+          "recommendation": "Create docker-compose.yml with all required services: app, redis, timescaledb, mqtt (mosquitto), kafka, neo4j."
+        },
+        {
+          "id": "CON-003",
+          "severity": "high",
+          "title": "No .dockerignore",
+          "description": "No .dockerignore file. Build context may include unnecessary files.",
+          "affected_files": [],
+          "impact": "Larger build context, slower builds, potential secret leakage.",
+          "recommendation": "Create .dockerignore excluding: .git, __pycache__, *.pyc, .pytest_cache, htmlcov, .env, *.onnx, tests/"
+        },
+        {
+          "id": "CON-004",
+          "severity": "high",
+          "title": "No health check endpoints for containers",
+          "description": "Only basic /health endpoint exists. No /ready or /live endpoints for Kubernetes probes.",
+          "affected_files": ["src/decision_support/api_gateway.py"],
+          "impact": "Cannot configure proper Kubernetes liveness/readiness probes.",
+          "recommendation": "Add /healthz (liveness), /readyz (readiness with dependency checks), and /metrics (Prometheus) endpoints."
+        },
+        {
+          "id": "CON-005",
+          "severity": "high",
+          "title": "No dependency management files",
+          "description": "No requirements.txt, pyproject.toml, or setup.py. Dependencies are only mentioned in README.",
+          "affected_files": [],
+          "impact": "Cannot reproduce builds. No dependency pinning. Security vulnerabilities from unpinned deps.",
+          "recommendation": "Create pyproject.toml with all dependencies pinned. Add requirements.txt for container builds. Use pip-tools or poetry for lock files."
+        },
+        {
+          "id": "CON-006",
+          "severity": "medium",
+          "title": "No multi-stage build optimization",
+          "description": "No optimized container build strategy.",
+          "affected_files": [],
+          "impact": "Larger images, slower deployments.",
+          "recommendation": "Use multi-stage builds: compile stage with build tools, runtime stage with only runtime deps. Target <200MB image."
+        },
+        {
+          "id": "CON-007",
+          "severity": "medium",
+          "title": "No container security hardening",
+          "description": "No non-root user, no read-only filesystem, no security scanning.",
+          "affected_files": [],
+          "impact": "Security vulnerabilities in container runtime.",
+          "recommendation": "Run as non-root user, enable read-only root filesystem, scan images with Trivy/Snyk, use distroless base image."
+        }
+      ]
+    },
+    "kubernetes": {
+      "score": "0/10",
+      "status": "Critical - No Kubernetes manifests",
+      "gaps": [
+        {
+          "id": "K8S-001",
+          "severity": "critical",
+          "title": "No Deployment manifests",
+          "description": "No Kubernetes Deployment YAML for any component.",
+          "affected_files": [],
+          "impact": "Cannot deploy to Kubernetes.",
+          "recommendation": "Create Deployment manifests for: api-gateway, dashboard, optimization-worker, iot-pipeline, decision-support. Include resource requests/limits, replica counts, and rolling update strategy."
+        },
+        {
+          "id": "K8S-002",
+          "severity": "critical",
+          "title": "No Service manifests",
+          "description": "No Kubernetes Service definitions for internal/external communication.",
+          "affected_files": [],
+          "impact": "No service discovery or load balancing.",
+          "recommendation": "Create ClusterIP services for internal communication, LoadBalancer/NodePort for external access. Add Ingress for HTTP routing."
+        },
+        {
+          "id": "K8S-003",
+          "severity": "critical",
+          "title": "No ConfigMap or Secret management",
+          "description": "No configuration externalization. Secrets (JWT secret, DB passwords) would be hardcoded.",
+          "affected_files": [],
+          "impact": "Configuration cannot be changed without redeployment. Secrets exposed in code.",
+          "recommendation": "Create ConfigMaps for non-sensitive config (timeouts, thresholds, feature flags). Use Kubernetes Secrets or external secret management (Vault, AWS Secrets Manager) for credentials."
+        },
+        {
+          "id": "K8S-004",
+          "severity": "high",
+          "title": "No Horizontal Pod Autoscaler (HPA)",
+          "description": "No autoscaling configuration.",
+          "affected_files": [],
+          "impact": "Cannot scale based on CPU/memory/custom metrics.",
+          "recommendation": "Create HPA for each deployment. Use CPU/memory for general scaling, custom metrics (queue depth, request latency) for pipeline workers."
+        },
+        {
+          "id": "K8S-005",
+          "severity": "high",
+          "title": "No Ingress configuration",
+          "description": "No HTTP routing, TLS termination, or domain configuration.",
+          "affected_files": [],
+          "impact": "No external access to services.",
+          "recommendation": "Create Ingress with cert-manager for TLS. Route /api/* to api-gateway, /ws/* to dashboard, /metrics to monitoring."
+        },
+        {
+          "id": "K8S-006",
+          "severity": "high",
+          "title": "No PodDisruptionBudget",
+          "description": "No availability guarantees during voluntary disruptions.",
+          "affected_files": [],
+          "impact": "Service unavailable during node drains or cluster upgrades.",
+          "recommendation": "Create PodDisruptionBudget with minAvailable: 1 for single-replica services, minAvailable: 2 for multi-replica services."
+        },
+        {
+          "id": "K8S-007",
+          "severity": "high",
+          "title": "No NetworkPolicy",
+          "description": "No network segmentation between services.",
+          "affected_files": [],
+          "impact": "Any pod can communicate with any other pod. Security risk.",
+          "recommendation": "Create NetworkPolicies: api-gateway can only talk to backend services, iot-pipeline can only talk to message brokers, database only accessible by backend services."
+        },
+        {
+          "id": "K8S-008",
+          "severity": "medium",
+          "title": "No StatefulSet for stateful components",
+          "description": "No StatefulSet for TimescaleDB, Redis, or other stateful services.",
+          "affected_files": [],
+          "impact": "Stateful services cannot be properly managed.",
+          "recommendation": "Use StatefulSet with PersistentVolumeClaims for TimescaleDB, Redis, Neo4j. Consider managed services instead."
+        },
+        {
+          "id": "K8S-009",
+          "severity": "medium",
+          "title": "No resource requests or limits",
+          "description": "No CPU/memory resource specifications.",
+          "affected_files": [],
+          "impact": "No resource guarantees. Potential OOM kills. No scheduling optimization.",
+          "recommendation": "Set resource requests based on profiling: api-gateway (500m CPU, 512Mi), optimization-worker (2000m CPU, 4Gi for GPU), iot-pipeline (1000m CPU, 1Gi)."
+        },
+        {
+          "id": "K8S-010",
+          "severity": "medium",
+          "title": "No GPU node scheduling configuration",
+          "description": "No node affinity/tolerations for GPU workloads.",
+          "affected_files": [],
+          "impact": "GPU workloads may schedule on non-GPU nodes.",
+          "recommendation": "Add nodeSelector for GPU nodes, use nvidia.com/gpu resource limits, add tolerations for GPU node taints."
+        },
+        {
+          "id": "K8S-011",
+          "severity": "medium",
+          "title": "No Helm chart or Kustomize configuration",
+          "description": "No templated deployment configuration.",
+          "affected_files": [],
+          "impact": "Cannot easily deploy to different environments (dev/staging/prod).",
+          "recommendation": "Create Helm chart with values.yaml for each environment. Use Kustomize for environment-specific overlays."
+        },
+        {
+          "id": "K8S-012",
+          "severity": "low",
+          "title": "No service mesh configuration",
+          "description": "No Istio/Linkerd configuration for mTLS, traffic management, or observability.",
+          "affected_files": [],
+          "impact": "No fine-grained traffic control or mutual TLS.",
+          "recommendation": "Consider Istio for mTLS, traffic splitting, and observability. Start with sidecar injection and mTLS."
+        }
+      ]
+    },
+    "cicd": {
+      "score": "0/10",
+      "status": "Critical - No CI/CD pipeline",
+      "gaps": [
+        {
+          "id": "CI-001",
+          "severity": "critical",
+          "title": "No GitHub Actions workflows",
+          "description": "No CI/CD automation. No automated testing, building, or deployment.",
+          "affected_files": [],
+          "impact": "No quality gate. Manual testing and deployment only.",
+          "recommendation": "Create .github/workflows/ci.yml: lint (ruff/black), type-check (mypy), test (pytest with coverage), security-scan (bandit, safety), build (docker image)."
+        },
+        {
+          "id": "CI-002",
+          "severity": "critical",
+          "title": "No automated testing pipeline",
+          "description": "Tests exist but are not run automatically on push/PR.",
+          "affected_files": [],
+          "impact": "Regressions not caught early. No quality assurance.",
+          "recommendation": "Run pytest on every push. Enforce 80%+ coverage. Add integration tests with testcontainers."
+        },
+        {
+          "id": "CI-003",
+          "severity": "high",
+          "title": "No linting or formatting checks",
+          "description": "No code quality enforcement.",
+          "affected_files": [],
+          "impact": "Inconsistent code style. Potential bugs not caught.",
+          "recommendation": "Add ruff for linting, black for formatting, isort for import sorting. Run in CI with --check flag."
+        },
+        {
+          "id": "CI-004",
+          "severity": "high",
+          "title": "No type checking",
+          "description": "No static type checking despite type hints in code.",
+          "affected_files": [],
+          "impact": "Type errors not caught until runtime.",
+          "recommendation": "Add mypy to CI. Start with strict mode for new code, gradually increase coverage."
+        },
+        {
+          "id": "CI-005",
+          "severity": "high",
+          "title": "No security scanning",
+          "description": "No SAST, dependency vulnerability scanning, or secret detection.",
+          "affected_files": [],
+          "impact": "Security vulnerabilities not detected. Secrets may be committed.",
+          "recommendation": "Add bandit (SAST), safety/pip-audit (dependency scanning), gitleaks (secret detection), trivy (container scanning)."
+        },
+        {
+          "id": "CI-006",
+          "severity": "high",
+          "title": "No container image building in CI",
+          "description": "No automated Docker image builds.",
+          "affected_files": [],
+          "impact": "Manual image builds. No image versioning.",
+          "recommendation": "Build and push container images on every merge to main. Tag with git SHA and semantic version."
+        },
+        {
+          "id": "CI-007",
+          "severity": "medium",
+          "title": "No deployment automation",
+          "description": "No CD pipeline for deploying to environments.",
+          "affected_files": [],
+          "impact": "Manual deployments. Error-prone.",
+          "recommendation": "Create CD workflow: deploy to staging on merge to main, deploy to prod on tag. Use Helm or kubectl."
+        },
+        {
+          "id": "CI-008",
+          "severity": "medium",
+          "title": "No database migration automation",
+          "description": "No schema migration tooling.",
+          "affected_files": [],
+          "impact": "Manual schema changes. Potential data loss.",
+          "recommendation": "Add Alembic for database migrations. Run migrations in CI against test database."
+        },
+        {
+          "id": "CI-009",
+          "severity": "medium",
+          "title": "No release automation",
+          "description": "No automated versioning or changelog generation.",
+          "affected_files": [],
+          "impact": "Manual release process. Inconsistent versioning.",
+          "recommendation": "Use semantic-release or release-please for automated versioning. Generate changelog from conventional commits."
+        },
+        {
+          "id": "CI-010",
+          "severity": "low",
+          "title": "No performance regression testing",
+          "description": "No automated performance benchmarks in CI.",
+          "affected_files": [],
+          "impact": "Performance regressions not detected.",
+          "recommendation": "Add pytest-benchmark for performance tests. Set thresholds and fail CI on regression."
+        }
+      ]
+    },
+    "monitoring": {
+      "score": "1/10",
+      "status": "Critical - Almost no observability",
+      "gaps": [
+        {
+          "id": "MON-001",
+          "severity": "critical",
+          "title": "No Prometheus metrics",
+          "description": "No metrics endpoint. No application metrics exposed.",
+          "affected_files": [],
+          "impact": "Cannot monitor request rate, error rate, latency, or resource usage.",
+          "recommendation": "Add prometheus-client. Expose /metrics endpoint. Track: request_count, request_duration_seconds, error_count, active_connections, task_queue_depth, inference_latency."
+        },
+        {
+          "id": "MON-002",
+          "severity": "critical",
+          "title": "No structured logging",
+          "description": "Basic Python logging with no structured format. No correlation IDs.",
+          "affected_files": ["src/iot/data_pipeline.py", "src/multi_agent/swarm.py", "src/decision_support/alerts.py"],
+          "impact": "Cannot trace requests across services. Difficult to debug production issues.",
+          "recommendation": "Use structlog or python-json-logger for JSON structured logging. Add trace_id, span_id, request_id to all log entries."
+        },
+        {
+          "id": "MON-003",
+          "severity": "critical",
+          "title": "No distributed tracing",
+          "description": "No OpenTelemetry, Jaeger, or Zipkin integration.",
+          "affected_files": [],
+          "impact": "Cannot trace requests across microservices. Cannot identify latency bottlenecks.",
+          "recommendation": "Add OpenTelemetry SDK. Instrument FastAPI, PyTorch inference, and external HTTP calls. Export to Jaeger or Tempo."
+        },
+        {
+          "id": "MON-004",
+          "severity": "high",
+          "title": "No Grafana dashboards",
+          "description": "No visualization of metrics.",
+          "affected_files": [],
+          "impact": "Cannot visualize system health or performance.",
+          "recommendation": "Create Grafana dashboards: API latency/throughput, error rates, resource utilization, business metrics (tasks completed, alerts triggered)."
+        },
+        {
+          "id": "MON-005",
+          "severity": "high",
+          "title": "No alerting rules",
+          "description": "No Prometheus alerting rules or notification channels.",
+          "affected_files": [],
+          "impact": "Issues not detected until users report them.",
+          "recommendation": "Create alerting rules: high error rate (>5%), high latency (p99 > 1s), high memory usage (>80%), service down. Route to PagerDuty/Slack."
+        },
+        {
+          "id": "MON-006",
+          "severity": "high",
+          "title": "No health check probes",
+          "description": "Only basic /health endpoint. No readiness or liveness probes.",
+          "affected_files": ["src/decision_support/api_gateway.py"],
+          "impact": "Cannot properly configure Kubernetes probes. Traffic may be sent to unhealthy pods.",
+          "recommendation": "Add /healthz (liveness - process alive), /readyz (readiness - dependencies healthy), /startup (startup complete)."
+        },
+        {
+          "id": "MON-007",
+          "severity": "high",
+          "title": "No log aggregation",
+          "description": "No centralized logging (ELK, Loki, CloudWatch).",
+          "affected_files": [],
+          "impact": "Logs lost when pods restart. Cannot search across services.",
+          "recommendation": "Deploy Fluent Bit or Promtail as DaemonSet. Aggregate to Elasticsearch/Loki. Set up log retention policies."
+        },
+        {
+          "id": "MON-008",
+          "severity": "medium",
+          "title": "No SLO/SLA definitions",
+          "description": "No service level objectives or agreements.",
+          "affected_files": [],
+          "impact": "No clear reliability targets. Cannot measure user experience.",
+          "recommendation": "Define SLOs: 99.9% availability, p99 latency < 500ms, error rate < 0.1%. Create error budgets."
+        },
+        {
+          "id": "MON-009",
+          "severity": "medium",
+          "title": "No APM integration",
+          "description": "No application performance monitoring (Datadog, New Relic, etc.).",
+          "affected_files": [],
+          "impact": "No code-level performance insights.",
+          "recommendation": "Consider APM tool for production. OpenTelemetry can export to multiple backends."
+        },
+        {
+          "id": "MON-010",
+          "severity": "medium",
+          "title": "No business metrics tracking",
+          "description": "No tracking of business KPIs (tasks completed, farms monitored, alerts resolved).",
+          "affected_files": [],
+          "impact": "Cannot measure business impact or feature usage.",
+          "recommendation": "Add business metrics: tasks_completed_total, farms_active, alerts_triggered_total, recommendations_generated_total."
+        }
+      ]
+    },
+    "additional_gaps": {
+      "score": "N/A",
+      "gaps": [
+        {
+          "id": "ADD-001",
+          "severity": "critical",
+          "title": "No package installation support",
+          "description": "No pyproject.toml, setup.py, or setup.cfg. Cannot be installed as a Python package.",
+          "affected_files": [],
+          "impact": "Cannot be distributed or installed. Import paths assume running from repo root.",
+          "recommendation": "Create pyproject.toml with setuptools or poetry backend. Define package metadata, dependencies, and entry points."
+        },
+        {
+          "id": "ADD-002",
+          "severity": "high",
+          "title": "No environment configuration management",
+          "description": "No .env.example, no configuration files, no environment variable documentation.",
+          "affected_files": [],
+          "impact": "Configuration is hardcoded. Cannot deploy to different environments.",
+          "recommendation": "Create config.yaml or .env.example. Use pydantic-settings for typed configuration. Document all environment variables."
+        },
+        {
+          "id": "ADD-003",
+          "severity": "high",
+          "title": "No API versioning strategy",
+          "description": "API version is hardcoded as v1 in URL path. No versioning policy.",
+          "affected_files": ["src/decision_support/api_gateway.py"],
+          "impact": "Breaking changes cannot be managed.",
+          "recommendation": "Implement API versioning strategy (URL path or header). Document deprecation policy."
+        },
+        {
+          "id": "ADD-004",
+          "severity": "high",
+          "title": "No CORS configuration",
+          "description": "No CORS middleware in FastAPI applications.",
+          "affected_files": ["src/decision_support/api_gateway.py", "src/decision_support/dashboard.py"],
+          "impact": "Web clients cannot access API from different origins.",
+          "recommendation": "Add CORSMiddleware with configurable allowed origins."
+        },
+        {
+          "id": "ADD-005",
+          "severity": "medium",
+          "title": "No request validation middleware",
+          "description": "No global request validation or sanitization.",
+          "affected_files": ["src/decision_support/api_gateway.py"],
+          "impact": "Invalid data may cause unexpected errors.",
+          "recommendation": "Add Pydantic models for all request/response. Add global exception handlers."
+        },
+        {
+          "id": "ADD-006",
+          "severity": "medium",
+          "title": "No database migration strategy",
+          "description": "No schema versioning or migration tooling.",
+          "affected_files": [],
+          "impact": "Schema changes are manual and error-prone.",
+          "recommendation": "Add Alembic for SQL databases. Version control all schema changes."
+        },
+        {
+          "id": "ADD-007",
+          "severity": "medium",
+          "title": "No backup and restore strategy",
+          "description": "No data backup or disaster recovery plan.",
+          "affected_files": [],
+          "impact": "Data loss on failure. No recovery capability.",
+          "recommendation": "Implement automated backups for all persistent data. Test restore procedures regularly."
+        },
+        {
+          "id": "ADD-008",
+          "severity": "medium",
+          "title": "No multi-region deployment support",
+          "description": "No configuration for multi-region or edge deployment.",
+          "affected_files": [],
+          "impact": "Cannot deploy to multiple regions for latency or compliance.",
+          "recommendation": "Design for multi-region: data replication, region-aware routing, conflict resolution."
+        },
+        {
+          "id": "ADD-009",
+          "severity": "low",
+          "title": "No WebSocket scaling strategy",
+          "description": "Dashboard WebSocket connections are in-memory. Cannot scale horizontally.",
+          "affected_files": ["src/decision_support/dashboard.py"],
+          "impact": "WebSocket connections limited to single instance.",
+          "recommendation": "Use Redis Pub/Sub for WebSocket message broadcasting across instances."
+        },
+        {
+          "id": "ADD-010",
+          "severity": "low",
+          "title": "No OpenAPI documentation customization",
+          "description": "FastAPI auto-generates OpenAPI docs but no customization.",
+          "affected_files": ["src/decision_support/api_gateway.py"],
+          "impact": "API documentation is generic and not user-friendly.",
+          "recommendation": "Customize OpenAPI schema with descriptions, examples, and tags."
+        }
+      ]
+    }
+  },
+  "recommendations_priority": {
+    "immediate": [
+      "Create Dockerfile and docker-compose.yml for local development",
+      "Add pyproject.toml with pinned dependencies",
+      "Implement Redis-backed shared state for TenantRegistry and SwarmCoordinator",
+      "Add Prometheus metrics endpoint",
+      "Create GitHub Actions CI workflow with linting, testing, and security scanning",
+      "Create basic Kubernetes Deployment and Service manifests"
+    ],
+    "short_term": [
+      "Integrate real MQTT and Kafka clients",
+      "Add structured logging with trace IDs",
+      "Implement distributed tracing with OpenTelemetry",
+      "Create Helm chart for deployment",
+      "Add HPA and resource limits",
+      "Set up Grafana dashboards and alerting"
+    ],
+    "medium_term": [
+      "Implement circuit breakers and bulkhead patterns",
+      "Add caching layer with Redis",
+      "Create CD pipeline with automated deployments",
+      "Implement database migrations with Alembic",
+      "Add service mesh (Istio) for mTLS and traffic management",
+      "Define SLOs and error budgets"
+    ],
+    "long_term": [
+      "Multi-region deployment support",
+      "GPU resource management and scheduling",
+      "Advanced autoscaling with custom metrics",
+      "Chaos engineering and resilience testing",
+      "Full observability stack with APM"
+    ]
+  },
+  "files_created": [
+    "gaps/scalability_gaps.json"
+  ]
+}
