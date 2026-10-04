@@ -15,13 +15,13 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 
 # Signal peptide pattern (N-terminal hydrophobic region)
-SIGNAL_PEPTIDE_PATTERN = re.compile(r"^M[A-Z]{5,20}[AILVMFW]")
+SIGNAL_PEPTIDE_PATTERN = re.compile(r"^M[A-Z]{1,5}[AILVMFW]{7,20}")
 
-# Chloroplast transit peptide pattern
-CHLOROPLAST_PATTERN = re.compile(r"^M[A-Z]{0,15}[STA][A-Z]{0,25}[AILV]")
+# Chloroplast transit peptide pattern (requires specific motif)
+CHLOROPLAST_PATTERN = re.compile(r"^M[A-Z]{5,15}[STA][A-Z]{10,25}[AILV][A-Z]{3,10}[KRH]")
 
-# Mitochondrial targeting signal pattern
-MITOCHONDRIA_PATTERN = re.compile(r"^M[RL][A-Z]{3,20}[ST]")
+# Mitochondrial targeting signal pattern (requires specific motif)
+MITOCHONDRIA_PATTERN = re.compile(r"^M[RL][A-Z]{8,20}[ST][A-Z]{5,15}[KRH]")
 
 # Nuclear localization signal patterns
 NLS_PATTERNS = [

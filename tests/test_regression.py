@@ -73,12 +73,13 @@ class TestTSPRegression:
         assert set(result.tour) == {"A", "B", "C"}
 
     def test_duplicate_city_names_produces_valid_tour(self):
-        """Duplicate city names should still produce a valid tour."""
+        """Duplicate city names should still produce a valid tour (with duplicates)."""
         solver = TSPSolver(algorithm="nearest_neighbor")
         result = solver.solve(
             TSPInstance(cities=["A", "A", "B"], distance_matrix=[[0, 1, 2], [1, 0, 1], [2, 1, 0]])
         )
         assert len(result.tour) == 3
+        assert set(result.tour) == {"A", "B"}
 
     def test_large_instance_completes(self):
         """Large TSP instance (n=20) must complete in reasonable time."""

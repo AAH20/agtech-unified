@@ -96,7 +96,18 @@ class TSPSolver:
         if self.improve:
             from src.optimization.local_search import TwoOpt
 
-            tour_indices = [instance.cities.index(c) for c in result.tour]
+            # Build index mapping handling duplicate city names
+            used_indices: dict = {}
+            tour_indices = []
+            for c in result.tour:
+                idx = instance.cities.index(c)
+                while idx in used_indices.get(c, set()):
+                    next_idx = instance.cities.index(c, idx + 1)
+                    if next_idx == idx:
+                        break
+                    idx = next_idx
+                used_indices.setdefault(c, set()).add(idx)
+                tour_indices.append(idx)
             improved = TwoOpt().improve(tour_indices, instance.distance_matrix)
             new_cost = self._tour_cost(improved, instance.distance_matrix)
             result = TSPResult(
