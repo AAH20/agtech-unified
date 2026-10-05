@@ -112,7 +112,7 @@ jobs:
     name: Security (bandit)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [test]
+    needs: [test-fast]
     steps:
       - uses: actions/checkout@v4
 
@@ -141,7 +141,7 @@ jobs:
     name: Docker Build (multi-arch)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [test]
+    needs: [test-fast]
     steps:
       - uses: actions/checkout@v4
 
