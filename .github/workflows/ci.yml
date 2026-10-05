@@ -34,10 +34,10 @@ jobs:
           ruff check src/ tests/
           ruff format --check src/ tests/
 
-  test:
-    name: Test (pytest)
+  test-fast:
+    name: Test Fast (pytest)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     needs: [lint]
     strategy:
       matrix:
@@ -57,15 +57,15 @@ jobs:
           pip install -e ".[test]"
           pip install pytest-cov
 
-      - name: Run pytest
+      - name: Run fast pytest
         run: |
-          pytest tests/ -v --tb=short -n auto --dist loadfile --junitxml=test-results.xml --cov=src --cov-report=xml --cov-report=term
+          pytest tests/ -v --tb=short -n auto --dist loadfile -m "not slow" --junitxml=test-results.xml --cov=src --cov-report=xml --cov-report=term
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.python-version }}
+          name: test-results-fast-${{ matrix.python-version }}
           path: test-results.xml
 
       - name: Upload coverage to Codecov
@@ -74,6 +74,39 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
+
+  test-slow:
+    name: Test Slow (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [test-fast]
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Run slow pytest
+        run: |
+          pytest tests/ -v --tb=short -m slow --junitxml=test-results-slow.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-slow-${{ matrix.python-version }}
+          path: test-results-slow.xml
 
   security:
     name: Security (bandit)
