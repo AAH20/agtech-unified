@@ -7,9 +7,12 @@ import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-import torch
-
 logger = logging.getLogger(__name__)
+
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore[assignment]
 
 
 @dataclass
