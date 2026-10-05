@@ -39,6 +39,7 @@ dependencies = [
 test = [
     "pytest==8.3.4",
     "pytest-timeout>=2.3.1",
+    "pytest-xdist>=3.6.1",
     "rdflib>=7.0,<8",
     "tomli>=2.0; python_version < '3.11'",
     "httpx==0.28.1",
