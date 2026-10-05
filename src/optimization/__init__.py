@@ -1,5 +1,6 @@
 """Optimization module: TSP/VRP solvers, GPU acceleration, edge AI, and local search."""
 
+from src.optimization.ant_colony import AntColonyTSP
 from src.optimization.crop_vision import (
     DiseaseDetection,
     FieldHealthReport,
@@ -7,6 +8,7 @@ from src.optimization.crop_vision import (
     YieldPrediction,
 )
 from src.optimization.edge_ai import BenchmarkStats, EdgeAIInference, InferenceResult, ModelInfo
+from src.optimization.genetic_algorithm import GeneticAlgorithmTSP
 from src.optimization.gpu_fallback import GPUFallback
 
 try:
@@ -37,6 +39,8 @@ __all__ = [
     "TwoOpt",
     "ThreeOpt",
     "SimulatedAnnealingTSP",
+    "GeneticAlgorithmTSP",
+    "AntColonyTSP",
     "GPUFallback",
     "EdgeAIInference",
     "InferenceResult",

@@ -1,0 +1,36 @@
+{
+  "missing_algorithms": [
+    "No backward-compatibility or migration algorithm for onboarding state when tiers change — no versioned state schema, no upgrade path when a user's tier is re-evaluated",
+    "No heuristic or ML-based tier refinement — no feedback loop to adjust scoring weights or thresholds based on actual usage patterns or outcomes",
+    "No recommendation explanation algorithm — recommend_tier_scored returns a bare string with no reasoning trace, confidence score, or alternative-tier suggestions",
+    "No per-module completion estimation algorithm — no time/cost/complexity scoring per module to help users plan their onboarding effort",
+    "No runtime dependency resolution — ModuleDependencyGraph computes install order but no algorithm resolves conflicts when a user skips a prerequisite or installs modules out of order",
+    "No external-service dependency declaration — no algorithm to check that required infrastructure (PostgreSQL, Redis, object store, message queue) is available before module installation begins",
+    "No cost estimation algorithm — no way to estimate infrastructure cost (compute, storage, bandwidth) based on tier and scale inputs",
+    "No partial-completion or resume algorithm — wizard.get_progress() returns 1.0 once profile is set regardless of which steps are actually done; no way to persist and resume mid-onboarding"
+  ],
+  "bottlenecks": [
+    "ModuleRegistry uses a static dict — adding a tier or module requires editing source code; no plugin/registry extension point or config-driven module list",
+    "No caching of tier lookups or module lists; repeated calls rebuild data (trivial now, becomes real with dynamic registries or remote config)",
+    "Flat module list with no lazy loading — all modules for a tier are always returned even if the user only needs a subset",
+    "No async/concurrent module initialization — onboarding wizard would block on each module setup sequentially",
+    "No onboarding state persistence — wizard state lives only in memory; a session restart loses all progress with no way to resume",
+    "No onboarding API — no REST/gRPC endpoints for programmatic access to tier recommendation, module listing, or setup status",
+    "No onboarding CLI — no `agtech onboard init` / `agtech onboard status` / `agtech onboard validate` command for headless or CI/CD onboarding",
+    "No metrics or telemetry — no instrumentation to track onboarding completion rates, drop-off points, or module setup duration",
+    "No rollback or undo mechanism for completed onboarding steps — once a module is marked complete there is no way to revert",
+    "No notification/reminder system for incomplete onboarding steps — no email, webhook, or in-app nudge when onboarding stalls",
+    "No integration with identity providers (SSO, OAuth) for enterprise onboarding — no automated provisioning of users/roles",
+    "No data import/migration tooling for existing farms transitioning into the platform — no CSV/JSON bulk import for fields, sensors, or historical data",
+    "Health checks are purely structural — _check_module only verifies module exists in registry and dependencies are registered; no functional probes (DB reachable, API responding, sensor data flowing)"
+  ],
+  "benchmark_gaps": [
+    "No A/B testing framework for onboarding variants — no way to experiment with different wizard flows, scoring weights, or template configs",
+    "No multi-language or accessibility support in onboarding flow — all strings are hard-coded English, no i18n, no screen-reader or keyboard-nav considerations",
+    "No onboarding analytics dashboard — no visualization of funnel conversion, time-to-complete, or module-level drop-off",
+    "No integration with external monitoring/observability — no OpenTelemetry spans, no structured logging of onboarding events for debugging",
+    "No support for partial or incremental onboarding — wizard is all-or-nothing; no way to complete a subset of modules and defer the rest",
+    "No dry-run or preview mode — users cannot see what a tier's setup will produce (config diff, module list, cost estimate) before committing",
+    "No cost estimation or resource planning — no algorithm to estimate infrastructure cost (compute, storage, bandwidth) based on tier and scale inputs"
+  ]
+}

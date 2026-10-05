@@ -1,0 +1,767 @@
+{
+  "report": "Infrastructure & CI/CD Gap Audit v4",
+  "generated": "2026-10-05",
+  "scope": "CI pipeline, Docker, Kubernetes, monitoring, deployment strategy, GitOps, multi-cluster, service mesh, distributed tracing, backup, secrets scanning",
+  "files_audited": [
+    ".github/workflows/ci.yml",
+    "Dockerfile",
+    "docker-compose.yml",
+    "k8s/deployment.yaml",
+    "k8s/service.yaml",
+    "k8s/hpa.yaml",
+    "k8s/ingress.yaml",
+    "k8s/configmap.yaml",
+    "k8s/canary.yaml",
+    "k8s/gpu.yaml",
+    "k8s/network-policy.yaml",
+    "k8s/pdb.yaml",
+    "helm/Chart.yaml",
+    "helm/values.yaml",
+    "helm/templates/deployment.yaml",
+    "helm/templates/service.yaml",
+    "helm/templates/hpa.yaml"
+  ],
+  "previous_audit": "gaps/infrastructure_gaps_v3.json",
+  "gaps": [
+    {
+      "id": "CI-001",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No deployment jobs (staging/production)",
+      "description": "CI has no deploy jobs. After docker-build, the pipeline ends. No staging or production deployment, no automated rollout, no GitOps sync.",
+      "impact": "All deployments are manual; no gradual traffic shifting or automated rollback",
+      "recommended_fix": "Add deploy-staging and deploy-production jobs using ArgoCD/Flux GitOps sync or Helm upgrade"
+    },
+    {
+      "id": "CI-002",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No GPU runner in CI",
+      "description": "CI runs only on ubuntu-latest CPU runners. GPU solver modules (gpu_tsp, gpu_vrp) are never exercised in CI.",
+      "impact": "GPU code paths are untested; regressions go undetected",
+      "recommended_fix": "Add a self-hosted GPU runner job that runs GPU-specific tests"
+    },
+    {
+      "id": "CI-003",
+      "category": "CI Pipeline",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No secrets scanning in CI",
+      "description": "No gitleaks or trufflehog scanning. CI runs bandit (SAST) and Trivy (image) but no secrets detection.",
+      "impact": "Accidental secret commits (API keys, DB passwords) are not caught before merge",
+      "recommended_fix": "Add gitleaks-action to the security job"
+    },
+    {
+      "id": "CI-004",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No integration/e2e test stage",
+      "description": "CI only runs unit tests (pytest tests/). Integration and e2e tests are not executed in the pipeline.",
+      "impact": "Integration regressions are not caught before merge",
+      "recommended_fix": "Add an integration test job (pytest -m integration) after unit tests pass"
+    },
+    {
+      "id": "CI-005",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No dependency vulnerability scanning",
+      "description": "CI has no pip-audit or safety check for Python dependencies. Bandit covers SAST only.",
+      "impact": "Vulnerable dependencies can be merged undetected",
+      "recommended_fix": "Add pip-audit to the security job"
+    },
+    {
+      "id": "CI-006",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No database migration step",
+      "description": "No migration step in CI or deployment pipeline. Schema changes must be applied manually.",
+      "impact": "Schema drift between environments; deployment failures due to missing migrations",
+      "recommended_fix": "Add an alembic upgrade head step before deployment"
+    },
+    {
+      "id": "CI-007",
+      "category": "CI Pipeline",
+      "severity": "medium",
+      "module": "ci.yml",
+      "title": "No performance benchmarking",
+      "description": "No pytest-benchmark or custom timing tests in CI. Performance regressions are invisible.",
+      "impact": "Latency regressions accumulate silently",
+      "recommended_fix": "Add a benchmark job using pytest-benchmark"
+    },
+    {
+      "id": "CI-008",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No OS matrix",
+      "description": "CI only runs on ubuntu-latest. No Windows or macOS testing.",
+      "impact": "Platform-specific issues may go undetected",
+      "recommended_fix": "Add os: [ubuntu-latest, windows-latest] to test matrix"
+    },
+    {
+      "id": "CI-009",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No smoke tests after deployment",
+      "description": "No post-deployment smoke tests to verify deployment success.",
+      "impact": "Broken deployments are not automatically detected",
+      "recommended_fix": "Add a smoke test step that curls /health after deploy"
+    },
+    {
+      "id": "CI-010",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "Python 3.13 excluded from test matrix",
+      "description": "Python 3.13 is in classifiers but not in CI test matrix (excluded due to onnx build failure).",
+      "impact": "Forward-compatibility with Python 3.13 is untested",
+      "recommended_fix": "Add 3.13 to matrix with allow-failures: true"
+    },
+    {
+      "id": "CI-011",
+      "category": "CI Pipeline",
+      "severity": "low",
+      "module": "ci.yml",
+      "title": "No branch protection rules visible",
+      "description": "No evidence of branch protection rules requiring CI pass before merge.",
+      "impact": "Broken code can be merged to main",
+      "recommended_fix": "Configure branch protection rules in GitHub settings"
+    },
+    {
+      "id": "DKR-001",
+      "category": "Docker",
+      "severity": "high",
+      "module": "Dockerfile",
+      "title": "No image signing (cosign)",
+      "description": "Docker images are not signed. No supply chain integrity verification.",
+      "impact": "Images cannot be verified for integrity; supply chain attacks possible",
+      "recommended_fix": "Add cosign sign in CI after image build; verify in deployment admission controller"
+    },
+    {
+      "id": "DKR-002",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No SBOM generation",
+      "description": "No Software Bill of Materials is generated for the image.",
+      "impact": "No visibility into image contents for compliance (e.g., CVE audits, license tracking)",
+      "recommended_fix": "Add syft or trivy --format spdx to generate SBOM as CI artifact"
+    },
+    {
+      "id": "DKR-003",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No distroless base image option",
+      "description": "Uses python:3.11-slim which includes a full OS. Distroless would reduce attack surface.",
+      "impact": "Larger attack surface than necessary (shell, package manager in image)",
+      "recommended_fix": "Add a distroless variant (gcr.io/distroless/python3.11) for production"
+    },
+    {
+      "id": "DKR-004",
+      "category": "Docker",
+      "severity": "medium",
+      "module": "Dockerfile",
+      "title": "No version tagging strategy",
+      "description": "Image is only tagged as :latest. No semantic versioning or git sha tags.",
+      "impact": "Cannot roll back to specific versions; no traceability between code and image",
+      "recommended_fix": "Tag images with git sha and semver (e.g., agtech-unified:1.0.0, agtech-unified:sha-abc123)"
+    },
+    {
+      "id": "DKR-005",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No docker-compose.prod.yml",
+      "description": "Only one docker-compose.yml for all environments. No production override.",
+      "impact": "Cannot have environment-specific compose configuration",
+      "recommended_fix": "Add docker-compose.prod.yml with production settings"
+    },
+    {
+      "id": "DKR-006",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No resource limits in compose",
+      "description": "No mem_limit or cpus limits on services in docker-compose.yml.",
+      "impact": "Services can consume all host resources",
+      "recommended_fix": "Add deploy.resources.limits to each service"
+    },
+    {
+      "id": "DKR-007",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No network isolation in compose",
+      "description": "All services use a single bridge network. No segmentation between app, db, and messaging.",
+      "impact": "No isolation between services",
+      "recommended_fix": "Define separate networks for app, db, and messaging"
+    },
+    {
+      "id": "DKR-008",
+      "category": "Docker",
+      "severity": "low",
+      "module": "docker-compose.yml",
+      "title": "No logging configuration in compose",
+      "description": "No logging driver or log rotation configured.",
+      "impact": "Log files can grow unbounded",
+      "recommended_fix": "Add logging: driver: json-file with max-size and max-file"
+    },
+    {
+      "id": "K8S-001",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "k8s/deployment.yaml",
+      "title": "No rolling update strategy on raw manifest",
+      "description": "k8s/deployment.yaml has no strategy.rollingUpdate. Helm template has it but the raw manifest does not.",
+      "impact": "Default rolling update may cause downtime or resource spikes if raw manifests are applied",
+      "recommended_fix": "Add strategy: rollingUpdate: maxSurge: 1, maxUnavailable: 0 to k8s/deployment.yaml"
+    },
+    {
+      "id": "K8S-002",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "k8s/deployment.yaml",
+      "title": "No securityContext on main deployment",
+      "description": "k8s/deployment.yaml lacks securityContext (runAsNonRoot, readOnlyRootFilesystem, allowPrivilegeEscalation: false). GPU deployment has it but main does not.",
+      "impact": "Container runs with excessive privileges if raw manifests are applied",
+      "recommended_fix": "Add securityContext with runAsNonRoot: true, readOnlyRootFilesystem: true, allowPrivilegeEscalation: false"
+    },
+    {
+      "id": "K8S-003",
+      "category": "Kubernetes",
+      "severity": "high",
+      "module": "k8s/deployment.yaml",
+      "title": "No ServiceAccount",
+      "description": "No ServiceAccount defined in k8s/. Pods use the default service account with full API access.",
+      "impact": "Excessive API permissions; any pod compromise has cluster-admin-level access",
+      "recommended_fix": "Create a dedicated ServiceAccount with minimal RBAC"
+    },
+    {
+      "id": "K8S-004",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No topologySpreadConstraints on raw manifest",
+      "description": "k8s/deployment.yaml has no topologySpreadConstraints. Helm template has it but raw manifest does not.",
+      "impact": "Pods may all schedule on the same node/AZ if raw manifests are applied",
+      "recommended_fix": "Add topologySpreadConstraints with maxSkew: 1, topologyKey: topology.kubernetes.io/zone"
+    },
+    {
+      "id": "K8S-005",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No affinity/anti-affinity rules",
+      "description": "No pod affinity or anti-affinity rules defined in k8s/.",
+      "impact": "No control over pod placement; all replicas may land on one node",
+      "recommended_fix": "Add podAntiAffinity to spread pods across nodes"
+    },
+    {
+      "id": "K8S-006",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No init containers for migrations",
+      "description": "No init container to run database migrations before app starts.",
+      "impact": "App may start before schema is ready",
+      "recommended_fix": "Add initContainer that runs alembic upgrade head"
+    },
+    {
+      "id": "K8S-007",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No persistent volumes",
+      "description": "No PersistentVolumeClaim for application data storage.",
+      "impact": "Data is lost on pod restart",
+      "recommended_fix": "Add PVC for application data"
+    },
+    {
+      "id": "K8S-008",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No graceful shutdown configuration",
+      "description": "No terminationGracePeriodSeconds or preStop hook.",
+      "impact": "In-flight requests may be dropped on shutdown",
+      "recommended_fix": "Add terminationGracePeriodSeconds: 30 and preStop hook"
+    },
+    {
+      "id": "K8S-009",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/deployment.yaml",
+      "title": "No startup probe",
+      "description": "No startup probe defined. Slow-starting containers may be killed by liveness probe.",
+      "impact": "Containers that take time to start may be killed prematurely",
+      "recommended_fix": "Add startupProbe with failureThreshold: 30, periodSeconds: 10"
+    },
+    {
+      "id": "K8S-010",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/hpa.yaml",
+      "title": "No HPA behavior configuration on raw manifest",
+      "description": "k8s/hpa.yaml has no behavior configuration. Helm template has scaleDown/scaleUp policies but raw manifest does not.",
+      "impact": "Potential flapping or slow scale-down if raw manifests are applied",
+      "recommended_fix": "Add behavior: scaleDown: stabilizationWindowSeconds: 300"
+    },
+    {
+      "id": "K8S-011",
+      "category": "Kubernetes",
+      "severity": "medium",
+      "module": "k8s/hpa.yaml",
+      "title": "No custom metrics for HPA",
+      "description": "HPA only uses CPU and memory. No custom metrics (e.g., request queue depth, GPU utilization).",
+      "impact": "Cannot scale on application-specific metrics",
+      "recommended_fix": "Add custom metrics via Prometheus Adapter"
+    },
+    {
+      "id": "K8S-012",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/hpa.yaml",
+      "title": "No VPA (Vertical Pod Autoscaler)",
+      "description": "No VPA to recommend or set resource requests.",
+      "impact": "Resource requests may be misconfigured over time",
+      "recommended_fix": "Add VPA in recommendation mode"
+    },
+    {
+      "id": "K8S-013",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No resource quotas",
+      "description": "No ResourceQuota defined for the namespace.",
+      "impact": "No limit on total resource consumption",
+      "recommended_fix": "Add ResourceQuota for the namespace"
+    },
+    {
+      "id": "K8S-014",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No limit ranges",
+      "description": "No LimitRange defined for the namespace.",
+      "impact": "No default resource limits for pods without explicit limits",
+      "recommended_fix": "Add LimitRange with default requests/limits"
+    },
+    {
+      "id": "K8S-015",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No PodSecurityAdmission",
+      "description": "No PodSecurityAdmission configuration.",
+      "impact": "No enforcement of security standards",
+      "recommended_fix": "Add PodSecurityAdmission with restricted profile"
+    },
+    {
+      "id": "K8S-016",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No Kustomize overlays",
+      "description": "k8s/ has raw YAML with no Kustomize overlays. Helm chart exists but is not integrated into CI/CD.",
+      "impact": "Environment-specific configuration is manual and error-prone",
+      "recommended_fix": "Add Kustomize overlays for dev/staging/prod or integrate Helm into CI"
+    },
+    {
+      "id": "K8S-017",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No secrets encryption at rest",
+      "description": "No etcd encryption or external secrets operator.",
+      "impact": "Secrets stored in plaintext in etcd",
+      "recommended_fix": "Enable etcd encryption or use External Secrets Operator"
+    },
+    {
+      "id": "K8S-018",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/ingress.yaml",
+      "title": "No cert-manager Certificate resource",
+      "description": "Ingress references a ClusterIssuer but no Certificate resource is defined.",
+      "impact": "TLS certificates may not be provisioned automatically",
+      "recommended_fix": "Add Certificate resource for agtech-unified-tls"
+    },
+    {
+      "id": "K8S-019",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/ingress.yaml",
+      "title": "No rate limiting at ingress",
+      "description": "No rate limiting annotations on the Ingress.",
+      "impact": "API is vulnerable to abuse",
+      "recommended_fix": "Add nginx.ingress.kubernetes.io/limit-rps annotation"
+    },
+    {
+      "id": "K8S-020",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/ingress.yaml",
+      "title": "No WAF configuration",
+      "description": "No Web Application Firewall configuration.",
+      "impact": "No protection against common web attacks",
+      "recommended_fix": "Add ModSecurity or cloud WAF"
+    },
+    {
+      "id": "K8S-021",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/deployment.yaml",
+      "title": "No audit logging",
+      "description": "No Kubernetes audit logging configuration.",
+      "impact": "No audit trail of API server actions",
+      "recommended_fix": "Enable audit logging with appropriate policy"
+    },
+    {
+      "id": "K8S-022",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/gpu.yaml",
+      "title": "No liveness/readiness probes on GPU deployment",
+      "description": "GPU deployment has no liveness or readiness probes.",
+      "impact": "GPU pod health is not monitored",
+      "recommended_fix": "Add liveness and readiness probes to gpu-solver container"
+    },
+    {
+      "id": "K8S-023",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/gpu.yaml",
+      "title": "No PodDisruptionBudget for GPU deployment",
+      "description": "GPU deployment has no PDB.",
+      "impact": "GPU solver can be disrupted during node maintenance",
+      "recommended_fix": "Add PDB with minAvailable: 1 for gpu-solver"
+    },
+    {
+      "id": "K8S-024",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/gpu.yaml",
+      "title": "No NetworkPolicy for GPU deployment",
+      "description": "GPU deployment is not covered by the existing NetworkPolicy (different label selector).",
+      "impact": "GPU pod network traffic is unrestricted",
+      "recommended_fix": "Extend NetworkPolicy or add GPU-specific policy"
+    },
+    {
+      "id": "K8S-025",
+      "category": "Kubernetes",
+      "severity": "low",
+      "module": "k8s/gpu.yaml",
+      "title": "No HPA for GPU deployment",
+      "description": "GPU solver has no autoscaling configuration.",
+      "impact": "GPU workloads cannot scale with demand",
+      "recommended_fix": "Add GPU-specific HPA with custom metrics"
+    },
+    {
+      "id": "MON-001",
+      "category": "Monitoring & Alerting",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No Prometheus monitoring stack",
+      "description": "No Prometheus, ServiceMonitor, or PodMonitor resources. No metrics collection from the application.",
+      "impact": "No visibility into application metrics (request rate, error rate, latency, resource usage)",
+      "recommended_fix": "Deploy Prometheus Operator (kube-prometheus-stack) and add ServiceMonitor for agtech-unified"
+    },
+    {
+      "id": "MON-002",
+      "category": "Monitoring & Alerting",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No Grafana dashboards",
+      "description": "No Grafana instance or dashboard configurations. No visualization of metrics.",
+      "impact": "No operational visibility; incidents detected only by user reports",
+      "recommended_fix": "Deploy Grafana with pre-built dashboards for the application"
+    },
+    {
+      "id": "MON-003",
+      "category": "Monitoring & Alerting",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No alerting rules (PrometheusRule)",
+      "description": "No PrometheusRule or alerting configuration. No automated alerting on issues.",
+      "impact": "No automated detection of high error rates, latency spikes, or resource exhaustion",
+      "recommended_fix": "Add PrometheusRule with alerts for high error rate, high latency, pod crash loops, etc."
+    },
+    {
+      "id": "MON-004",
+      "category": "Monitoring & Alerting",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No Alertmanager configuration",
+      "description": "No Alertmanager for routing alerts to Slack, PagerDuty, or email.",
+      "impact": "Alerts have no delivery mechanism",
+      "recommended_fix": "Configure Alertmanager with notification channels"
+    },
+    {
+      "id": "MON-005",
+      "category": "Monitoring & Alerting",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No application metrics endpoint",
+      "description": "No /metrics endpoint or Prometheus client instrumentation in the application code.",
+      "impact": "Prometheus cannot scrape application metrics",
+      "recommended_fix": "Add prometheus-client instrumentation and expose /metrics endpoint"
+    },
+    {
+      "id": "MON-006",
+      "category": "Monitoring & Alerting",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No log aggregation (ELK/Loki)",
+      "description": "No centralized logging. No Elasticsearch, Loki, or Fluent Bit configuration.",
+      "impact": "Logs are lost on pod restart; no cross-service log correlation",
+      "recommended_fix": "Deploy Loki with Fluent Bit or ELK stack for centralized logging"
+    },
+    {
+      "id": "MON-007",
+      "category": "Monitoring & Alerting",
+      "severity": "low",
+      "module": "k8s/",
+      "title": "No SLO/SLA definitions",
+      "description": "No Service Level Objectives or SLIs defined for the platform.",
+      "impact": "No measurable reliability targets; no error budgets",
+      "recommended_fix": "Define SLOs (e.g., 99.9% availability, p99 latency < 500ms) and track with Prometheus"
+    },
+    {
+      "id": "BKP-001",
+      "category": "Backup & Disaster Recovery",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No backup strategy (Velero)",
+      "description": "No Velero or similar backup solution. No scheduled backups of persistent volumes or cluster state.",
+      "impact": "Data loss on cluster failure, accidental deletion, or corruption",
+      "recommended_fix": "Deploy Velero with scheduled backups of PVCs and cluster resources to S3/GCS"
+    },
+    {
+      "id": "BKP-002",
+      "category": "Backup & Disaster Recovery",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No disaster recovery plan",
+      "description": "No DR plan, no cross-region replication, no RTO/RPO definitions.",
+      "impact": "Extended outage on regional failure; no recovery procedure",
+      "recommended_fix": "Define DR plan with RTO/RPO targets; deploy Velero with cross-region backup replication"
+    },
+    {
+      "id": "BKP-003",
+      "category": "Backup & Disaster Recovery",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No database backup configuration",
+      "description": "No scheduled database backups (TimescaleDB, PostgreSQL). No point-in-time recovery.",
+      "impact": "Database data loss on failure; no recovery point",
+      "recommended_fix": "Add pg_dump or WAL-G for scheduled database backups"
+    },
+    {
+      "id": "BKP-004",
+      "category": "Backup & Disaster Recovery",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No backup testing/validation",
+      "description": "No backup restoration testing. Backups may be corrupt or incomplete.",
+      "impact": "Backups may not work when needed",
+      "recommended_fix": "Schedule regular backup restoration tests"
+    },
+    {
+      "id": "SEC-001",
+      "category": "Secrets Scanning",
+      "severity": "high",
+      "module": "ci.yml",
+      "title": "No gitleaks in CI",
+      "description": "No gitleaks or trufflehog scanning for secrets in CI pipeline.",
+      "impact": "Accidental secret commits (API keys, DB passwords, JWT secrets) are not caught",
+      "recommended_fix": "Add gitleaks-action to CI security job"
+    },
+    {
+      "id": "SEC-002",
+      "category": "Secrets Scanning",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No external secrets management",
+      "description": "Secrets are referenced via Kubernetes Secret objects but no External Secrets Operator or Vault integration.",
+      "impact": "Secrets in etcd are base64-encoded (not encrypted); no rotation or audit trail",
+      "recommended_fix": "Deploy External Secrets Operator with AWS Secrets Manager, GCP Secret Manager, or HashiCorp Vault"
+    },
+    {
+      "id": "SEC-003",
+      "category": "Secrets Scanning",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No secret rotation policy",
+      "description": "No automated secret rotation. JWT secrets and DB credentials are static.",
+      "impact": "Compromised secrets remain valid indefinitely",
+      "recommended_fix": "Implement secret rotation with External Secrets Operator or custom rotation controller"
+    },
+    {
+      "id": "GITOPS-001",
+      "category": "GitOps",
+      "severity": "high",
+      "module": "k8s/",
+      "title": "No GitOps controller (ArgoCD/Flux)",
+      "description": "No ArgoCD or Flux configuration. Deployments are manual via kubectl or Helm.",
+      "impact": "No declarative GitOps; configuration drift between environments; no automated sync",
+      "recommended_fix": "Deploy ArgoCD or Flux CD with Git repository as source of truth"
+    },
+    {
+      "id": "GITOPS-002",
+      "category": "GitOps",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No environment promotion pipeline",
+      "description": "No automated promotion from dev to staging to production. All environment updates are manual.",
+      "impact": "Environment inconsistencies; manual errors in deployment",
+      "recommended_fix": "Implement GitOps promotion with ArgoCD ApplicationSets or Flux Kustomization pipelines"
+    },
+    {
+      "id": "GITOPS-003",
+      "category": "GitOps",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No drift detection",
+      "description": "No detection of configuration drift between Git and live cluster state.",
+      "impact": "Manual changes to cluster are not detected or reverted",
+      "recommended_fix": "Enable ArgoCD/Flux drift detection with auto-heal"
+    },
+    {
+      "id": "GITOPS-004",
+      "category": "GitOps",
+      "severity": "low",
+      "module": "k8s/",
+      "title": "No rollback mechanism",
+      "description": "No automated rollback on deployment failure. Flagger canary exists but no GitOps-level rollback.",
+      "impact": "Failed deployments require manual intervention",
+      "recommended_fix": "Enable ArgoCD/Flux rollback on sync failure"
+    },
+    {
+      "id": "MC-001",
+      "category": "Multi-Cluster",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No multi-cluster management",
+      "description": "No multi-cluster configuration. No cluster federation, no cross-cluster service discovery.",
+      "impact": "No high availability across regions; single point of failure",
+      "recommended_fix": "Evaluate Cluster API or Karmada for multi-cluster management"
+    },
+    {
+      "id": "MC-002",
+      "category": "Multi-Cluster",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No cross-cluster backup",
+      "description": "No backup replication across clusters or regions.",
+      "impact": "Data loss on regional cluster failure",
+      "recommended_fix": "Configure Velero with cross-region backup replication"
+    },
+    {
+      "id": "MC-003",
+      "category": "Multi-Cluster",
+      "severity": "low",
+      "module": "k8s/",
+      "title": "No global load balancing",
+      "description": "No global load balancer or multi-cluster ingress (e.g., Istio multi-cluster, GKE Multi-Cluster Ingress).",
+      "impact": "No traffic failover across regions",
+      "recommended_fix": "Deploy global load balancer with health-check-based failover"
+    },
+    {
+      "id": "MESH-001",
+      "category": "Service Mesh",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No service mesh (Istio/Linkerd)",
+      "description": "No Istio or Linkerd configuration. Canary references Istio gateways but no Istio control plane is deployed.",
+      "impact": "No mTLS between services, no traffic management, no mesh-level observability",
+      "recommended_fix": "Deploy Istio or Linkerd with mTLS and traffic management"
+    },
+    {
+      "id": "MESH-002",
+      "category": "Service Mesh",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No mTLS between services",
+      "description": "No mutual TLS between pods. All inter-service traffic is plaintext.",
+      "impact": "No service-to-service authentication; traffic interception possible",
+      "recommended_fix": "Enable Istio mTLS in strict mode or Linkerd mTLS"
+    },
+    {
+      "id": "MESH-003",
+      "category": "Service Mesh",
+      "severity": "low",
+      "module": "k8s/",
+      "title": "No traffic splitting beyond canary",
+      "description": "Flagger canary exists but no fine-grained traffic splitting (e.g., A/B testing, blue-green).",
+      "impact": "Limited deployment strategy options",
+      "recommended_fix": "Use Istio VirtualService for advanced traffic management"
+    },
+    {
+      "id": "TRACE-001",
+      "category": "Distributed Tracing",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No distributed tracing (OpenTelemetry/Jaeger)",
+      "description": "No OpenTelemetry Collector, Jaeger, or Tempo configuration. No trace collection or visualization.",
+      "impact": "No visibility into request flows across services; difficult to debug latency issues",
+      "recommended_fix": "Deploy OpenTelemetry Collector as DaemonSet with Jaeger or Tempo backend"
+    },
+    {
+      "id": "TRACE-002",
+      "category": "Distributed Tracing",
+      "severity": "medium",
+      "module": "k8s/",
+      "title": "No application instrumentation",
+      "description": "No OpenTelemetry SDK instrumentation in application code. No trace context propagation.",
+      "impact": "Traces cannot be correlated across services",
+      "recommended_fix": "Add OpenTelemetry Python SDK with auto-instrumentation for FastAPI, SQLAlchemy, and Kafka"
+    },
+    {
+      "id": "TRACE-003",
+      "category": "Distributed Tracing",
+      "severity": "low",
+      "module": "k8s/",
+      "title": "No trace-based alerting",
+      "description": "No alerting based on trace data (e.g., error rate by endpoint, latency percentile).",
+      "impact": "No proactive detection of latency or error anomalies",
+      "recommended_fix": "Configure alerting on trace-derived metrics (e.g., Prometheus alerts on span metrics)"
+    }
+  ],
+  "summary": {
+    "total": 62,
+    "critical": 0,
+    "high": 14,
+    "medium": 24,
+    "low": 24,
+    "categories": {
+      "ci_pipeline": 11,
+      "docker": 8,
+      "kubernetes": 25,
+      "monitoring_alerting": 7,
+      "backup_disaster_recovery": 4,
+      "secrets_scanning": 3,
+      "gitops": 4,
+      "multi_cluster": 3,
+      "service_mesh": 3,
+      "distributed_tracing": 3
+    },
+    "improvements_since_v3": [
+      "CI now has multi-arch Docker build (docker/build-push-action with platforms: linux/amd64,linux/arm64)",
+      "CI now has Trivy container image scanning",
+      "CI now has job dependencies (needs: [lint], needs: [test])",
+      "CI now has timeout-minutes on all jobs",
+      "Helm chart exists with deployment, service, and hpa templates",
+      "Helm template includes topologySpreadConstraints, securityContext, and HPA behavior policies",
+      "k8s/ has canary.yaml (Flagger), gpu.yaml, network-policy.yaml, pdb.yaml"
+    ],
+    "regressions_since_v3": [],
+    "notes": "Many v3 gaps persist because the raw k8s/ manifests were not updated to match the Helm template improvements. The Helm chart is the source of truth but is not integrated into CI/CD. Monitoring, backup, GitOps, multi-cluster, service mesh, and distributed tracing remain entirely absent."
+  }
+}

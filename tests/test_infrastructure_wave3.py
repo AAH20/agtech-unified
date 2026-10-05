@@ -24,16 +24,16 @@ class TestCI001MultiArchBuilds:
     def test_ci_has_setup_buildx_action(self):
         """CI must use docker/setup-buildx-action."""
         content = _read(".github/workflows/ci.yml")
-        assert "docker/setup-buildx-action" in content, (
-            "CI must use docker/setup-buildx-action for multi-arch builds"
-        )
+        assert (
+            "docker/setup-buildx-action" in content
+        ), "CI must use docker/setup-buildx-action for multi-arch builds"
 
     def test_ci_has_build_push_action(self):
         """CI must use docker/build-push-action."""
         content = _read(".github/workflows/ci.yml")
-        assert "docker/build-push-action" in content, (
-            "CI must use docker/build-push-action to build and push images"
-        )
+        assert (
+            "docker/build-push-action" in content
+        ), "CI must use docker/build-push-action to build and push images"
 
     def test_ci_buildx_action_has_version(self):
         """setup-buildx-action must specify a version."""
@@ -57,9 +57,9 @@ class TestCI001MultiArchBuilds:
     def test_ci_has_docker_build_job(self):
         """CI must have a dedicated docker-build job."""
         content = _read(".github/workflows/ci.yml")
-        assert "docker-build:" in content or "docker_build:" in content, (
-            "CI must have a docker-build job"
-        )
+        assert (
+            "docker-build:" in content or "docker_build:" in content
+        ), "CI must have a docker-build job"
 
     def test_ci_docker_job_needs_test(self):
         """docker-build job should depend on test job passing."""
@@ -88,9 +88,9 @@ class TestCI008ImageScanning:
         content = _read(".github/workflows/ci.yml")
         has_trivy = "trivy" in content.lower()
         has_grype = "grype" in content.lower()
-        assert has_trivy or has_grype, (
-            "CI must include Trivy or grype for image vulnerability scanning"
-        )
+        assert (
+            has_trivy or has_grype
+        ), "CI must include Trivy or grype for image vulnerability scanning"
 
     def test_ci_trivy_scans_image(self):
         """Trivy step must scan the built image."""
@@ -101,27 +101,27 @@ class TestCI008ImageScanning:
             for i, line in enumerate(lines):
                 if "trivy" in line.lower():
                     context = "\n".join(lines[i : i + 10])
-                    assert "image" in context.lower() or "scan" in context.lower(), (
-                        "Trivy step must scan an image"
-                    )
+                    assert (
+                        "image" in context.lower() or "scan" in context.lower()
+                    ), "Trivy step must scan an image"
                     break
 
     def test_ci_image_scan_has_severity_threshold(self):
         """Image scan must define a severity threshold."""
         content = _read(".github/workflows/ci.yml")
         if "trivy" in content.lower():
-            assert "severity" in content.lower() or "CRITICAL" in content, (
-                "Image scan must define severity threshold"
-            )
+            assert (
+                "severity" in content.lower() or "CRITICAL" in content
+            ), "Image scan must define severity threshold"
 
     def test_ci_image_scan_fails_on_critical(self):
         """Image scan should fail on critical vulnerabilities."""
         content = _read(".github/workflows/ci.yml")
         if "trivy" in content.lower():
             # Check for exit-on-echo or severity-based failure
-            assert "CRITICAL" in content or "severity" in content.lower(), (
-                "Image scan must fail on critical vulnerabilities"
-            )
+            assert (
+                "CRITICAL" in content or "severity" in content.lower()
+            ), "Image scan must fail on critical vulnerabilities"
 
 
 # ── CI-016/K8S-017: Helm chart ───────────────────────────────────────
@@ -144,27 +144,27 @@ class TestHelmChart:
 
     def test_helm_templates_directory_exists(self):
         """helm/templates/ directory must exist."""
-        assert (PROJECT_ROOT / "helm" / "templates").is_dir(), (
-            "helm/templates/ directory must exist"
-        )
+        assert (
+            PROJECT_ROOT / "helm" / "templates"
+        ).is_dir(), "helm/templates/ directory must exist"
 
     def test_helm_deployment_template_exists(self):
         """helm/templates/deployment.yaml must exist."""
-        assert (PROJECT_ROOT / "helm" / "templates" / "deployment.yaml").is_file(), (
-            "helm/templates/deployment.yaml must exist"
-        )
+        assert (
+            PROJECT_ROOT / "helm" / "templates" / "deployment.yaml"
+        ).is_file(), "helm/templates/deployment.yaml must exist"
 
     def test_helm_service_template_exists(self):
         """helm/templates/service.yaml must exist."""
-        assert (PROJECT_ROOT / "helm" / "templates" / "service.yaml").is_file(), (
-            "helm/templates/service.yaml must exist"
-        )
+        assert (
+            PROJECT_ROOT / "helm" / "templates" / "service.yaml"
+        ).is_file(), "helm/templates/service.yaml must exist"
 
     def test_helm_hpa_template_exists(self):
         """helm/templates/hpa.yaml must exist."""
-        assert (PROJECT_ROOT / "helm" / "templates" / "hpa.yaml").is_file(), (
-            "helm/templates/hpa.yaml must exist"
-        )
+        assert (
+            PROJECT_ROOT / "helm" / "templates" / "hpa.yaml"
+        ).is_file(), "helm/templates/hpa.yaml must exist"
 
 
 class TestHelmChartYaml:

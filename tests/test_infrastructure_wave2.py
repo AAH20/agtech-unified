@@ -36,9 +36,9 @@ class TestDKR001MultiArchDocker:
     def test_dockerfile_uses_buildplatform_in_from(self):
         """Builder stage must use --platform=$BUILDPLATFORM."""
         content = _read("Dockerfile")
-        assert "--platform=$BUILDPLATFORM" in content, (
-            "Builder stage must use --platform=$BUILDPLATFORM for multi-arch builds"
-        )
+        assert (
+            "--platform=$BUILDPLATFORM" in content
+        ), "Builder stage must use --platform=$BUILDPLATFORM for multi-arch builds"
 
     def test_dockerfile_uses_targetarch_for_platform_specific_installs(self):
         """Dockerfile must use TARGETARCH for platform-specific logic."""

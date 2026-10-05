@@ -19,6 +19,7 @@ import inspect
 import json
 import logging
 import os
+import threading
 import time
 import uuid
 from collections import defaultdict
@@ -264,7 +265,13 @@ class EventBus:
         base_retry_delay: float = 0.1,
         schema_registry: Optional[EventSchemaRegistry] = None,
         persist: Optional[str] = None,
+        batch_size: int = 1,
+        batch_timeout: float = 0.0,
     ) -> None:
+        if batch_size < 1:
+            raise ValueError("batch_size must be >= 1")
+        if batch_timeout < 0:
+            raise ValueError("batch_timeout must be >= 0")
         self._subscribers: Dict[str, List[EventHandler]] = defaultdict(list)
         self._history: List[DomainEvent] = []
         self._event_store = event_store
@@ -274,6 +281,11 @@ class EventBus:
         self._schema_registry = schema_registry
         self._dead_letter_queue: List[DomainEvent] = []
         self._processed_event_ids: set = set()
+        self._batch_size = batch_size
+        self._batch_timeout = batch_timeout
+        self._batch_buffers: Dict[str, List[DomainEvent]] = defaultdict(list)
+        self._batch_lock = threading.Lock()
+        self._batch_timers: Dict[str, threading.Timer] = {}
         if persist:
             self._event_store = FileEventStore(persist)
 
@@ -281,6 +293,9 @@ class EventBus:
         """Register handler for events of the given type.
 
         Duplicate registrations of the same handler are ignored.
+        When batch_size > 1 or batch_timeout > 0, handlers receive
+        lists of DomainEvent (micro-batches). Otherwise they receive
+        individual DomainEvent objects.
         """
         handlers = self._subscribers[event_type]
         if handler not in handlers:
@@ -325,6 +340,12 @@ class EventBus:
             self._event_store.append(event)
 
         self._history.append(event)
+
+        # Batching: buffer event for micro-batch delivery
+        if self._batch_size > 1:
+            self._buffer_event(event)
+            return len(self._subscribers.get(event.event_type, ()))
+
         handlers = list(self._subscribers.get(event.event_type, ()))
 
         if delivery_guarantee == "at_least_once":
@@ -394,8 +415,13 @@ class EventBus:
         return [e for e in self._history if e.event_type == event_type]
 
     def clear(self) -> None:
-        """Drop all recorded history. Subscriptions are kept."""
+        """Drop all recorded history and pending batch buffers. Subscriptions are kept."""
         self._history.clear()
+        with self._batch_lock:
+            self._batch_buffers.clear()
+            for timer in self._batch_timers.values():
+                timer.cancel()
+            self._batch_timers.clear()
 
     def subscriber_count(self, event_type: str) -> int:
         """Number of handlers registered for the given event type."""
@@ -423,6 +449,56 @@ class EventBus:
         except RuntimeError:
             # No running event loop — create one to run the coroutine
             asyncio.run(coro)
+
+    def _buffer_event(self, event: DomainEvent) -> None:
+        """Buffer an event for batch delivery."""
+        should_flush = False
+        should_schedule = False
+        with self._batch_lock:
+            self._batch_buffers[event.event_type].append(event)
+            buffer = self._batch_buffers[event.event_type]
+            if len(buffer) >= self._batch_size:
+                should_flush = True
+            elif self._batch_timeout > 0:
+                should_schedule = event.event_type not in self._batch_timers
+        if should_flush:
+            self._flush_batch(event.event_type)
+        elif should_schedule:
+            self._schedule_batch_flush(event.event_type)
+
+    def _flush_batch(self, event_type: str) -> None:
+        """Flush buffered events for the given type."""
+        with self._batch_lock:
+            buffer = self._batch_buffers[event_type]
+            if not buffer:
+                return
+            self._batch_buffers[event_type] = []
+            timer = self._batch_timers.pop(event_type, None)
+            if timer:
+                timer.cancel()
+
+        handlers = list(self._subscribers.get(event_type, ()))
+        for handler in handlers:
+            try:
+                result = handler(buffer)
+                if inspect.isawaitable(result):
+                    self._schedule_async(result)
+            except Exception:
+                logger.exception(
+                    "Event handler %r failed for batch of %d events",
+                    getattr(handler, "__name__", handler),
+                    len(buffer),
+                )
+
+    def _schedule_batch_flush(self, event_type: str) -> None:
+        """Schedule a timer to flush the batch after timeout."""
+        with self._batch_lock:
+            if event_type in self._batch_timers:
+                return
+            timer = threading.Timer(self._batch_timeout, self._flush_batch, args=[event_type])
+            timer.daemon = True
+            timer.start()
+            self._batch_timers[event_type] = timer
 
     async def publish_async(
         self, event: DomainEvent, delivery_guarantee: Optional[str] = None
@@ -457,6 +533,12 @@ class EventBus:
             self._event_store.append(event)
 
         self._history.append(event)
+
+        # Batching: buffer event for micro-batch delivery
+        if self._batch_size > 1:
+            self._buffer_event(event)
+            return len(self._subscribers.get(event.event_type, ()))
+
         handlers = list(self._subscribers.get(event.event_type, ()))
 
         if delivery_guarantee == "at_least_once":

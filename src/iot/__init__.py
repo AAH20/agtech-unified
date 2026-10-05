@@ -17,6 +17,8 @@ from src.iot.data_validation import (
     ValidationResult,
 )
 from src.iot.device_management import Device, DeviceRegistry, DeviceStatus, HealthStatus
+from src.iot.edge_computing import EdgeNode, EdgeScheduler, EdgeTask, TaskAssignment
+from src.iot.mqtt_qos import DeliveryState, MQTTMessage, MQTTQoSClient, QoSLevel
 from src.iot.sensor_placement import PlacementInstance, PlacementResult, SensorPlacement
 from src.iot.smart_models import AgriculturalSmartModels
 
@@ -40,4 +42,12 @@ __all__ = [
     "Device",
     "DeviceRegistry",
     "AgriculturalSmartModels",
+    "EdgeNode",
+    "EdgeScheduler",
+    "EdgeTask",
+    "TaskAssignment",
+    "DeliveryState",
+    "MQTTMessage",
+    "MQTTQoSClient",
+    "QoSLevel",
 ]

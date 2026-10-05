@@ -1,0 +1,44 @@
+{
+  "benchmark_gaps": [
+    "TSP Christofides uses greedy matching instead of Edmonds' blossom algorithm, so the 1.5-approximation guarantee does not hold; measured max ratio 1.057 at n=10 on random Euclidean instances (n=8: 1.045)",
+    "TSP nearest-neighbor has no approximation guarantee; measured max ratio 1.055 at n=10 (n=8: 1.000 — NN found optimal on that instance)",
+    "TSP NN + 2-opt reaches ratio 1.0 at n=8 and n=10 on random Euclidean instances, but 2-opt is not integrated into TSPSolver for Christofides or multi_start_nn initial tours",
+    "TSP 3-opt reaches ratio 1.0 at n=8 and n=10 but is O(n^3) per iteration and not integrated into TSPSolver.solve()",
+    "TSP Lin-Kernighan reaches ratio 1.0 at n=8 but only 1.055 at n=10 (LK did not improve on the NN tour for that instance); LK is not integrated into TSPSolver",
+    "TSP Simulated Annealing with 2000 iterations reaches ratio 1.0 at n=8 but degrades to 1.217 at n=10; SA is not integrated into TSPSolver and has no candidate list",
+    "VRP Clarke-Wright savings is the only algorithm; no intra-route 2-opt, inter-route relocate/exchange, or ALNS post-processing is applied",
+    "VRP has no metaheuristic improvement (SA, GA, ACO, ALNS); solution quality degrades significantly for larger instances",
+    "No standard TSP/VRP benchmark instances (TSPLIB, CVRPLIB) are used for validation; only random Euclidean instances are tested",
+    "No Held-Karp exact solver integration into TSPSolver for benchmarking heuristic quality on small instances (n <= 15)"
+  ],
+  "bottlenecks": [
+    "GPUFallback class exists but is never used by any solver; GPU solvers (GPUTSPSolver, GPUVRPSolver) have no try/except fallback to CPU on CUDA failure",
+    "GPUTSPSolver._gpu_two_opt evaluates all O(n^2) moves per iteration on GPU but applies only the best one; no parallel move application or candidate list strategy",
+    "GPUVRPSolver computes savings on GPU but route merging is sequential on CPU; no GPU-accelerated route improvement",
+    "TSPSolver.solve() with improve=True runs 2-opt as a separate pass only for NN and multi_start_nn; Christofides tours are not improved",
+    "ThreeOpt is O(n^3) per iteration with no don't-look bits or candidate lists; impractical for n > 200",
+    "SimulatedAnnealingTSP uses random 2-opt moves with no candidate list or adaptive neighborhood; convergence is slow for large instances",
+    "VRP solver has no post-processing pipeline; savings output is final with no improvement pass",
+    "No unified solver interface; users must choose between CPU/GPU, TSP/VRP, and construction/local-search/metaheuristic manually",
+    "GPUTSPSolver.solve_batch() processes instances sequentially; no true batched GPU parallelism across instances",
+    "No support for time windows (VRPTW), multi-depot VRP, or heterogeneous fleet in any solver",
+    "TSPSolver only supports christofides, nearest_neighbor, and multi_start_nn; no SA, LK, or 3-opt integration",
+    "VRPSolver only supports savings; no sweep, insertion, or metaheuristic construction"
+  ],
+  "missing_algorithms": [
+    "Edmonds' blossom algorithm — optimal minimum-weight perfect matching for Christofides; required for the 1.5-approximation guarantee",
+    "Or-opt — relocates segments of 1-3 consecutive cities; complements 2-opt by exploring a different neighborhood",
+    "Genetic Algorithm for TSP — population-based metaheuristic with crossover (OX, PMX, CX) and mutation; effective for large instances",
+    "Ant Colony Optimization for TSP — pheromone-based constructive metaheuristic; strong empirical performance on TSP benchmarks",
+    "Adaptive Large Neighborhood Search (ALNS) for VRP — destroy/repair metaheuristic with adaptive operator selection; state-of-the-art for VRP",
+    "Sweep algorithm for VRP — simple construction heuristic sorting customers by polar angle from depot",
+    "VRPTW support — time window constraints for agricultural operations (e.g., pesticide application windows)",
+    "Multi-depot VRP — large farms with multiple depots (e.g., north/south storage)",
+    "Heterogeneous fleet VRP — vehicles with different capacities (e.g., drones + tractors)",
+    "Intra-route 2-opt and 3-opt for VRP — improve individual routes after savings construction",
+    "Inter-route relocate and exchange for VRP — move or swap customers between routes to reduce total cost",
+    "Asymmetric TSP (ATSP) support — real-world agricultural routing may have asymmetric distances (one-way fields, elevation)",
+    "Christofides + 2-opt/3-opt/LK integration — TSPSolver should offer improve=True for all construction algorithms, not just NN",
+    "Unified solver interface — common base class or protocol for CPU/GPU, TSP/VRP, and construction/local-search/metaheuristic"
+  ]
+}

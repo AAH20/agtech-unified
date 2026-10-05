@@ -143,9 +143,9 @@ class TestINF005MultiStageDocker:
     def test_dockerfile_has_builder_stage(self):
         """Dockerfile must have a named builder stage."""
         content = _read_dockerfile()
-        assert "AS builder" in content or "as builder" in content.lower(), (
-            "Dockerfile must have a builder stage"
-        )
+        assert (
+            "AS builder" in content or "as builder" in content.lower()
+        ), "Dockerfile must have a builder stage"
 
     def test_dockerfile_runtime_stage_copies_from_builder(self):
         """Runtime stage must copy artifacts from builder."""
@@ -179,9 +179,9 @@ class TestINF007EnvCredentials:
     def test_compose_uses_env_var_for_password(self):
         """Compose must use ${POSTGRES_PASSWORD:?} syntax."""
         content = _read_compose()
-        assert "${POSTGRES_PASSWORD" in content, (
-            "Compose must reference POSTGRES_PASSWORD from .env"
-        )
+        assert (
+            "${POSTGRES_PASSWORD" in content
+        ), "Compose must reference POSTGRES_PASSWORD from .env"
 
 
 # ── INF-008: GPU runtime in compose ──────────────────────────────────

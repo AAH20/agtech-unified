@@ -1,5 +1,7 @@
 """Onboarding and sizing module for agtech-unified."""
 
+from src.onboarding.api import app as onboarding_app
+from src.onboarding.cli import main as onboarding_cli_main
 from src.onboarding.dependencies import ModuleDependencyGraph
 from src.onboarding.feature_flags import FeatureFlag, FeatureFlagManager
 from src.onboarding.health import HealthCheck, HealthStatus, ModuleHealthChecker, SystemHealth
@@ -20,4 +22,6 @@ __all__ = [
     "OrganizationProfiler",
     "SetupWizard",
     "SystemHealth",
+    "onboarding_app",
+    "onboarding_cli_main",
 ]

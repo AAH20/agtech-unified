@@ -21,6 +21,14 @@ from src.digital_twin.nutrient_cycling import (
 )
 from src.digital_twin.ontology import AGROVOCOntology, Concept, SearchResult
 from src.digital_twin.pest_model import PestModel, PestSimulationResult, PestState
+from src.digital_twin.photosynthesis import (
+    C3C4Pathway,
+    FarquharResult,
+    PhotosynthesisModel,
+    PhotosynthesisResult,
+    PhotosynthesisState,
+    RUEResult,
+)
 from src.digital_twin.root_growth import (
     RootGrowthModel,
     RootGrowthResult,
@@ -41,6 +49,12 @@ from src.digital_twin.water_balance import (
     WaterBalanceModel,
     WaterBalanceResult,
     WaterBalanceState,
+)
+from src.digital_twin.weed_competition import (
+    CompetitionResult,
+    WeedCompetitionModel,
+    WeedSimulationResult,
+    WeedState,
 )
 from src.digital_twin.yield_prediction import (
     GrainQuality,
@@ -71,6 +85,12 @@ __all__ = [
     "PestState",
     "PestSimulationResult",
     "PestModel",
+    "C3C4Pathway",
+    "FarquharResult",
+    "PhotosynthesisModel",
+    "PhotosynthesisResult",
+    "PhotosynthesisState",
+    "RUEResult",
     "RootGrowthState",
     "RootLayerState",
     "RootGrowthResult",
@@ -86,6 +106,10 @@ __all__ = [
     "HierarchicalSynchronizer",
     "HierarchicalSyncResult",
     "TwinLevel",
+    "CompetitionResult",
+    "WeedCompetitionModel",
+    "WeedSimulationResult",
+    "WeedState",
     "Graph",
     "PageRankResult",
     "CommunityDetectionResult",
