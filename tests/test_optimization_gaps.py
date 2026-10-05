@@ -224,6 +224,7 @@ class TestVRPInputValidation:
 # ======================================================================
 # GPU TSP: Validation
 # ======================================================================
+@pytest.mark.gpu
 class TestGPUTSPValidation:
     def test_nan_distance_raises(self):
         solver = GPUTSPSolver()
@@ -257,6 +258,7 @@ class TestGPUTSPValidation:
 # ======================================================================
 # GPU VRP: Validation
 # ======================================================================
+@pytest.mark.gpu
 class TestGPUVRPValidation:
     def test_negative_demand_raises(self):
         solver = GPUVRPSolver()

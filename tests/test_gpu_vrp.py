@@ -4,6 +4,9 @@ import pytest
 
 from src.optimization.gpu_vrp import GPUVRPSolver
 
+torch = pytest.importorskip("torch", reason="torch not installed")
+pytestmark = pytest.mark.gpu
+
 
 def test_gpu_vrp_empty():
     """GPU VRP with no customers returns empty routes."""

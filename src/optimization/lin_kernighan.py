@@ -38,12 +38,14 @@ class LinKernighan:
         perturbation: bool = True,
         restarts: int = 3,
         seed: Optional[int] = None,
+        max_depth_budget: int = 20000,
     ):
         self.candidate_set_size = candidate_set_size
         self.max_iterations = max_iterations
         self.max_chain_depth = max_chain_depth
         self.perturbation = perturbation
         self.restarts = restarts
+        self.max_depth_budget = max_depth_budget
         self.rng = random.Random(seed)
 
     def improve(self, tour: List[int], distance_matrix: List[List[float]]) -> List[int]:
@@ -59,6 +61,8 @@ class LinKernighan:
                     f"Tour index {idx} exceeds distance matrix size {len(distance_matrix)}"
                 )
         if n <= 2:
+            return tour[:]
+        if self.max_iterations <= 0:
             return tour[:]
         if len(set(tour)) != n:
             raise ValueError("Tour contains duplicate cities")
@@ -94,6 +98,7 @@ class LinKernighan:
                 best, best_cost = current[:], cost
             if self.perturbation and restart < self.restarts:
                 current = self._double_bridge(best)
+                passes = 0  # each restart gets its own improvement budget
         return best
 
     # ------------------------------------------------------------------
@@ -150,6 +155,7 @@ class LinKernighan:
         """
         best_gain = 0.0
         best_move: Optional[Tuple[Set[Tuple[int, int]], Set[Tuple[int, int]]]] = None
+        budget = [self.max_depth_budget]
 
         def check_closing(end: int, gain: float, removed: set, added: set) -> None:
             nonlocal best_gain, best_move
@@ -167,6 +173,9 @@ class LinKernighan:
                 best_move = (set(removed), set(added) | {close_edge})
 
         def explore(end: int, gain: float, removed: set, added: set, depth: int) -> None:
+            if budget[0] <= 0:
+                return
+            budget[0] -= 1
             # Choose the next tour edge to remove: X = (end, t_next).
             for t_next in (succ[end], pred[end]):
                 if t_next == t1:

@@ -40,6 +40,8 @@ test = [
     "pytest==8.3.4",
     "pytest-timeout>=2.3.1",
     "pytest-xdist>=3.6.1",
+    "pytest-asyncio>=0.25.0",
+    "attrs>=23.2.0",
     "rdflib>=7.0,<8",
     "tomli>=2.0; python_version < '3.11'",
     "httpx==0.28.1",
@@ -80,6 +82,7 @@ markers = [
     "performance: Performance and benchmark tests",
     "reliability: Fault injection and recovery tests",
     "slow: Tests that take longer than 1 second",
+    "gpu: Tests requiring torch/CUDA (auto-skipped when torch is absent)",
 ]
 timeout = 300
 

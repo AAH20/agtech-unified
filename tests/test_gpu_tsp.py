@@ -4,6 +4,9 @@ import pytest
 
 from src.optimization.gpu_tsp import GPUTSPSolver
 
+torch = pytest.importorskip("torch", reason="torch not installed")
+pytestmark = pytest.mark.gpu
+
 
 def test_gpu_tsp_empty_instance():
     """GPU TSP with no cities returns empty result."""

@@ -11,6 +11,20 @@ from src.genomics.protein import ProteinAnalyzer
 from src.onboarding.modules import ModuleRegistry
 from src.onboarding.sizing import OrganizationProfiler
 
+
+def pytest_collection_modifyitems(config, items):
+    """Skip GPU-marked tests when torch is not installed."""
+    try:
+        import torch  # noqa: F401
+
+        return
+    except ImportError:
+        skip_gpu = pytest.mark.skip(reason="torch not installed — GPU tests skipped")
+        for item in items:
+            if "gpu" in item.keywords:
+                item.add_marker(skip_gpu)
+
+
 # ---------------------------------------------------------------------------
 # Engine / Analyzer fixtures
 # ---------------------------------------------------------------------------

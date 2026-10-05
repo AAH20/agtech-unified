@@ -134,6 +134,7 @@ class TestUnifiedVRP:
         assert sorted(visited) == [0, 1, 2]
 
 
+@pytest.mark.gpu
 class TestUnifiedGPU:
     """GPU solvers through the unified interface."""
 
