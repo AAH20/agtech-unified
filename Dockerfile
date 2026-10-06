@@ -14,7 +14,10 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir --upgrade "wheel>=0.46.2" "jaraco.context>=6.1.0"
+    # setuptools vendors wheel-0.45.1 (CVE-2026-24049); upgrading
+    # setuptools replaces the vendored copy. jaraco.context patched by
+    # the direct upgrade below.
+    && pip install --no-cache-dir --upgrade "setuptools>=84.0.0" "wheel>=0.46.2" "jaraco.context>=6.1.0"
 
 # ── Runtime stage ─────────────────────────────────────────────────────
 FROM python:3.11-slim
