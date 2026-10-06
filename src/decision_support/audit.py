@@ -113,23 +113,26 @@ class AuditLogger:
         timestamp: Optional[float] = None,
     ) -> AuditEvent:
         """Record an audit event and return it."""
-        event = AuditEvent(
-            event_id=str(uuid.uuid4()),
-            timestamp=timestamp if timestamp is not None else time.time(),
-            event_type=event_type,
-            actor=actor or self._actor,
-            action=action,
-            resource=resource,
-            tenant_id=tenant_id,
-            request_id=request_id,
-            source_ip=source_ip,
-            user_agent=user_agent,
-            status=status,
-            latency_ms=latency_ms,
-            metadata=metadata or {},
-            previous_hash=self._last_hash,
-        )
         with self._lock:
+            # previous_hash must be read inside the lock: reading it before
+            # would let two threads chain off the same predecessor and
+            # corrupt the hash chain under concurrency.
+            event = AuditEvent(
+                event_id=str(uuid.uuid4()),
+                timestamp=timestamp if timestamp is not None else time.time(),
+                event_type=event_type,
+                actor=actor or self._actor,
+                action=action,
+                resource=resource,
+                tenant_id=tenant_id,
+                request_id=request_id,
+                source_ip=source_ip,
+                user_agent=user_agent,
+                status=status,
+                latency_ms=latency_ms,
+                metadata=metadata or {},
+                previous_hash=self._last_hash,
+            )
             self._last_hash = self._compute_hash(event)
             self._events.append(event)
             if request_id is not None:
