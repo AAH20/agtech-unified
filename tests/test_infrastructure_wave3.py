@@ -48,11 +48,16 @@ class TestCI001MultiArchBuilds:
             raise AssertionError("docker/setup-buildx-action not found in CI")
 
     def test_ci_build_push_has_platforms(self):
-        """build-push-action must specify multi-arch platforms."""
+        """build-push-action must specify the CI target platform.
+
+        CI builds linux/amd64 (the deployment/scan target). ARM64 builds
+        via QEMU with heavy ML wheels exceeded the 30-minute job window
+        (run 37455131937), so arm64 images are built in the release
+        workflow instead.
+        """
         content = _read(".github/workflows/ci.yml")
         assert "platforms:" in content, "build-push-action must specify platforms"
         assert "linux/amd64" in content, "Must build for linux/amd64"
-        assert "linux/arm64" in content, "Must build for linux/arm64"
 
     def test_ci_has_docker_build_job(self):
         """CI must have a dedicated docker-build job."""

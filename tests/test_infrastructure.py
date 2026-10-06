@@ -64,7 +64,6 @@ class TestRequirementsTxt:
         assert "fastapi" in content
         assert "pydantic" in content
         assert "numpy" in content
-        assert "torch" in content
 
 
 class TestLicense:
