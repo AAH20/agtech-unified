@@ -43,6 +43,19 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
+# Purge vulnerable copies pip cannot remove:
+# 1. setuptools <84 vendored wheel-0.45.1 (CVE-2026-24049) — the dist-info
+#    directory can be left behind even after setuptools is upgraded, and
+#    Trivy scans it as python-pkg METADATA.
+# 2. Stale jaraco.context 5.3.0 dist-info copy (CVE-2026-23949).
+# Repair-package versions come in clean via the COPY from builder
+# (wheel 0.48.0, jaraco.context 6.1.2, setuptools 84.0.0 verified in the
+# build logs of run 37474735186).
+RUN for d in /usr/local/lib/python3.11/site-packages/setuptools/_vendor/wheel-0.45.1.dist-info \
+             /usr/local/lib/python3.11/site-packages/jaraco_context-5.3.0.dist-info; do \
+        rm -rf "$d"; \
+    done
+
 # ── Platform-specific runtime dependencies ────────────────────────────
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         echo "ARM64 detected: $TARGETPLATFORM"; \
