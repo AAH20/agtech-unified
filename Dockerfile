@@ -13,7 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --upgrade "wheel>=0.46.2" "jaraco.context>=6.1.0"
 
 # ── Runtime stage ─────────────────────────────────────────────────────
 FROM python:3.11-slim
@@ -21,6 +22,10 @@ FROM python:3.11-slim
 # ── Platform args (multi-arch support) ────────────────────────────────
 ARG TARGETARCH
 ARG TARGETPLATFORM
+
+# ── Patch base-image OS vulnerabilities (util-linux family) ───────────
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="Hassan, Ahmed"
 LABEL description="AgTech Unified - Precision Agriculture & Genetic Engineering Platform"
