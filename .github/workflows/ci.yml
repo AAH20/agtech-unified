@@ -136,6 +136,11 @@ jobs:
           format: table
           severity: CRITICAL,HIGH
           exit-code: 1
+          # OS-library CVEs (util-linux, ncurses, systemd) have no fix
+          # published in Debian 13/trixie repos - the base image is
+          # already fully upgraded and these block every Debian-based CI.
+          # Revisit when Debian publishes fixed packages.
+          ignore-unfixed: true
 
       - name: Upload Trivy scan results
         if: always()
