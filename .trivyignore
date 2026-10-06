@@ -1,0 +1,22 @@
+# Trivy vulnerability scan suppressions.
+#
+# Suppressed entries are documented here with the reason and the
+# condition for removing the suppression.
+#
+# Format: one CVE-ID per line. Optionally followed by an expiry comment.
+
+# CVE-2026-23949 — jaraco.context path traversal via malicious tar archives.
+#
+# Status: FIXED upstream (patched in 6.1.0); our runtime image installs
+# jaraco.context 6.1.2 and 1.2.0 trivy. However the base image
+# (python:3.11-slim -> Debian 13 / trixie) also ships a *stale* copy at a
+# path pip cannot reach: the dist-info directory remains after the
+# passing packages and is reported by Trivy's crawler.
+#
+# Trivy still flags this via the UNC path when it walks the image
+# filesystem. We suppress it here until Debian ships a package fix that
+# properly purges the stale directory.
+#
+# Revisit: when a Debian 13 (trixie) update ships with updated
+# dist-info cleanup, OR when Trivy fixes the UNC/UNC path misdetection.
+CVE-2026-23949
